@@ -204,16 +204,16 @@ export default function FavoritesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] text-[#ededed] px-4 py-8 max-w-6xl mx-auto">
+    <main className="min-h-screen px-4 py-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-100">Favorites</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Your saved movies, shows, and more</p>
+          <h1 className="text-2xl font-bold text-[#2d2640]">Favorites</h1>
+          <p className="text-sm text-[#7c7291] mt-0.5">Your saved movies, shows, and more</p>
         </div>
         <button
           onClick={() => setShowForm(v => !v)}
-          className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-sm text-zinc-100 rounded-lg transition-colors"
+          className="px-4 py-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-sm text-white rounded-lg transition-colors"
         >
           {showForm ? 'Cancel' : '+ Add Favorite'}
         </button>
@@ -227,15 +227,15 @@ export default function FavoritesPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-zinc-800 pb-0">
+      <div className="flex gap-1 mb-6 border-b border-[#e9e4f5] pb-0">
         {TABS.map(tab => (
           <button
             key={tab.value}
             onClick={() => setFilter(tab.value)}
             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors -mb-px border-b-2 ${
               filter === tab.value
-                ? 'border-zinc-400 text-zinc-100'
-                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                ? 'border-[#8b5cf6] text-[#2d2640]'
+                : 'border-transparent text-[#7c7291] hover:text-[#7c7291]'
             }`}
           >
             {tab.label}
@@ -245,9 +245,9 @@ export default function FavoritesPage() {
 
       {/* Grid */}
       {loading ? (
-        <div className="text-center text-zinc-600 py-16">Loading...</div>
+        <div className="text-center text-[#b8b0c8] py-16">Loading...</div>
       ) : favorites.length === 0 ? (
-        <div className="text-center text-zinc-600 py-16">
+        <div className="text-center text-[#b8b0c8] py-16">
           <p className="text-lg mb-2">No favorites yet</p>
           <p className="text-sm">Add some using the button above or the import section below.</p>
         </div>
@@ -260,16 +260,16 @@ export default function FavoritesPage() {
       )}
 
       {/* Import Section */}
-      <div className="mt-12 border-t border-zinc-800 pt-8 space-y-10">
-        <h2 className="text-lg font-semibold text-zinc-200">Import</h2>
+      <div className="mt-12 border-t border-[#e9e4f5] pt-8 space-y-10">
+        <h2 className="text-lg font-semibold text-[#2d2640]">Import</h2>
 
         {/* MAL Import */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+        <div className="bg-white border border-[#e9e4f5] rounded-xl p-5">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">🎌</span>
-            <h3 className="text-sm font-semibold text-zinc-200">MyAnimeList</h3>
+            <h3 className="text-sm font-semibold text-[#2d2640]">MyAnimeList</h3>
           </div>
-          <p className="text-xs text-zinc-500 mb-3">
+          <p className="text-xs text-[#7c7291] mb-3">
             Enter your MAL username to auto-import your anime list. Your list must be set to public.
           </p>
           <div className="flex gap-3 items-center">
@@ -278,7 +278,7 @@ export default function FavoritesPage() {
               value={malUsername}
               onChange={e => setMalUsername(e.target.value)}
               placeholder="Your MAL username"
-              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
+              className="flex-1 bg-[#f5f3ff] border border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd]"
               onKeyDown={e => e.key === 'Enter' && handleMALImport()}
             />
             <button
@@ -297,15 +297,15 @@ export default function FavoritesPage() {
         </div>
 
         {/* YouTube Import */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+        <div className="bg-white border border-[#e9e4f5] rounded-xl p-5">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">▶️</span>
-            <h3 className="text-sm font-semibold text-zinc-200">YouTube</h3>
+            <h3 className="text-sm font-semibold text-[#2d2640]">YouTube</h3>
             {ytConnected && (
               <span className="text-[10px] font-medium bg-green-900/50 text-green-400 px-2 py-0.5 rounded-full">Connected</span>
             )}
           </div>
-          <p className="text-xs text-zinc-500 mb-3">
+          <p className="text-xs text-[#7c7291] mb-3">
             Connect your Google account to import liked videos and subscriptions.
           </p>
 
@@ -341,7 +341,7 @@ export default function FavoritesPage() {
               </button>
               <button
                 onClick={handleYouTubeDisconnect}
-                className="px-4 py-2 text-sm bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm bg-[#e9e4f5] hover:bg-[#ddd8ee] text-[#7c7291] rounded-lg transition-colors"
               >
                 Disconnect
               </button>
@@ -355,20 +355,20 @@ export default function FavoritesPage() {
         </div>
 
         {/* Letterboxd Import */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+        <div className="bg-white border border-[#e9e4f5] rounded-xl p-5">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">🎬</span>
-            <h3 className="text-sm font-semibold text-zinc-200">Letterboxd</h3>
+            <h3 className="text-sm font-semibold text-[#2d2640]">Letterboxd</h3>
           </div>
-          <p className="text-xs text-zinc-500 mb-3">
-            Go to <a href="https://letterboxd.com/settings/data/" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">letterboxd.com/settings/data/</a> → Export Your Data → open <code className="text-zinc-400">watched.csv</code> and paste the contents below.
+          <p className="text-xs text-[#7c7291] mb-3">
+            Go to <a href="https://letterboxd.com/settings/data/" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">letterboxd.com/settings/data/</a> → Export Your Data → open <code className="text-[#7c7291]">watched.csv</code> and paste the contents below.
           </p>
           <textarea
             value={lbCsv}
             onChange={e => setLbCsv(e.target.value)}
             placeholder={"Date,Name,Year,Letterboxd URI,Rating\n2024-01-15,Inception,2010,https://letterboxd.com/film/inception/,4.5\n..."}
             rows={5}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-500 resize-none font-mono mb-3"
+            className="w-full bg-[#f5f3ff] border border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd] resize-none font-mono mb-3"
           />
           <div className="flex items-center gap-3">
             <button
@@ -387,12 +387,12 @@ export default function FavoritesPage() {
         </div>
 
         {/* Bulk Import */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
+        <div className="bg-white border border-[#e9e4f5] rounded-xl p-5">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">📋</span>
-            <h3 className="text-sm font-semibold text-zinc-200">Bulk Import</h3>
+            <h3 className="text-sm font-semibold text-[#2d2640]">Bulk Import</h3>
           </div>
-          <p className="text-xs text-zinc-500 mb-3">
+          <p className="text-xs text-[#7c7291] mb-3">
             Paste one title per line for any content type.
           </p>
           <div className="flex flex-col gap-3">
@@ -400,7 +400,7 @@ export default function FavoritesPage() {
               <select
                 value={bulkType}
                 onChange={e => setBulkType(e.target.value as ContentType)}
-                className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 shrink-0"
+                className="bg-[#f5f3ff] border border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] focus:outline-none focus:border-[#c4b5fd] shrink-0"
               >
                 <option value="movie">Movie</option>
                 <option value="tv">TV Show</option>
@@ -412,14 +412,14 @@ export default function FavoritesPage() {
                 onChange={e => setBulkText(e.target.value)}
                 placeholder={"Inception\nBreaking Bad\nAttack on Titan\n..."}
                 rows={4}
-                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-500 resize-none"
+                className="flex-1 bg-[#f5f3ff] border border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd] resize-none"
               />
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleBulkImport}
                 disabled={bulkLoading || !bulkText.trim()}
-                className="px-4 py-2 text-sm bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-100 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm bg-[#e9e4f5] hover:bg-[#ddd8ee] disabled:opacity-40 disabled:cursor-not-allowed text-[#2d2640] rounded-lg transition-colors"
               >
                 {bulkLoading ? 'Importing...' : 'Import'}
               </button>

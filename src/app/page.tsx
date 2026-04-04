@@ -4,19 +4,29 @@ import { useState } from 'react';
 import ContentTypeSelector from '@/components/ContentTypeSelector';
 import VibeInput from '@/components/VibeInput';
 import RecommendationCard from '@/components/RecommendationCard';
+import Particles from '@/components/Particles';
 import { ContentType, Recommendation } from '@/types/index';
 
+type Screen = 'pick' | 'vibe' | 'result';
+
 export default function Home() {
+  const [screen, setScreen] = useState<Screen>('pick');
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handlePickType = (type: ContentType) => {
+    setSelectedType(type);
+    setError(null);
+    setRecommendation(null);
+    setScreen('vibe');
+  };
+
   const handleSubmit = async (vibe: string) => {
     if (!selectedType) return;
     setLoading(true);
     setError(null);
-    setRecommendation(null);
 
     try {
       const res = await fetch('/api/recommend', {
@@ -32,6 +42,7 @@ export default function Home() {
 
       const data = await res.json();
       setRecommendation(data);
+      setScreen('result');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -39,80 +50,103 @@ export default function Home() {
     }
   };
 
-  const step = !selectedType ? 1 : 2;
+  const startOver = () => {
+    setScreen('pick');
+    setSelectedType(null);
+    setRecommendation(null);
+    setError(null);
+  };
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a]">
-      <div className="mx-auto max-w-2xl px-6 py-16 flex flex-col gap-12">
+    <main className="min-h-[calc(100vh-57px)] relative overflow-hidden">
+      <Particles />
 
-        {/* Hero */}
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-white sm:text-5xl">
-            What&apos;s your{' '}
-            <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
-              vibe
-            </span>
-            ?
-          </h1>
-          <p className="mt-3 text-gray-500">
-            Tell us your mood and we&apos;ll find the perfect thing to watch.
-          </p>
-        </div>
+      <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-[calc(100vh-57px)]">
 
-        {/* Step 1: Content Type */}
-        <section className="flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold transition-all ${
-              selectedType ? 'bg-violet-500 text-white' : 'bg-white/10 text-gray-400'
-            }`}>
-              {selectedType ? '✓' : '1'}
-            </span>
-            <h2 className="font-semibold text-white">What do you want to watch?</h2>
-          </div>
-          <ContentTypeSelector selected={selectedType} onSelect={setSelectedType} />
-        </section>
-
-        {/* Step 2: Vibe Input */}
-        {step >= 2 && (
-          <section className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center gap-3">
-              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold transition-all ${
-                recommendation ? 'bg-violet-500 text-white' : 'bg-white/10 text-gray-400'
-              }`}>
-                {recommendation ? '✓' : '2'}
-              </span>
-              <h2 className="font-semibold text-white">Describe your vibe</h2>
+        {/* Screen 1: Pick content type */}
+        {screen === 'pick' && (
+          <div className="w-full flex flex-col items-center gap-8 animate-[fadeIn_0.4s_ease-out]">
+            <div className="text-center">
+              <h1 className="text-3xl sm:text-4xl font-bold text-[#2d2640]">
+                What are you in the mood for?
+              </h1>
+              <p className="mt-2 text-sm text-[#7c7291]">Pick one and we'll find something perfect.</p>
             </div>
-            <VibeInput onSubmit={handleSubmit} loading={loading} />
-          </section>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-300">
-            {error}
+            <ContentTypeSelector selected={null} onSelect={handlePickType} />
           </div>
         )}
 
-        {/* Result */}
-        {recommendation && (
-          <section className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-3">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500 text-sm font-bold text-white">
-                3
-              </span>
-              <h2 className="font-semibold text-white">Your recommendation</h2>
-            </div>
-            <RecommendationCard recommendation={recommendation} />
+        {/* Screen 2: Vibe input */}
+        {screen === 'vibe' && (
+          <div className="w-full flex flex-col items-center gap-6 animate-[fadeIn_0.4s_ease-out]">
             <button
-              onClick={() => { setRecommendation(null); setSelectedType(null); }}
-              className="self-center text-sm text-gray-500 hover:text-gray-300 transition-colors underline underline-offset-2"
+              onClick={() => setScreen('pick')}
+              className="self-start text-sm text-[#7c7291] hover:text-[#7c3aed] transition-colors flex items-center gap-1"
             >
-              Start over
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
             </button>
-          </section>
+
+            <div className="text-center">
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#2d2640]">
+                Describe your vibe
+              </h1>
+              <p className="mt-2 text-sm text-[#7c7291]">
+                Tell us how you're feeling and we'll match it.
+              </p>
+            </div>
+
+            <div className="w-full">
+              <VibeInput onSubmit={handleSubmit} loading={loading} />
+            </div>
+
+            {error && (
+              <div className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Screen 3: Recommendation result */}
+        {screen === 'result' && recommendation && (
+          <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out] py-8">
+            <div className="text-center mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#2d2640]">
+                Here's your pick
+              </h1>
+            </div>
+
+            <div className="w-full">
+              <RecommendationCard recommendation={recommendation} />
+            </div>
+
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => setScreen('vibe')}
+                className="px-5 py-2.5 text-sm border-2 border-[#e9e4f5] text-[#7c7291] hover:border-[#c4b5fd] hover:text-[#7c3aed] rounded-xl transition-all"
+              >
+                Try different vibe
+              </button>
+              <button
+                onClick={startOver}
+                className="px-5 py-2.5 text-sm bg-[#8b5cf6] text-white hover:bg-[#7c3aed] rounded-xl transition-all"
+              >
+                Start over
+              </button>
+            </div>
+          </div>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </main>
   );
 }

@@ -11,6 +11,8 @@ type AIResponse = {
   year?: string;
   searchQuery?: string;
   episodeInfo?: string;
+  actors?: string[];
+  imageSearchTerms?: string[];
 };
 
 const RATING_LABELS: Record<string, string> = {
@@ -101,6 +103,9 @@ export function buildRecommendationPrompt(
     'IMPORTANT: Prioritize content similar to what the user LOVED. AVOID anything similar to what they DISLIKED, paying attention to their stated reasons.',
     'Always explain WHY this specific recommendation fits the vibe.',
     '',
+    'For movies/tv/anime: include an "actors" array with 2-4 notable actors/voice actors in it.',
+    'Include an "imageSearchTerms" array with 3-4 search terms to find images that capture the vibe/aesthetic of this recommendation (e.g., "Inception cityscape scene", "Inception spinning top", "Inception zero gravity hallway").',
+    '',
     'Respond with ONLY a JSON object (no markdown, no extra text):',
     '{',
     '  "title": "...",',
@@ -108,7 +113,9 @@ export function buildRecommendationPrompt(
     '  "reasoning": "why this fits the vibe perfectly",',
     '  "year": "YYYY (for movies/tv/anime, omit for youtube)",',
     '  "searchQuery": "search string (youtube only)",',
-    '  "episodeInfo": "e.g. Start at Season 2 (tv/anime only, optional)"',
+    '  "episodeInfo": "e.g. Start at Season 2 (tv/anime only, optional)",',
+    '  "actors": ["Actor 1", "Actor 2"] (omit for youtube),',
+    '  "imageSearchTerms": ["scene description 1", "scene description 2", "scene description 3"]',
     '}',
   ].join('\n');
 }
@@ -173,6 +180,11 @@ export async function getRecommendation(
     actionLabel = 'Find on sflix.to';
   }
 
+  // Build image URLs from search terms using a free image proxy
+  const imageUrls: string[] = (ai.imageSearchTerms ?? []).map(
+    (term: string) => `https://source.unsplash.com/600x400/?${encodeURIComponent(term)}`
+  );
+
   return {
     title,
     type: contentType,
@@ -182,5 +194,7 @@ export async function getRecommendation(
     actionLabel,
     year: ai.year,
     episodeInfo: ai.episodeInfo,
+    actors: ai.actors,
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
   };
 }

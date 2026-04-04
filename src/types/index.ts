@@ -53,6 +53,8 @@ export interface Recommendation {
   actionUrl: string;
   actionLabel: string;
   thumbnailUrl?: string;
+  imageUrls?: string[];
+  actors?: string[];
   year?: string;
   episodeInfo?: string;
 }

@@ -28,9 +28,9 @@ export default function VibeInput({ onSubmit, loading }: Props) {
       <textarea
         value={vibe}
         onChange={(e) => setVibe(e.target.value)}
-        rows={4}
+        rows={3}
         placeholder="Describe your vibe... e.g., 'eating lunch, want something light and funny, ~20 mins'"
-        className="w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white placeholder-gray-500 focus:border-violet-500/60 focus:bg-white/8 focus:outline-none focus:ring-2 focus:ring-violet-500/30 transition-all"
+        className="w-full resize-none rounded-2xl border-2 border-[#e9e4f5] bg-white px-4 py-3 text-[#2d2640] placeholder-[#b8b0c8] focus:border-[#c4b5fd] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]/30 transition-all text-sm sm:text-base"
       />
 
       <div className="flex flex-wrap gap-2">
@@ -38,7 +38,7 @@ export default function VibeInput({ onSubmit, loading }: Props) {
           <button
             key={example}
             onClick={() => setVibe(example)}
-            className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-gray-400 hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-300 transition-all"
+            className="rounded-full border border-[#e9e4f5] bg-white px-3 py-1.5 text-xs text-[#7c7291] hover:border-[#c4b5fd] hover:bg-[#f3f0ff] hover:text-[#7c3aed] transition-all"
           >
             {example}
           </button>
@@ -48,7 +48,7 @@ export default function VibeInput({ onSubmit, loading }: Props) {
       <button
         onClick={handleSubmit}
         disabled={!vibe.trim() || loading}
-        className="flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-8 py-4 font-semibold text-white transition-all hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-violet-500"
+        className="flex items-center justify-center gap-2 rounded-2xl bg-[#8b5cf6] px-8 py-3.5 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#c4b5fd] text-sm sm:text-base"
       >
         {loading ? (
           <>
@@ -59,7 +59,7 @@ export default function VibeInput({ onSubmit, loading }: Props) {
             Finding your vibe...
           </>
         ) : (
-          'Check My Vibe ✨'
+          'Check My Vibe'
         )}
       </button>
     </div>
