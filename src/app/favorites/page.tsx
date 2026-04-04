@@ -30,6 +30,7 @@ export default function FavoritesPage() {
   const [malUsername, setMalUsername] = useState('');
   const [malLoading, setMalLoading] = useState(false);
   const [malMessage, setMalMessage] = useState('');
+  const [lastMalUser, setLastMalUser] = useState('');
 
   // Letterboxd import state
   const [lbCsv, setLbCsv] = useState('');
@@ -138,7 +139,32 @@ export default function FavoritesPage() {
         setMalMessage(data.error || 'Import failed');
       } else {
         setMalMessage(data.message);
+        setLastMalUser(malUsername.trim());
         setMalUsername('');
+        fetchFavorites();
+      }
+    } catch {
+      setMalMessage('Network error — try again');
+    }
+    setMalLoading(false);
+    setTimeout(() => setMalMessage(''), 5000);
+  }
+
+  async function handleMALSync() {
+    if (!lastMalUser) return;
+    setMalLoading(true);
+    setMalMessage('Syncing...');
+    try {
+      const res = await fetch('/api/imports/mal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: lastMalUser }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMalMessage(data.error || 'Sync failed');
+      } else {
+        setMalMessage(data.message);
         fetchFavorites();
       }
     } catch {
@@ -243,7 +269,7 @@ export default function FavoritesPage() {
         ))}
       </div>
 
-      {/* Grid */}
+      {/* Grid — split by watched status */}
       {loading ? (
         <div className="text-center text-[#b8b0c8] py-16">Loading...</div>
       ) : favorites.length === 0 ? (
@@ -251,13 +277,39 @@ export default function FavoritesPage() {
           <p className="text-lg mb-2">No favorites yet</p>
           <p className="text-sm">Add some using the button above or the import section below.</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-12">
-          {favorites.map(fav => (
-            <FavoriteCard key={fav.id} favorite={fav} rating={ratings[fav.id]} onDelete={handleDelete} onRate={handleRate} />
-          ))}
-        </div>
-      )}
+      ) : (() => {
+        const watched = favorites.filter(f => {
+          try {
+            const meta = f.metadata ? JSON.parse(f.metadata) : null;
+            return meta?.status === 'completed';
+          } catch { return false; }
+        });
+        const unwatched = favorites.filter(f => !watched.includes(f));
+        return (
+          <div className="space-y-8 mb-12">
+            {unwatched.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-[#7c7291] mb-3 uppercase tracking-wider">Haven&apos;t watched</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {unwatched.map(fav => (
+                    <FavoriteCard key={fav.id} favorite={fav} rating={ratings[fav.id]} onDelete={handleDelete} onRate={handleRate} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {watched.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-[#7c7291] mb-3 uppercase tracking-wider">Watched</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {watched.map(fav => (
+                    <FavoriteCard key={fav.id} favorite={fav} rating={ratings[fav.id]} onDelete={handleDelete} onRate={handleRate} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Import Section */}
       <div className="mt-12 border-t border-[#e9e4f5] pt-8 space-y-10">
@@ -268,9 +320,18 @@ export default function FavoritesPage() {
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">🎌</span>
             <h3 className="text-sm font-semibold text-[#2d2640]">MyAnimeList</h3>
+            {lastMalUser && (
+              <button
+                onClick={handleMALSync}
+                disabled={malLoading}
+                className="ml-auto px-3 py-1 text-[10px] bg-[#f5f3ff] hover:bg-[#e9e4f5] text-[#7c3aed] border border-[#e9e4f5] rounded-lg transition-colors disabled:opacity-40"
+              >
+                {malLoading ? 'Syncing...' : `Sync ${lastMalUser}`}
+              </button>
+            )}
           </div>
           <p className="text-xs text-[#7c7291] mb-3">
-            Enter your MAL username to auto-import your anime list. Your list must be set to public.
+            Enter your MAL username to import your full anime list (up to 1000). Your list must be set to public.
           </p>
           <div className="flex gap-3 items-center">
             <input

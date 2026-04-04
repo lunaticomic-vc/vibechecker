@@ -187,9 +187,9 @@ export async function getRecommendation(
     actionLabel = 'Find on sflix.to';
   }
 
-  // Build image URLs from search terms using a free image proxy
+  // Build image search URLs using Google image thumbnails via title
   const imageUrls: string[] = (ai.imageSearchTerms ?? []).map(
-    (term: string) => `https://source.unsplash.com/600x400/?${encodeURIComponent(term)}`
+    (term: string) => `https://loremflickr.com/400/300/${encodeURIComponent(term)}`
   );
 
   // Fetch Reddit insights for non-YouTube content

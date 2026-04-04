@@ -18,7 +18,7 @@ export async function fetchMALAnimeList(
     return fetchViaJikan(username, options);
   }
 
-  const limit = options?.limit ?? 100;
+  const limit = options?.limit ?? 1000;
   const results: { title: string; mal_id: number; image_url: string; episodes: number | null; score: number; status: string }[] = [];
   let offset = 0;
 
