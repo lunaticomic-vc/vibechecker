@@ -20,7 +20,7 @@ export default function Home() {
     setSelectedType(type);
     setError(null);
     setRecommendation(null);
-    setScreen('vibe');
+    setTimeout(() => setScreen('vibe'), 150);
   };
 
   const handleSubmit = async (vibe: string) => {
@@ -58,83 +58,67 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-57px)] relative overflow-hidden">
+    <main className="min-h-screen relative overflow-hidden">
       <Particles />
 
-      <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-[calc(100vh-57px)]">
+      <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen">
 
-        {/* Screen 1: Pick content type */}
+        {/* Screen 1: Just the four squares */}
         {screen === 'pick' && (
-          <div className="w-full flex flex-col items-center gap-8 animate-[fadeIn_0.4s_ease-out]">
-            <div className="text-center">
-              <h1 className="text-3xl sm:text-4xl font-bold text-[#2d2640]">
-                What are you in the mood for?
-              </h1>
-              <p className="mt-2 text-sm text-[#7c7291]">Pick one and we'll find something perfect.</p>
-            </div>
+          <div className="animate-[fadeIn_0.5s_ease-out]">
             <ContentTypeSelector selected={null} onSelect={handlePickType} />
           </div>
         )}
 
         {/* Screen 2: Vibe input */}
         {screen === 'vibe' && (
-          <div className="w-full flex flex-col items-center gap-6 animate-[fadeIn_0.4s_ease-out]">
+          <div className="w-full flex flex-col items-center gap-8 animate-[fadeIn_0.4s_ease-out]">
             <button
               onClick={() => setScreen('pick')}
-              className="self-start text-sm text-[#7c7291] hover:text-[#7c3aed] transition-colors flex items-center gap-1"
+              className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e9e4f5] text-[#7c7291] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
-              Back
             </button>
 
-            <div className="text-center">
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#2d2640]">
-                Describe your vibe
-              </h1>
-              <p className="mt-2 text-sm text-[#7c7291]">
-                Tell us how you're feeling and we'll match it.
-              </p>
-            </div>
-
-            <div className="w-full">
+            <div className="w-full max-w-sm">
               <VibeInput onSubmit={handleSubmit} loading={loading} />
             </div>
 
             {error && (
-              <div className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="w-full max-w-sm rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-600">
                 {error}
               </div>
             )}
           </div>
         )}
 
-        {/* Screen 3: Recommendation result */}
+        {/* Screen 3: Recommendation */}
         {screen === 'result' && recommendation && (
-          <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out] py-8">
-            <div className="text-center mb-2">
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#2d2640]">
-                Here's your pick
-              </h1>
-            </div>
-
-            <div className="w-full">
+          <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out] py-16">
+            <div className="w-full max-w-sm">
               <RecommendationCard recommendation={recommendation} />
             </div>
 
             <div className="flex gap-3 mt-2">
               <button
                 onClick={() => setScreen('vibe')}
-                className="px-5 py-2.5 text-sm border-2 border-[#e9e4f5] text-[#7c7291] hover:border-[#c4b5fd] hover:text-[#7c3aed] rounded-xl transition-all"
+                className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e9e4f5] text-[#7c7291] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
+                title="Try different vibe"
               >
-                Try different vibe
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
               </button>
               <button
                 onClick={startOver}
-                className="px-5 py-2.5 text-sm bg-[#8b5cf6] text-white hover:bg-[#7c3aed] rounded-xl transition-all"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-[#8b5cf6] text-white hover:bg-[#7c3aed] transition-all shadow-md shadow-purple-200/50"
+                title="Start over"
               >
-                Start over
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" />
+                </svg>
               </button>
             </div>
           </div>
@@ -143,8 +127,8 @@ export default function Home() {
 
       <style jsx>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(16px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: scale(0.97); }
+          to { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </main>
