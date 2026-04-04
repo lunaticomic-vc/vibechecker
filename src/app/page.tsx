@@ -5,13 +5,14 @@ import ContentTypeSelector from '@/components/ContentTypeSelector';
 import VibeInput from '@/components/VibeInput';
 import RecommendationCard from '@/components/RecommendationCard';
 import Particles from '@/components/Particles';
-import { ContentType, Recommendation } from '@/types/index';
+import { ContentType, DiscoveryMode, Recommendation } from '@/types/index';
 
-type Screen = 'pick' | 'vibe' | 'result';
+type Screen = 'pick' | 'discover' | 'vibe' | 'result';
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>('pick');
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
+  const [discoveryMode, setDiscoveryMode] = useState<DiscoveryMode>('something_new');
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +21,12 @@ export default function Home() {
     setSelectedType(type);
     setError(null);
     setRecommendation(null);
-    setTimeout(() => setScreen('vibe'), 150);
+    setTimeout(() => setScreen('discover'), 150);
+  };
+
+  const handleDiscovery = (mode: DiscoveryMode) => {
+    setDiscoveryMode(mode);
+    setScreen('vibe');
   };
 
   const handleSubmit = async (vibe: string) => {
@@ -32,7 +38,7 @@ export default function Home() {
       const res = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentType: selectedType, vibe }),
+        body: JSON.stringify({ contentType: selectedType, vibe, discoveryMode }),
       });
 
       if (!res.ok) {
@@ -57,6 +63,9 @@ export default function Home() {
     setError(null);
   };
 
+  const libraryLabel = selectedType === 'youtube' ? 'from your subscriptions' : 'from your library';
+  const newLabel = selectedType === 'youtube' ? 'new channels' : 'something new';
+
   return (
     <main className="min-h-screen relative overflow-hidden">
       <Particles />
@@ -70,12 +79,43 @@ export default function Home() {
           </div>
         )}
 
-        {/* Screen 2: Vibe input */}
+        {/* Screen 2: New or from library */}
+        {screen === 'discover' && (
+          <div className="w-full flex flex-col items-center gap-6 animate-[fadeIn_0.4s_ease-out]">
+            <button
+              onClick={() => setScreen('pick')}
+              className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            <p className="text-sm text-[#b0a8c4] tracking-wide">feel like starting something new?</p>
+
+            <div className="flex flex-col gap-3 w-full max-w-[260px]">
+              <button
+                onClick={() => handleDiscovery('from_library')}
+                className="py-4 px-6 rounded-2xl border-2 border-[#e8e3f3]/80 bg-white/40 text-[#7c7291] text-sm hover:bg-white/70 hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all duration-300"
+              >
+                {libraryLabel}
+              </button>
+              <button
+                onClick={() => handleDiscovery('something_new')}
+                className="py-4 px-6 rounded-2xl border-2 border-[#e8e3f3]/80 bg-white/40 text-[#7c7291] text-sm hover:bg-white/70 hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all duration-300"
+              >
+                {newLabel}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Screen 3: Vibe input */}
         {screen === 'vibe' && (
           <div className="w-full flex flex-col items-center gap-8 animate-[fadeIn_0.4s_ease-out]">
             <button
-              onClick={() => setScreen('pick')}
-              className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e9e4f5] text-[#7c7291] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
+              onClick={() => setScreen('discover')}
+              className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -94,7 +134,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Screen 3: Recommendation */}
+        {/* Screen 4: Recommendation */}
         {screen === 'result' && recommendation && (
           <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out] py-16">
             <div className="w-full max-w-sm">
@@ -104,7 +144,7 @@ export default function Home() {
             <div className="flex gap-3 mt-2">
               <button
                 onClick={() => setScreen('vibe')}
-                className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e9e4f5] text-[#7c7291] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
+                className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
                 title="Try different vibe"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

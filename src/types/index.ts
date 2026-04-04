@@ -45,6 +45,14 @@ export const RATING_OPTIONS: { value: RatingValue; label: string; emoji: string;
   { value: 'not_my_thing', label: 'Not my thing', emoji: '👎', hasReasoning: true },
 ];
 
+export type DiscoveryMode = 'from_library' | 'something_new';
+
+export interface RedditInsight {
+  subreddit: string;
+  comment: string;
+  score: number;
+}
+
 export interface Recommendation {
   title: string;
   type: ContentType;
@@ -57,6 +65,7 @@ export interface Recommendation {
   actors?: string[];
   year?: string;
   episodeInfo?: string;
+  redditInsights?: RedditInsight[];
 }
 
 export interface VibeRequest {

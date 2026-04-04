@@ -1,14 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Recommendation } from '@/types/index';
-
-const TYPE_LABELS: Record<string, string> = {
-  movie: 'Movie',
-  tv: 'TV Show',
-  youtube: 'YouTube',
-  anime: 'Anime',
-};
+import FloatingCircle from '@/components/FloatingCircle';
 
 const TYPE_COLORS: Record<string, string> = {
   movie: 'bg-[#f3f0ff] text-[#7c3aed] border-[#c4b5fd]',
@@ -21,81 +14,72 @@ interface Props {
   recommendation: Recommendation;
 }
 
+// Position circles around the card
+function getCirclePositions(count: number): { x: number; y: number }[] {
+  const positions = [
+    { x: -50, y: -30 },
+    { x: 110, y: -20 },
+    { x: -40, y: 80 },
+    { x: 120, y: 70 },
+    { x: 30, y: -45 },
+    { x: 80, y: 100 },
+  ];
+  return positions.slice(0, count);
+}
+
 export default function RecommendationCard({ recommendation }: Props) {
-  const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo } = recommendation;
-  const [currentImg, setCurrentImg] = useState(0);
+  const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights } = recommendation;
 
   const allImages = [
     ...(thumbnailUrl ? [thumbnailUrl] : []),
     ...(imageUrls ?? []),
   ];
 
-  return (
-    <div className="rounded-2xl border-2 border-[#e9e4f5] bg-white overflow-hidden shadow-sm">
-      {/* Image carousel */}
-      {allImages.length > 0 && (
-        <div className="relative">
-          <div className="h-48 sm:h-56 w-full overflow-hidden bg-[#f5f3ff]">
-            <img
-              src={allImages[currentImg]}
-              alt={title}
-              className="h-full w-full object-cover transition-opacity duration-300"
-            />
-          </div>
-          {allImages.length > 1 && (
-            <>
-              {/* Dots */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-                {allImages.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentImg(i)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      i === currentImg ? 'bg-white scale-110 shadow' : 'bg-white/50'
-                    }`}
-                  />
-                ))}
-              </div>
-              {/* Arrows */}
-              <button
-                onClick={() => setCurrentImg(i => (i - 1 + allImages.length) % allImages.length)}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/70 hover:bg-white text-[#2d2640] transition-all text-sm"
-              >
-                ‹
-              </button>
-              <button
-                onClick={() => setCurrentImg(i => (i + 1) % allImages.length)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white/70 hover:bg-white text-[#2d2640] transition-all text-sm"
-              >
-                ›
-              </button>
-            </>
-          )}
-        </div>
-      )}
+  const circlePositions = getCirclePositions(allImages.length);
 
-      <div className="p-5 flex flex-col gap-3">
+  return (
+    <div className="relative w-full">
+      {/* Floating image circles — positioned as percentages */}
+      <div className="absolute inset-0 pointer-events-auto" style={{ zIndex: 5 }}>
+        {allImages.map((src, i) => {
+          const pos = circlePositions[i];
+          if (!pos) return null;
+          return (
+            <FloatingCircle
+              key={i}
+              src={src}
+              alt={`${title} scene ${i + 1}`}
+              size={65 + (i === 0 ? 15 : 0)}
+              initialX={pos.x}
+              initialY={pos.y}
+              delay={i * 0.8}
+            />
+          );
+        })}
+      </div>
+
+      {/* Card content */}
+      <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/90 backdrop-blur-sm p-5 flex flex-col gap-2.5" style={{ maxHeight: 'calc(100vh - 200px)', overflow: 'hidden' }}>
         <div>
-          <h2 className="text-xl font-bold text-[#2d2640] leading-tight">{title}</h2>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-3 py-0.5 text-xs font-medium ${TYPE_COLORS[type] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-              {TYPE_LABELS[type] ?? type}
+          <h2 className="text-lg font-bold text-[#2d2640] leading-tight">{title}</h2>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium ${TYPE_COLORS[type] ?? ''}`}>
+              {type}
             </span>
-            {year && <span className="text-xs text-[#7c7291]">{year}</span>}
+            {year && <span className="text-[10px] text-[#7c7291]">{year}</span>}
             {episodeInfo && (
-              <span className="rounded-full border border-[#c4b5fd] bg-[#f5f3ff] px-3 py-0.5 text-xs text-[#8b5cf6]">
+              <span className="rounded-full border border-[#c4b5fd] bg-[#f5f3ff] px-2.5 py-0.5 text-[10px] text-[#8b5cf6]">
                 {episodeInfo}
               </span>
             )}
           </div>
         </div>
 
-        {/* Actors */}
         {actors && actors.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-[#7c7291]">Starring</span>
+          <div className="flex flex-wrap gap-1 items-center">
+            <span className="text-[9px] tracking-widest uppercase text-[#c8c2d6]">starring</span>
             {actors.map((actor, i) => (
-              <span key={i} className="text-xs text-[#2d2640] bg-[#f5f3ff] border border-[#e9e4f5] px-2 py-0.5 rounded-full">
+              <span key={i} className="text-[10px] text-[#5a5270] bg-[#f5f3ff] border border-[#e9e4f5] px-1.5 py-0.5 rounded-full">
                 {actor}
               </span>
             ))}
@@ -103,22 +87,34 @@ export default function RecommendationCard({ recommendation }: Props) {
         )}
 
         {description && (
-          <p className="text-sm text-[#7c7291] leading-relaxed">{description}</p>
+          <p className="text-xs text-[#7c7291] leading-relaxed line-clamp-2">{description}</p>
         )}
 
-        <div className="rounded-xl border border-[#d4e6d1] bg-[#f6faf5] p-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#6b9a65] mb-1.5">Why this fits your vibe</p>
-          <p className="text-sm italic text-[#4a7044] leading-relaxed">{reasoning}</p>
+        <div className="rounded-lg border border-[#d4e6d1] bg-[#f6faf5] p-3">
+          <p className="text-[9px] font-semibold uppercase tracking-widest text-[#6b9a65] mb-1">why this fits</p>
+          <p className="text-xs italic text-[#4a7044] leading-relaxed line-clamp-3">{reasoning}</p>
         </div>
+
+        {redditInsights && redditInsights.length > 0 && (
+          <div className="rounded-lg border border-[#e9e4f5] bg-[#faf8ff] p-3">
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1.5">what people say</p>
+            {redditInsights.slice(0, 2).map((insight, i) => (
+              <div key={i} className="text-[10px] text-[#5a5270] leading-relaxed mb-1 last:mb-0">
+                <span className="text-[9px] text-[#c4b5fd]">r/{insight.subreddit}</span>
+                {' '}&ldquo;{insight.comment.length > 120 ? insight.comment.substring(0, 120) + '...' : insight.comment}&rdquo;
+              </div>
+            ))}
+          </div>
+        )}
 
         <a
           href={actionUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-6 py-3 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd] text-sm"
+          className="flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-5 py-2.5 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] text-xs"
         >
           {actionLabel}
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </a>

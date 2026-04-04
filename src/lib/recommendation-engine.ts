@@ -2,7 +2,8 @@ import { getOpenAI } from '@/lib/openai';
 import { getAllFavorites } from '@/lib/favorites';
 import { getAllProgress } from '@/lib/progress';
 import { getAllRatings } from '@/lib/ratings';
-import type { ContentType, Favorite, WatchProgress, Rating, Recommendation } from '@/types/index';
+import { searchRedditForTitle } from '@/lib/reddit';
+import type { ContentType, DiscoveryMode, Favorite, WatchProgress, Rating, Recommendation } from '@/types/index';
 
 type AIResponse = {
   title: string;
@@ -27,7 +28,8 @@ export function buildRecommendationPrompt(
   contentType: ContentType,
   favorites: Favorite[],
   watchProgress: WatchProgress[],
-  ratings: Rating[]
+  ratings: Rating[],
+  discoveryMode: DiscoveryMode = 'something_new'
 ): string {
   const ratingsMap = new Map<number, Rating>();
   for (const r of ratings) ratingsMap.set(r.favorite_id, r);
@@ -97,6 +99,10 @@ export function buildRecommendationPrompt(
       ? `What they're currently watching:\n${progressSection}`
       : 'Nothing in their watch queue right now.',
     '',
+    discoveryMode === 'from_library'
+      ? `IMPORTANT: You MUST recommend something from the user's existing library/favorites listed above. Pick one that best fits the vibe. For YouTube, pick from their saved channels/videos.`
+      : `IMPORTANT: Recommend something NEW that the user has NOT seen/watched yet. Do NOT suggest anything already in their library above. For YouTube, suggest channels or creators they are NOT subscribed to.`,
+    '',
     `Your task: ${instructions[contentType]}`,
     '',
     'IMPORTANT: The recommendation MUST match the vibe — consider duration, intensity, genre, and mood.',
@@ -122,7 +128,8 @@ export function buildRecommendationPrompt(
 
 export async function getRecommendation(
   vibe: string,
-  contentType: ContentType
+  contentType: ContentType,
+  discoveryMode: DiscoveryMode = 'something_new'
 ): Promise<Recommendation> {
   const favorites = await getAllFavorites();
   const allProgress = await getAllProgress();
@@ -139,7 +146,7 @@ export async function getRecommendation(
     updated_at: p.updated_at,
   }));
 
-  const userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings);
+  const userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode);
 
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
@@ -185,6 +192,16 @@ export async function getRecommendation(
     (term: string) => `https://source.unsplash.com/600x400/?${encodeURIComponent(term)}`
   );
 
+  // Fetch Reddit insights for non-YouTube content
+  let redditInsights;
+  if (contentType !== 'youtube') {
+    try {
+      redditInsights = await searchRedditForTitle(title, contentType);
+    } catch {
+      // Reddit search is best-effort
+    }
+  }
+
   return {
     title,
     type: contentType,
@@ -196,5 +213,6 @@ export async function getRecommendation(
     episodeInfo: ai.episodeInfo,
     actors: ai.actors,
     imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+    redditInsights: redditInsights && redditInsights.length > 0 ? redditInsights : undefined,
   };
 }

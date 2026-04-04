@@ -7,6 +7,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -18,66 +19,117 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
+  // Dithered moon canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const size = 52;
+    canvas.width = size;
+    canvas.height = size;
+    let animId: number;
+    let time = 0;
+
+    function draw() {
+      const s = size;
+      const cx = s / 2;
+      const cy = s / 2;
+      const r = s / 2 - 2;
+
+      ctx!.clearRect(0, 0, s, s);
+      time += 0.015;
+
+      const isActive = hovering || open;
+
+      for (let y = 0; y < s; y += 2) {
+        for (let x = 0; x < s; x += 2) {
+          const dx = x - cx;
+          const dy = y - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist > r + 1) continue;
+
+          // Crescent: darken the right side
+          const crescentFade = Math.max(0, Math.min(1, (dx + r * 0.3) / (r * 1.2)));
+
+          // Surface waves
+          const nx = x / s;
+          const ny = y / s;
+          const wave = Math.sin(nx * 10 + time * 2) * 0.1
+            + Math.sin(ny * 12 - time * 1.5) * 0.08
+            + Math.sin((nx + ny) * 8 + time) * 0.06;
+
+          // Light direction (top-left)
+          const lightAngle = Math.atan2(dy, dx);
+          const lightFade = (Math.cos(lightAngle + 2.4) + 1) * 0.5;
+
+          const base = 0.6 + lightFade * 0.3 + crescentFade * 0.1 + wave;
+          const glow = isActive ? 0.15 : 0;
+
+          const dither = (Math.random() - 0.5) * 0.12;
+          const val = Math.max(0, Math.min(1, base + dither + glow));
+
+          // Edge softness
+          const edgeFade = dist > r - 1.5 ? Math.max(0, (r + 1 - dist) / 2.5) : 1;
+
+          // Colors: lilac-grey moon
+          const rr = Math.round(195 + val * 55);
+          const gg = Math.round(185 + val * 60);
+          const bb = Math.round(215 + val * 38);
+          const alpha = edgeFade * (isActive ? 1 : 0.85);
+
+          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${alpha})`;
+          ctx!.fillRect(x, y, 2, 2);
+
+          // Crater dots
+          const craterDist1 = Math.sqrt((x - cx + 4) ** 2 + (y - cy - 5) ** 2);
+          const craterDist2 = Math.sqrt((x - cx - 6) ** 2 + (y - cy + 3) ** 2);
+          const craterDist3 = Math.sqrt((x - cx + 2) ** 2 + (y - cy + 8) ** 2);
+
+          if ((craterDist1 < 4 || craterDist2 < 3 || craterDist3 < 2.5) && Math.random() > 0.5) {
+            ctx!.fillStyle = `rgba(170, 160, 195, ${0.15 * edgeFade})`;
+            ctx!.fillRect(x, y, 2, 2);
+          }
+        }
+      }
+
+      // Shine halo when active
+      if (isActive) {
+        const gradient = ctx!.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 1.8);
+        gradient.addColorStop(0, 'rgba(196, 181, 253, 0.15)');
+        gradient.addColorStop(0.5, 'rgba(196, 181, 253, 0.06)');
+        gradient.addColorStop(1, 'rgba(196, 181, 253, 0)');
+        ctx!.fillStyle = gradient;
+        ctx!.fillRect(0, 0, s, s);
+      }
+
+      animId = requestAnimationFrame(draw);
+    }
+
+    draw();
+    return () => cancelAnimationFrame(animId);
+  }, [hovering, open]);
+
   return (
     <div ref={menuRef} className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center pt-5 pointer-events-none">
-      {/* Moon orb */}
+      {/* Moon */}
       <button
         onClick={() => setOpen(v => !v)}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
-        className="pointer-events-auto relative w-12 h-12 rounded-full transition-all duration-700 ease-out focus:outline-none group"
+        className="pointer-events-auto relative w-[52px] h-[52px] rounded-full focus:outline-none"
         aria-label="Menu"
+        style={{
+          filter: hovering || open ? 'drop-shadow(0 0 20px rgba(196,181,253,0.5))' : 'drop-shadow(0 0 8px rgba(196,181,253,0.15))',
+          transition: 'filter 0.7s ease',
+        }}
       >
-        {/* Moon body */}
-        <span
-          className="absolute inset-0 rounded-full transition-all duration-700"
-          style={{
-            background: `radial-gradient(circle at 35% 35%,
-              ${hovering || open ? '#f5f0ff' : '#ebe5f5'} 0%,
-              ${hovering || open ? '#e0d6f5' : '#d8d0e8'} 40%,
-              ${hovering || open ? '#c8baed' : '#c4bbd8'} 70%,
-              ${hovering || open ? '#b5a3e0' : '#b0a6c8'} 100%)`,
-            boxShadow: hovering || open
-              ? '0 0 40px rgba(196,181,253,0.7), 0 0 80px rgba(196,181,253,0.3), 0 0 120px rgba(196,181,253,0.15), inset -3px -3px 8px rgba(139,92,246,0.15)'
-              : '0 0 15px rgba(196,181,253,0.2), 0 0 30px rgba(196,181,253,0.08), inset -3px -3px 8px rgba(139,92,246,0.1)',
-          }}
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full rounded-full"
         />
-
-        {/* Craters */}
-        <span className="absolute top-2 left-3 w-2 h-2 rounded-full opacity-[0.08]" style={{ background: '#8b5cf6' }} />
-        <span className="absolute top-5 right-3 w-1.5 h-1.5 rounded-full opacity-[0.06]" style={{ background: '#8b5cf6' }} />
-        <span className="absolute bottom-3 left-5 w-1 h-1 rounded-full opacity-[0.07]" style={{ background: '#8b5cf6' }} />
-
-        {/* Shine glow on hover */}
-        <span
-          className="absolute inset-[-8px] rounded-full transition-all duration-700 pointer-events-none"
-          style={{
-            opacity: hovering || open ? 1 : 0,
-            background: 'radial-gradient(circle, rgba(196,181,253,0.3) 0%, rgba(196,181,253,0.1) 40%, transparent 70%)',
-          }}
-        />
-
-        {/* Outer pulse ring */}
-        <span
-          className="absolute inset-[-4px] rounded-full animate-[moonPulse_4s_ease-in-out_infinite] pointer-events-none"
-          style={{
-            border: '1px solid rgba(196,181,253,0.15)',
-          }}
-        />
-
-        {/* Sparkle on hover */}
-        <span
-          className="absolute -top-1 -right-1 transition-all duration-500 pointer-events-none"
-          style={{
-            opacity: hovering || open ? 1 : 0,
-            transform: hovering || open ? 'scale(1)' : 'scale(0)',
-          }}
-        >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M5 0L5 10M0 5L10 5" stroke="rgba(196,181,253,0.6)" strokeWidth="1" />
-            <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" stroke="rgba(196,181,253,0.3)" strokeWidth="0.5" />
-          </svg>
-        </span>
       </button>
 
       {/* Nav dropdown */}
@@ -87,36 +139,17 @@ export default function Header() {
         }`}
       >
         <div className="bg-white/85 backdrop-blur-xl border border-[#e9e4f5] rounded-2xl px-6 py-3 shadow-lg shadow-purple-100/20 flex flex-col gap-0.5">
-          <Link
-            href="/"
-            onClick={() => setOpen(false)}
-            className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center"
-          >
+          <Link href="/" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
             Home
           </Link>
-          <Link
-            href="/favorites"
-            onClick={() => setOpen(false)}
-            className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center"
-          >
+          <Link href="/favorites" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
             Favorites
           </Link>
-          <Link
-            href="/progress"
-            onClick={() => setOpen(false)}
-            className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center"
-          >
+          <Link href="/progress" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
             Progress
           </Link>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes moonPulse {
-          0%, 100% { transform: scale(1); opacity: 0.4; }
-          50% { transform: scale(1.6); opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 }
