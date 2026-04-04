@@ -1,7 +1,7 @@
 import type { ContentType } from '@/types/index';
 
-export function buildSflixUrl(title: string, _type: ContentType | 'movie' | 'tv'): string {
-  return `https://sflix.to/search/${encodeURIComponent(title)}`;
+export function buildSflixUrl(title: string): string {
+  return `https://sflix.ps/search/${encodeURIComponent(title)}`;
 }
 
 export function buildYouTubeSearchUrl(query: string): string {

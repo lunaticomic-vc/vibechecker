@@ -184,8 +184,8 @@ export async function getRecommendation(
     actionUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
     actionLabel = 'Search on YouTube';
   } else {
-    actionUrl = `https://sflix.to/search?q=${encodeURIComponent(title)}`;
-    actionLabel = 'Find on sflix.to';
+    actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
+    actionLabel = 'Watch on sflix';
   }
 
   // Fetch real images from TMDB
