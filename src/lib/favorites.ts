@@ -1,14 +1,26 @@
 import { db } from '@/lib/db';
 import type { ContentType, Favorite } from '@/types/index';
 
-export async function getAllFavorites(type?: ContentType): Promise<Favorite[]> {
+export async function getAllFavorites(type?: ContentType, limit?: number, offset?: number): Promise<Favorite[]> {
   const client = await db();
+  const lim = limit ?? 10000;
+  const off = offset ?? 0;
   if (type) {
-    const result = await client.execute({ sql: 'SELECT * FROM favorites WHERE type = ? ORDER BY created_at DESC', args: [type] });
+    const result = await client.execute({ sql: 'SELECT * FROM favorites WHERE type = ? ORDER BY created_at DESC LIMIT ? OFFSET ?', args: [type, lim, off] });
     return result.rows as unknown as Favorite[];
   }
-  const result = await client.execute('SELECT * FROM favorites ORDER BY created_at DESC');
+  const result = await client.execute({ sql: 'SELECT * FROM favorites ORDER BY created_at DESC LIMIT ? OFFSET ?', args: [lim, off] });
   return result.rows as unknown as Favorite[];
+}
+
+export async function countFavorites(type?: ContentType): Promise<number> {
+  const client = await db();
+  if (type) {
+    const result = await client.execute({ sql: 'SELECT count(*) as cnt FROM favorites WHERE type = ?', args: [type] });
+    return Number((result.rows[0] as unknown as { cnt: number }).cnt);
+  }
+  const result = await client.execute('SELECT count(*) as cnt FROM favorites');
+  return Number((result.rows[0] as unknown as { cnt: number }).cnt);
 }
 
 export async function addFavorite(data: {

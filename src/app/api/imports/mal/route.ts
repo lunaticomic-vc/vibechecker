@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     }
 
     log.ai('Fetching MAL list', `user="${username.trim()}" via ${process.env.MAL_CLIENT_ID ? 'official API' : 'Jikan'}`);
-    const animeList = await fetchMALAnimeList(username.trim(), { limit: 1000 });
+    const animeList = await fetchMALAnimeList(username.trim());
     log.success(`Fetched ${animeList.length} anime from MAL`);
 
     if (animeList.length === 0) {

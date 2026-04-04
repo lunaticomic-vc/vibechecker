@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllFavorites, addFavorite, removeFavorite } from '@/lib/favorites';
+import { getAllFavorites, addFavorite, removeFavorite, countFavorites } from '@/lib/favorites';
 import { log } from '@/lib/logger';
 import type { ContentType } from '@/types/index';
 
 export async function GET(request: NextRequest) {
   const type = request.nextUrl.searchParams.get('type') as ContentType | null;
-  log.api('GET', '/api/favorites', type ? `type=${type}` : 'all');
+  const limit = parseInt(request.nextUrl.searchParams.get('limit') ?? '25');
+  const offset = parseInt(request.nextUrl.searchParams.get('offset') ?? '0');
+  log.api('GET', '/api/favorites', `type=${type ?? 'all'} limit=${limit} offset=${offset}`);
   try {
-    const favorites = await getAllFavorites(type ?? undefined);
-    log.success(`Fetched ${favorites.length} favorites`, type ?? 'all types');
-    return NextResponse.json(favorites);
+    const [favorites, total] = await Promise.all([
+      getAllFavorites(type ?? undefined, limit, offset),
+      countFavorites(type ?? undefined),
+    ]);
+    log.success(`Fetched ${favorites.length}/${total} favorites`, type ?? 'all types');
+    return NextResponse.json({ favorites, total, hasMore: offset + limit < total });
   } catch (err) {
     log.error('Failed to fetch favorites', err);
     return NextResponse.json({ error: 'Failed to fetch favorites' }, { status: 500 });

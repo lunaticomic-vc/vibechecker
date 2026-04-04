@@ -7,10 +7,11 @@ interface ProgressCardProps {
   onUpdate: () => void;
 }
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<string, string> = {
   watching: 'bg-[#f0f7ef] text-[#6b9a65] border border-[#a7c4a0]',
   completed: 'bg-[#f3f0ff] text-[#7c3aed] border border-[#c4b5fd]',
   dropped: 'bg-[#fef2f2] text-[#dc2626] border border-[#fca5a5]',
+  on_hold: 'bg-[#fefce8] text-[#a16207] border border-[#fde68a]',
 };
 
 const TYPE_COLORS = {

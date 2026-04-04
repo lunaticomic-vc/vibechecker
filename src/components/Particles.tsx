@@ -29,10 +29,9 @@ export default function Particles() {
 
       time += 0.003;
 
-      // The main wave edge that rocks back and forth — like the photo
-      // Shore runs vertically, sand left, water right
-      // The wave advances toward shore (left) then pulls back (right)
-      const waveCycle = Math.sin(time * 1.2) * 0.06 + Math.sin(time * 0.5) * 0.03;
+      // Shore runs vertically — sand left (~45%), water fills entire right side
+      // Wave edge rocks toward shore then pulls back
+      const waveCycle = Math.sin(time * 1.2) * 0.04 + Math.sin(time * 0.5) * 0.02;
 
       for (let y = 0; y < h; y += step) {
         // Shore edge — organic wavy line running top to bottom
@@ -42,8 +41,8 @@ export default function Particles() {
           Math.sin(ny * 7 - time * 0.6) * 0.02 +
           Math.sin(ny * 12 + time * 1.5) * 0.008;
 
-        // Base shore position ~55% from left, rocking with waveCycle
-        const shoreEdge = (0.55 + waveCycle + edgeWave) * w;
+        // Base shore position ~45% from left, rocking with waveCycle
+        const shoreEdge = (0.45 + waveCycle + edgeWave) * w;
 
         // Foam band width oscillates
         const foamWidth = w * (0.04 + Math.sin(ny * 5 + time * 2) * 0.015);
@@ -121,11 +120,11 @@ export default function Particles() {
             const dither = (Math.random() - 0.5) * 0.08;
             const v = Math.max(0, Math.min(1, val + dither));
 
-            // Light grey palette — gets slightly darker further from shore
-            const depth = waterNx * 0.25;
-            r = Math.round(218 - depth * 35 + v * 18);
-            g = Math.round(216 - depth * 35 + v * 18);
-            b = Math.round(225 - depth * 25 + v * 14);
+            // Light grey palette — subtle depth gradient
+            const depth = waterNx * 0.15;
+            r = Math.round(228 - depth * 25 + v * 15);
+            g = Math.round(226 - depth * 25 + v * 15);
+            b = Math.round(232 - depth * 18 + v * 12);
           }
 
           r = Math.max(0, Math.min(255, r));
