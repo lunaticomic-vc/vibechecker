@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Recommendation } from '@/types/index';
 import FloatingCircle from '@/components/FloatingCircle';
 
@@ -14,19 +15,21 @@ interface Props {
   recommendation: Recommendation;
 }
 
-// Position circles on left and right sides of the card
-function getCirclePositions(count: number): { x: number; y: number; side: 'left' | 'right' }[] {
-  const positions: { x: number; y: number; side: 'left' | 'right' }[] = [
-    { x: 0, y: 5, side: 'left' },
-    { x: 0, y: 0, side: 'right' },
-    { x: 0, y: 50, side: 'left' },
-    { x: 0, y: 45, side: 'right' },
+type AccordionSection = 'description' | 'vibe' | 'reddit' | null;
+
+function getCirclePositions(count: number): { y: number; side: 'left' | 'right' }[] {
+  const positions: { y: number; side: 'left' | 'right' }[] = [
+    { y: 5, side: 'left' },
+    { y: 0, side: 'right' },
+    { y: 50, side: 'left' },
+    { y: 45, side: 'right' },
   ];
   return positions.slice(0, count);
 }
 
 export default function RecommendationCard({ recommendation }: Props) {
   const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights } = recommendation;
+  const [openSection, setOpenSection] = useState<AccordionSection>(null);
 
   const allImages = [
     ...(thumbnailUrl ? [thumbnailUrl] : []),
@@ -35,9 +38,19 @@ export default function RecommendationCard({ recommendation }: Props) {
 
   const circlePositions = getCirclePositions(allImages.length);
 
+  function toggleSection(section: AccordionSection) {
+    setOpenSection(prev => prev === section ? null : section);
+  }
+
+  const chevron = (isOpen: boolean) => (
+    <svg className={`w-3 h-3 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+
   return (
     <div className="relative w-full">
-      {/* Floating image circles — left and right of card */}
+      {/* Floating circles — outside the card */}
       {allImages.map((src, i) => {
         const pos = circlePositions[i];
         if (!pos) return null;
@@ -45,10 +58,10 @@ export default function RecommendationCard({ recommendation }: Props) {
         return (
           <div
             key={i}
-            className="absolute"
+            className="absolute hidden sm:block"
             style={{
-              left: pos.side === 'left' ? `-${sz / 2 + 20}px` : 'auto',
-              right: pos.side === 'right' ? `-${sz / 2 + 20}px` : 'auto',
+              left: pos.side === 'left' ? `-${sz / 2 + 30}px` : 'auto',
+              right: pos.side === 'right' ? `-${sz / 2 + 30}px` : 'auto',
               top: `${pos.y}%`,
               zIndex: 5,
             }}
@@ -65,8 +78,9 @@ export default function RecommendationCard({ recommendation }: Props) {
         );
       })}
 
-      {/* Card content */}
-      <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/90 backdrop-blur-sm p-5 flex flex-col gap-2.5" style={{ maxHeight: 'calc(100vh - 200px)', overflow: 'hidden' }}>
+      {/* Card */}
+      <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/90 backdrop-blur-sm p-5 flex flex-col gap-3">
+        {/* Title + meta */}
         <div>
           <h2 className="text-lg font-bold text-[#2d2640] leading-tight">{title}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -82,6 +96,7 @@ export default function RecommendationCard({ recommendation }: Props) {
           </div>
         </div>
 
+        {/* Actors */}
         {actors && actors.length > 0 && (
           <div className="flex flex-wrap gap-1 items-center">
             <span className="text-[9px] tracking-widest uppercase text-[#c8c2d6]">starring</span>
@@ -93,27 +108,60 @@ export default function RecommendationCard({ recommendation }: Props) {
           </div>
         )}
 
-        {description && (
-          <p className="text-xs text-[#7c7291] leading-relaxed line-clamp-2">{description}</p>
-        )}
+        {/* Accordion sections */}
+        <div className="flex flex-col gap-1">
+          {/* Description */}
+          {description && (
+            <div className="rounded-lg border border-[#e9e4f5] overflow-hidden">
+              <button
+                onClick={() => toggleSection('description')}
+                className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#7c7291] hover:bg-[#faf8ff] transition-colors"
+              >
+                About {chevron(openSection === 'description')}
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ${openSection === 'description' ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+                <p className="px-3 pb-3 text-xs text-[#5a5270] leading-relaxed">{description}</p>
+              </div>
+            </div>
+          )}
 
-        <div className="rounded-lg border border-[#d4e6d1] bg-[#f6faf5] p-3">
-          <p className="text-[9px] font-semibold uppercase tracking-widest text-[#6b9a65] mb-1">why this fits</p>
-          <p className="text-xs italic text-[#4a7044] leading-relaxed line-clamp-3">{reasoning}</p>
+          {/* Why it fits */}
+          <div className="rounded-lg border border-[#d4e6d1] overflow-hidden">
+            <button
+              onClick={() => toggleSection('vibe')}
+              className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65] hover:bg-[#f6faf5] transition-colors"
+            >
+              Why this fits {chevron(openSection === 'vibe')}
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ${openSection === 'vibe' ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+              <p className="px-3 pb-3 text-xs italic text-[#4a7044] leading-relaxed">{reasoning}</p>
+            </div>
+          </div>
+
+          {/* Reddit */}
+          {redditInsights && redditInsights.length > 0 && (
+            <div className="rounded-lg border border-[#e9e4f5] overflow-hidden">
+              <button
+                onClick={() => toggleSection('reddit')}
+                className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] hover:bg-[#faf8ff] transition-colors"
+              >
+                What people say {chevron(openSection === 'reddit')}
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ${openSection === 'reddit' ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="px-3 pb-3 flex flex-col gap-2">
+                  {redditInsights.slice(0, 3).map((insight, i) => (
+                    <div key={i} className="text-[10px] text-[#5a5270] leading-relaxed">
+                      <span className="text-[9px] text-[#c4b5fd] font-medium">r/{insight.subreddit}</span>
+                      {' '}&ldquo;{insight.comment.length > 150 ? insight.comment.substring(0, 150) + '...' : insight.comment}&rdquo;
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {redditInsights && redditInsights.length > 0 && (
-          <div className="rounded-lg border border-[#e9e4f5] bg-[#faf8ff] p-3">
-            <p className="text-[9px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1.5">what people say</p>
-            {redditInsights.slice(0, 2).map((insight, i) => (
-              <div key={i} className="text-[10px] text-[#5a5270] leading-relaxed mb-1 last:mb-0">
-                <span className="text-[9px] text-[#c4b5fd]">r/{insight.subreddit}</span>
-                {' '}&ldquo;{insight.comment.length > 120 ? insight.comment.substring(0, 120) + '...' : insight.comment}&rdquo;
-              </div>
-            ))}
-          </div>
-        )}
-
+        {/* Action button */}
         <a
           href={actionUrl}
           target="_blank"

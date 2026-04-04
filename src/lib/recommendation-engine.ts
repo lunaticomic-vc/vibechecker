@@ -3,6 +3,7 @@ import { getAllFavorites } from '@/lib/favorites';
 import { getAllProgress } from '@/lib/progress';
 import { getAllRatings } from '@/lib/ratings';
 import { searchRedditForTitle } from '@/lib/reddit';
+import { searchTMDB } from '@/lib/tmdb';
 import type { ContentType, DiscoveryMode, Favorite, WatchProgress, Rating, Recommendation } from '@/types/index';
 
 type AIResponse = {
@@ -187,25 +188,20 @@ export async function getRecommendation(
     actionLabel = 'Find on sflix.to';
   }
 
-  // Fetch real images from TMDB (no API key needed for search, free tier)
+  // Fetch real images from TMDB
   let imageUrls: string[] = [];
+  let thumbnailUrl: string | undefined;
   if (contentType !== 'youtube') {
-    try {
-      const tmdbSearch = await fetch(`https://api.themoviedb.org/3/search/${contentType === 'anime' ? 'tv' : contentType}?query=${encodeURIComponent(title)}&include_adult=false&language=en-US&page=1`, {
-        headers: { 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjZTI0MTI2OGRiNWRmNGEwZjFhZTc1NjAxNGRiZWYzZiIsIm5iZiI6MTY5MDAwMDAwMC4wLCJzdWIiOiI2NjAwMDAwMDAwMDAwMDAwMDAiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.placeholder' },
-      });
-      // Fallback: use a free TMDB alternative
-    } catch {
-      // ignore
+    const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
+    const tmdb = await searchTMDB(title, tmdbType);
+    if (tmdb) {
+      if (tmdb.posterUrl) thumbnailUrl = tmdb.posterUrl;
+      imageUrls = tmdb.backdropUrls;
     }
   }
-  // Use imageSearchTerms as styled gradient fallback labels
-  const searchTerms = ai.imageSearchTerms ?? [title];
+  // Gradient fallbacks if no images found
   if (imageUrls.length === 0) {
-    // Generate gradient placeholder URLs that the FloatingCircle can detect
-    imageUrls = searchTerms.slice(0, 4).map(
-      (_: string, i: number) => `gradient:${i}:${encodeURIComponent(title)}`
-    );
+    imageUrls = [0, 1, 2, 3].map(i => `gradient:${i}:${encodeURIComponent(title)}`);
   }
 
   // Fetch Reddit insights for non-YouTube content
@@ -225,6 +221,7 @@ export async function getRecommendation(
     reasoning: ai.reasoning ?? '',
     actionUrl,
     actionLabel,
+    thumbnailUrl,
     year: ai.year,
     episodeInfo: ai.episodeInfo,
     actors: ai.actors,
