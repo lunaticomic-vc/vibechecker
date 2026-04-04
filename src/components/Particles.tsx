@@ -23,95 +23,100 @@ export default function Particles() {
     function draw() {
       const w = canvas!.width;
       const h = canvas!.height;
-      const imageData = ctx!.createImageData(w, h);
-      const data = imageData.data;
 
-      const step = window.innerWidth < 600 ? 4 : 3;
-      time += 0.004;
+      // Soft lilac-white background fill
+      ctx!.fillStyle = '#faf8ff';
+      ctx!.fillRect(0, 0, w, h);
 
-      for (let y = 0; y < h; y += step) {
-        for (let x = 0; x < w; x += step) {
+      time += 0.005;
+
+      // Shore line comes from the right side, waves rock left
+      const shoreX = w * 0.6 + Math.sin(time * 0.6) * w * 0.04;
+
+      // Draw dithered dot waves
+      const dotSpacing = window.innerWidth < 600 ? 6 : 5;
+      const maxDots = 40000;
+      let dotCount = 0;
+
+      for (let y = 0; y < h && dotCount < maxDots; y += dotSpacing) {
+        for (let x = 0; x < w && dotCount < maxDots; x += dotSpacing) {
           const nx = x / w;
           const ny = y / h;
 
-          // --- Top half: soft lilac-white gradient (sky/shore) ---
-          // --- Bottom half: grey dithered waves rocking like water ---
+          // Only draw dots in the water area (right side)
+          // Wave layers rocking left from the right
+          const waveOffset =
+            Math.sin(ny * 6 + time * 2.5) * 0.06 +
+            Math.sin(ny * 10 - time * 1.8) * 0.03 +
+            Math.sin(ny * 3 + time * 1.2) * 0.04 +
+            Math.sin((ny * 8 + nx * 4) + time * 3) * 0.02;
 
-          const shoreY = 0.45 + Math.sin(time * 0.8 + nx * 3) * 0.03; // undulating shore line
+          const localShore = (shoreX / w) + waveOffset;
 
-          let r, g, b;
+          if (nx < localShore - 0.08) continue; // skip non-water area
 
-          if (ny < shoreY - 0.05) {
-            // Sky / upper area: soft lilac to white
-            const t = ny / shoreY;
-            r = Math.round(248 - t * 8);
-            g = Math.round(246 - t * 12);
-            b = Math.round(255 - t * 2);
+          // How deep into water (0 = shore, 1 = far right)
+          const depth = Math.max(0, (nx - localShore) / (1 - localShore));
+          // Foam zone near shore
+          const foamZone = Math.max(0, 1 - Math.abs(nx - localShore) * 15);
 
-            // Subtle lilac bloom
-            const bloom = Math.sin(nx * 5 + time) * 0.5 + 0.5;
-            r = Math.round(r - bloom * 6);
-            g = Math.round(g - bloom * 10);
-          } else {
-            // Water area: rocking grey waves with dither
-            const waterNy = (ny - shoreY) / (1 - shoreY); // 0 at shore, 1 at bottom
+          // Wave motion for dots — rock back and forth
+          const waveDisplaceX =
+            Math.sin(ny * 5 - time * 2.2 + depth * 4) * (8 + depth * 12) +
+            Math.sin(ny * 12 + time * 3.5) * (2 + depth * 4) +
+            Math.cos(ny * 3 + time * 1.5) * 5;
 
-            // Multiple wave layers rocking back and forth
-            const wave1 = Math.sin(nx * 8 - time * 2.5 + waterNy * 3) * 0.5;
-            const wave2 = Math.sin(nx * 12 + time * 1.8 - waterNy * 5) * 0.3;
-            const wave3 = Math.sin((nx + waterNy) * 6 + time * 3.2) * 0.2;
-            const wave4 = Math.sin(nx * 20 - time * 4 + waterNy * 8) * 0.1; // fine ripples
-            const wave5 = Math.cos(nx * 5 + time * 1.2) * Math.sin(waterNy * 4 - time * 2) * 0.15;
+          const waveDisplaceY =
+            Math.sin(nx * 8 + time * 1.8) * (3 + depth * 5) +
+            Math.cos(ny * 6 - time * 2) * 2;
 
-            let wave = wave1 + wave2 + wave3 + wave4 + wave5;
-
-            // Shore foam: bright line near the shore
-            const foamDist = Math.max(0, 1 - waterNy * 8);
-            const foam = foamDist * (0.5 + 0.5 * Math.sin(nx * 15 - time * 3));
-            wave += foam * 0.4;
-
-            // Mouse ripple in water
-            if (mouse.active && mouse.y / h > shoreY - 0.1) {
-              const mx = mouse.x / w;
-              const my = mouse.y / h;
-              const dist = Math.sqrt((nx - mx) ** 2 + (ny - my) ** 2);
-              if (dist < 0.3) {
-                wave += Math.sin(dist * 35 - time * 6) * Math.max(0, 0.3 - dist) * 2;
-              }
-            }
-
-            const v = (wave + 1.5) / 3; // normalize roughly to 0-1
-
-            // Dither
-            const dither = (Math.random() - 0.5) * 0.07;
-            const val = Math.max(0, Math.min(1, v + dither));
-
-            // Water colors: light grey with lilac tint
-            // Deeper water = slightly darker
-            const depth = waterNy * 0.15;
-            r = Math.round(225 - depth * 40 + val * 25);
-            g = Math.round(222 - depth * 42 + val * 26);
-            b = Math.round(235 - depth * 30 + val * 18);
-          }
-
-          // Clamp
-          r = Math.max(0, Math.min(255, r));
-          g = Math.max(0, Math.min(255, g));
-          b = Math.max(0, Math.min(255, b));
-
-          for (let dy = 0; dy < step && y + dy < h; dy++) {
-            for (let dx = 0; dx < step && x + dx < w; dx++) {
-              const idx = ((y + dy) * w + (x + dx)) * 4;
-              data[idx] = r;
-              data[idx + 1] = g;
-              data[idx + 2] = b;
-              data[idx + 3] = 255;
+          // Mouse ripple
+          let mouseDisplaceX = 0;
+          let mouseDisplaceY = 0;
+          if (mouse.active) {
+            const dx = x - mouse.x;
+            const dy = y - mouse.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 150) {
+              const force = (150 - dist) / 150;
+              const ripple = Math.sin(dist * 0.08 - time * 8) * force * 12;
+              mouseDisplaceX = (dx / (dist || 1)) * ripple;
+              mouseDisplaceY = (dy / (dist || 1)) * ripple;
             }
           }
+
+          const drawX = x + waveDisplaceX + mouseDisplaceX;
+          const drawY = y + waveDisplaceY + mouseDisplaceY;
+
+          if (drawX < 0 || drawX > w || drawY < 0 || drawY > h) continue;
+
+          // Dot properties — light grey, varying opacity
+          const baseOpacity = foamZone > 0
+            ? 0.15 + foamZone * 0.35 // foam: brighter
+            : 0.08 + depth * 0.2; // water: gets denser deeper
+
+          // Dither: randomize opacity slightly per frame for shimmer
+          const shimmer = (Math.sin(time * 4 + x * 0.1 + y * 0.1) + 1) * 0.5;
+          const opacity = Math.min(0.5, baseOpacity + shimmer * 0.05);
+
+          // Dot size varies
+          const size = foamZone > 0
+            ? 1 + foamZone * 1.5 + Math.random() * 0.5
+            : 1 + depth * 0.8;
+
+          // Light grey with slight lilac tint
+          const grey = Math.round(170 - depth * 30 + shimmer * 15);
+          const bTint = Math.round(grey + 10); // slight blue/lilac push
+
+          ctx!.beginPath();
+          ctx!.arc(drawX, drawY, size, 0, Math.PI * 2);
+          ctx!.fillStyle = `rgba(${grey}, ${grey - 5}, ${bTint}, ${opacity})`;
+          ctx!.fill();
+
+          dotCount++;
         }
       }
 
-      ctx!.putImageData(imageData, 0, 0);
       animationId = requestAnimationFrame(draw);
     }
 
