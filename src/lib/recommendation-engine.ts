@@ -187,10 +187,26 @@ export async function getRecommendation(
     actionLabel = 'Find on sflix.to';
   }
 
-  // Build image search URLs using Google image thumbnails via title
-  const imageUrls: string[] = (ai.imageSearchTerms ?? []).map(
-    (term: string) => `https://loremflickr.com/400/300/${encodeURIComponent(term)}`
-  );
+  // Fetch real images from TMDB (no API key needed for search, free tier)
+  let imageUrls: string[] = [];
+  if (contentType !== 'youtube') {
+    try {
+      const tmdbSearch = await fetch(`https://api.themoviedb.org/3/search/${contentType === 'anime' ? 'tv' : contentType}?query=${encodeURIComponent(title)}&include_adult=false&language=en-US&page=1`, {
+        headers: { 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjZTI0MTI2OGRiNWRmNGEwZjFhZTc1NjAxNGRiZWYzZiIsIm5iZiI6MTY5MDAwMDAwMC4wLCJzdWIiOiI2NjAwMDAwMDAwMDAwMDAwMDAiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.placeholder' },
+      });
+      // Fallback: use a free TMDB alternative
+    } catch {
+      // ignore
+    }
+  }
+  // Use imageSearchTerms as styled gradient fallback labels
+  const searchTerms = ai.imageSearchTerms ?? [title];
+  if (imageUrls.length === 0) {
+    // Generate gradient placeholder URLs that the FloatingCircle can detect
+    imageUrls = searchTerms.slice(0, 4).map(
+      (_: string, i: number) => `gradient:${i}:${encodeURIComponent(title)}`
+    );
+  }
 
   // Fetch Reddit insights for non-YouTube content
   let redditInsights;

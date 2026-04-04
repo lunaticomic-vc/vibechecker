@@ -17,12 +17,10 @@ interface Props {
 // Position circles on left and right sides of the card
 function getCirclePositions(count: number): { x: number; y: number; side: 'left' | 'right' }[] {
   const positions: { x: number; y: number; side: 'left' | 'right' }[] = [
-    { x: 0, y: 10, side: 'left' },
-    { x: 0, y: 5, side: 'right' },
-    { x: 0, y: 45, side: 'left' },
-    { x: 0, y: 40, side: 'right' },
-    { x: 0, y: 75, side: 'left' },
-    { x: 0, y: 72, side: 'right' },
+    { x: 0, y: 5, side: 'left' },
+    { x: 0, y: 0, side: 'right' },
+    { x: 0, y: 50, side: 'left' },
+    { x: 0, y: 45, side: 'right' },
   ];
   return positions.slice(0, count);
 }
@@ -43,7 +41,7 @@ export default function RecommendationCard({ recommendation }: Props) {
       {allImages.map((src, i) => {
         const pos = circlePositions[i];
         if (!pos) return null;
-        const sz = 90 + (i === 0 ? 15 : 0);
+        const sz = 130 + (i === 0 ? 20 : 0);
         return (
           <div
             key={i}

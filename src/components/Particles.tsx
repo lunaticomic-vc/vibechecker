@@ -27,56 +27,81 @@ export default function Particles() {
       const data = imageData.data;
       const step = window.innerWidth < 600 ? 3 : 2;
 
-      time += 0.004;
+      time += 0.003;
 
-      // Shore line runs vertically — sand on left (~40%), water on right
-      // Viewed from above like a bird's eye view of a beach
+      // The main wave edge that rocks back and forth — like the photo
+      // Shore runs vertically, sand left, water right
+      // The wave advances toward shore (left) then pulls back (right)
+      const waveCycle = Math.sin(time * 1.2) * 0.06 + Math.sin(time * 0.5) * 0.03;
 
       for (let y = 0; y < h; y += step) {
-        // Shore line undulates per row
-        const shoreWave = Math.sin(y / h * 4 + time * 1.5) * 0.03
-          + Math.sin(y / h * 8 - time * 0.8) * 0.015
-          + Math.sin(y / h * 2 + time * 0.5) * 0.02;
-        const shoreX = (0.38 + shoreWave) * w;
+        // Shore edge — organic wavy line running top to bottom
+        const ny = y / h;
+        const edgeWave =
+          Math.sin(ny * 3.5 + time * 0.8) * 0.04 +
+          Math.sin(ny * 7 - time * 0.6) * 0.02 +
+          Math.sin(ny * 12 + time * 1.5) * 0.008;
+
+        // Base shore position ~55% from left, rocking with waveCycle
+        const shoreEdge = (0.55 + waveCycle + edgeWave) * w;
+
+        // Foam band width oscillates
+        const foamWidth = w * (0.04 + Math.sin(ny * 5 + time * 2) * 0.015);
 
         for (let x = 0; x < w; x += step) {
           let r, g, b;
+          const nx = x / w;
 
-          if (x < shoreX - w * 0.06) {
-            // === SAND ===
-            const nx = x / w;
-            const ny = y / h;
-            // Sand texture: warm lilac-white with subtle grain
-            const grain = (Math.random() - 0.5) * 6;
-            const sandWave = Math.sin(nx * 20 + ny * 15) * 2 + Math.sin(ny * 30 + nx * 8) * 1.5;
-            r = Math.round(245 + sandWave + grain);
-            g = Math.round(240 + sandWave + grain);
-            b = Math.round(248 + sandWave * 0.5 + grain);
-          } else if (x < shoreX + w * 0.03) {
-            // === FOAM / SHORE EDGE ===
-            const foamPos = (x - (shoreX - w * 0.06)) / (w * 0.09);
-            const foamWave = Math.sin(y / h * 12 - time * 3) * 0.3
-              + Math.sin(y / h * 20 + time * 4) * 0.15;
-            const foam = Math.max(0, 1 - Math.abs(foamPos - 0.5 + foamWave) * 3);
-            const dither = (Math.random() - 0.5) * 8;
+          if (x < shoreEdge - foamWidth * 2) {
+            // === SAND — soft warm lilac-white ===
+            const sandGrain = (Math.random() - 0.5) * 3;
+            const sandPattern = Math.sin(nx * 30 + ny * 25) * 1.5 + Math.sin(ny * 50 + nx * 12) * 0.8;
 
-            // Wet sand to foam to water gradient
-            const t = foamPos;
-            r = Math.round(240 - t * 25 + foam * 15 + dither);
-            g = Math.round(237 - t * 28 + foam * 15 + dither);
-            b = Math.round(248 - t * 10 + foam * 10 + dither);
+            // Wet sand gradient near shore
+            const wetness = Math.max(0, 1 - (shoreEdge - foamWidth * 2 - x) / (w * 0.08));
+
+            r = Math.round(248 - wetness * 12 + sandPattern + sandGrain);
+            g = Math.round(244 - wetness * 14 + sandPattern + sandGrain);
+            b = Math.round(252 - wetness * 6 + sandPattern * 0.5 + sandGrain);
+
+          } else if (x < shoreEdge + foamWidth) {
+            // === FOAM EDGE — white frothy line ===
+            const foamPos = (x - (shoreEdge - foamWidth * 2)) / (foamWidth * 3);
+
+            // Foam intensity — peaks at the edge, dithered
+            const foamNoise = Math.random() * 0.3;
+            const foamCurve = Math.sin(foamPos * Math.PI);
+            const foamDetail = Math.sin(ny * 20 + time * 4) * 0.15 + Math.sin(ny * 35 - time * 6) * 0.08;
+            const foam = foamCurve * 0.7 + foamDetail + foamNoise;
+
+            // Dither the foam — scattered white dots on grey
+            const isFoamDot = foam > 0.4 + Math.random() * 0.3;
+
+            if (isFoamDot) {
+              // White foam
+              r = Math.round(250 + Math.random() * 5);
+              g = Math.round(248 + Math.random() * 5);
+              b = Math.round(252 + Math.random() * 3);
+            } else {
+              // Transition zone
+              const t = foamPos;
+              r = Math.round(238 - t * 20 + Math.random() * 4);
+              g = Math.round(235 - t * 22 + Math.random() * 4);
+              b = Math.round(245 - t * 12 + Math.random() * 3);
+            }
+
           } else {
-            // === WATER ===
-            const waterStart = shoreX + w * 0.03;
-            const waterNx = (x - waterStart) / (w - waterStart); // 0=shore, 1=far right
-            const ny = y / h;
+            // === WATER — light grey dithered waves ===
+            const waterStart = shoreEdge + foamWidth;
+            const waterNx = Math.min(1, (x - waterStart) / (w - waterStart));
 
-            // Layered waves rocking back and forth
-            const wave1 = Math.sin(ny * 5 - time * 2.2 + waterNx * 3) * 0.15;
-            const wave2 = Math.sin(ny * 10 + time * 1.6 - waterNx * 5) * 0.1;
-            const wave3 = Math.sin((ny + waterNx) * 7 + time * 2.8) * 0.08;
-            const wave4 = Math.sin(ny * 18 - time * 3.5 + waterNx * 8) * 0.04; // fine ripples
-            const wave5 = Math.cos(ny * 4 + time * 1) * Math.sin(waterNx * 6 - time * 1.5) * 0.06;
+            // Multiple wave layers — rocking toward shore and pulling back
+            const waveRock = Math.sin(time * 1.2); // main rock cycle
+            const wave1 = Math.sin(ny * 4 + time * 2 * waveRock + waterNx * 3) * 0.12;
+            const wave2 = Math.sin(ny * 9 - time * 1.5 + waterNx * 6) * 0.08;
+            const wave3 = Math.sin((ny * 6 + waterNx * 4) + time * 2.5) * 0.06;
+            const wave4 = Math.sin(ny * 16 - time * 3 + waterNx * 10) * 0.03; // fine ripples
+            const wave5 = Math.cos(ny * 3 + time * 0.8) * Math.sin(waterNx * 5 - time * 1.2) * 0.05;
 
             let wave = wave1 + wave2 + wave3 + wave4 + wave5;
 
@@ -84,22 +109,23 @@ export default function Particles() {
             if (mouse.active) {
               const mx = mouse.x / w;
               const my = mouse.y / h;
-              const nx = x / w;
               const dist = Math.sqrt((nx - mx) ** 2 + (ny - my) ** 2);
-              if (dist < 0.25) {
-                wave += Math.sin(dist * 30 - time * 6) * Math.max(0, 0.25 - dist) * 1.2;
+              if (dist < 0.2) {
+                wave += Math.sin(dist * 35 - time * 7) * Math.max(0, 0.2 - dist) * 1.5;
               }
             }
 
-            const v = (wave + 0.5);
-            const dither = (Math.random() - 0.5) * 0.06;
-            const val = Math.max(0, Math.min(1, v + dither));
+            const val = (wave + 0.5);
 
-            // Water color: light grey-blue with lilac tint, darker further from shore
-            const depth = waterNx * 0.3;
-            r = Math.round(210 - depth * 50 + val * 20);
-            g = Math.round(212 - depth * 45 + val * 22);
-            b = Math.round(228 - depth * 25 + val * 15);
+            // Dither — scattered dots
+            const dither = (Math.random() - 0.5) * 0.08;
+            const v = Math.max(0, Math.min(1, val + dither));
+
+            // Light grey palette — gets slightly darker further from shore
+            const depth = waterNx * 0.25;
+            r = Math.round(218 - depth * 35 + v * 18);
+            g = Math.round(216 - depth * 35 + v * 18);
+            b = Math.round(225 - depth * 25 + v * 14);
           }
 
           r = Math.max(0, Math.min(255, r));
@@ -122,21 +148,9 @@ export default function Particles() {
       animationId = requestAnimationFrame(draw);
     }
 
-    function handleMouseMove(e: MouseEvent) {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      mouse.active = true;
-    }
-
-    function handleTouchMove(e: TouchEvent) {
-      mouse.x = e.touches[0].clientX;
-      mouse.y = e.touches[0].clientY;
-      mouse.active = true;
-    }
-
-    function handleLeave() {
-      mouse.active = false;
-    }
+    function handleMouseMove(e: MouseEvent) { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; }
+    function handleTouchMove(e: TouchEvent) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; mouse.active = true; }
+    function handleLeave() { mouse.active = false; }
 
     resize();
     draw();
@@ -157,10 +171,5 @@ export default function Particles() {
     };
   }, []);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 z-0"
-    />
-  );
+  return <canvas ref={canvasRef} className="fixed inset-0 z-0" />;
 }

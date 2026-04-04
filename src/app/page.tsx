@@ -9,6 +9,14 @@ import { ContentType, DiscoveryMode, Recommendation } from '@/types/index';
 
 type Screen = 'pick' | 'discover' | 'vibe' | 'result';
 
+interface LastWatching {
+  favorite_id: number;
+  favorite_title: string;
+  current_season: number;
+  current_episode: number;
+  status: string;
+}
+
 export default function Home() {
   const [screen, setScreen] = useState<Screen>('pick');
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
@@ -16,6 +24,64 @@ export default function Home() {
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastWatching, setLastWatching] = useState<LastWatching | null>(null);
+  const [lastDismissed, setLastDismissed] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+
+  // Fetch last watching item on mount
+  useState(() => {
+    fetch('/api/progress').then(r => r.json()).then((items: LastWatching[]) => {
+      const watching = items.find((i: LastWatching) => i.status === 'watching');
+      if (watching) setLastWatching(watching);
+    }).catch(() => {});
+  });
+
+  async function handleMarkCompleted() {
+    if (!lastWatching) return;
+    await fetch(`/api/progress?id=${lastWatching.favorite_id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    });
+    setLastDismissed(true);
+  }
+
+  async function handleAcceptRec() {
+    if (!recommendation || accepting) return;
+    setAccepting(true);
+    try {
+      // Add as favorite
+      const favRes = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: recommendation.type,
+          title: recommendation.title,
+          image_url: recommendation.thumbnailUrl ?? recommendation.imageUrls?.[0],
+          metadata: JSON.stringify({ year: recommendation.year, source: 'recommendation' }),
+        }),
+      });
+      const fav = await favRes.json();
+
+      // Add to progress as watching
+      if (fav.id) {
+        await fetch('/api/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            favorite_id: fav.id,
+            current_season: 1,
+            current_episode: 1,
+            status: 'watching',
+          }),
+        });
+      }
+    } catch {
+      // best effort
+    }
+    setAccepting(false);
+    startOver();
+  }
 
   const handlePickType = (type: ContentType) => {
     setSelectedType(type);
@@ -74,7 +140,30 @@ export default function Home() {
 
         {/* Screen 1: Just the four squares */}
         {screen === 'pick' && (
-          <div className="animate-[fadeIn_0.5s_ease-out]">
+          <div className="animate-[fadeIn_0.5s_ease-out] flex flex-col items-center gap-6">
+            {/* Last watching banner */}
+            {lastWatching && !lastDismissed && (
+              <div className="w-full max-w-[340px] sm:max-w-[440px] bg-white/70 backdrop-blur-sm border-2 border-[#e9e4f5] rounded-2xl px-4 py-3 flex items-center gap-3 animate-[fadeIn_0.3s_ease-out]">
+                <p className="text-xs text-[#7c7291] flex-1">
+                  Add <span className="font-medium text-[#2d2640]">{lastWatching.favorite_title}</span> to completed?
+                </p>
+                <button
+                  onClick={handleMarkCompleted}
+                  className="text-[10px] px-3 py-1.5 bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-colors shrink-0"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setLastDismissed(true)}
+                  className="text-[#c8c2d6] hover:text-[#7c7291] transition-colors shrink-0"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
             <ContentTypeSelector selected={null} onSelect={handlePickType} />
           </div>
         )}
@@ -141,7 +230,7 @@ export default function Home() {
               <RecommendationCard recommendation={recommendation} />
             </div>
 
-            <div className="flex gap-3 mt-2">
+            <div className="flex gap-3 mt-2 items-center">
               <button
                 onClick={() => setScreen('vibe')}
                 className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
@@ -152,8 +241,15 @@ export default function Home() {
                 </svg>
               </button>
               <button
+                onClick={handleAcceptRec}
+                disabled={accepting}
+                className="px-5 py-2.5 text-xs bg-[#8b5cf6] text-white hover:bg-[#7c3aed] rounded-xl transition-all shadow-md shadow-purple-200/50 disabled:opacity-50"
+              >
+                {accepting ? 'Adding...' : 'Accept & start watching'}
+              </button>
+              <button
                 onClick={startOver}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-[#8b5cf6] text-white hover:bg-[#7c3aed] transition-all shadow-md shadow-purple-200/50"
+                className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
                 title="Start over"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
