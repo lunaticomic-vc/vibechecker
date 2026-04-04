@@ -14,15 +14,15 @@ interface Props {
   recommendation: Recommendation;
 }
 
-// Position circles around the card
-function getCirclePositions(count: number): { x: number; y: number }[] {
-  const positions = [
-    { x: -50, y: -30 },
-    { x: 110, y: -20 },
-    { x: -40, y: 80 },
-    { x: 120, y: 70 },
-    { x: 30, y: -45 },
-    { x: 80, y: 100 },
+// Position circles on left and right sides of the card
+function getCirclePositions(count: number): { x: number; y: number; side: 'left' | 'right' }[] {
+  const positions: { x: number; y: number; side: 'left' | 'right' }[] = [
+    { x: 0, y: 10, side: 'left' },
+    { x: 0, y: 5, side: 'right' },
+    { x: 0, y: 45, side: 'left' },
+    { x: 0, y: 40, side: 'right' },
+    { x: 0, y: 75, side: 'left' },
+    { x: 0, y: 72, side: 'right' },
   ];
   return positions.slice(0, count);
 }
@@ -39,24 +39,33 @@ export default function RecommendationCard({ recommendation }: Props) {
 
   return (
     <div className="relative w-full">
-      {/* Floating image circles — positioned as percentages */}
-      <div className="absolute inset-0 pointer-events-auto" style={{ zIndex: 5 }}>
-        {allImages.map((src, i) => {
-          const pos = circlePositions[i];
-          if (!pos) return null;
-          return (
+      {/* Floating image circles — left and right of card */}
+      {allImages.map((src, i) => {
+        const pos = circlePositions[i];
+        if (!pos) return null;
+        const sz = 90 + (i === 0 ? 15 : 0);
+        return (
+          <div
+            key={i}
+            className="absolute"
+            style={{
+              left: pos.side === 'left' ? `-${sz / 2 + 20}px` : 'auto',
+              right: pos.side === 'right' ? `-${sz / 2 + 20}px` : 'auto',
+              top: `${pos.y}%`,
+              zIndex: 5,
+            }}
+          >
             <FloatingCircle
-              key={i}
               src={src}
-              alt={`${title} scene ${i + 1}`}
-              size={65 + (i === 0 ? 15 : 0)}
-              initialX={pos.x}
-              initialY={pos.y}
+              alt={`${title} ${i + 1}`}
+              size={sz}
+              initialX={0}
+              initialY={0}
               delay={i * 0.8}
             />
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
 
       {/* Card content */}
       <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/90 backdrop-blur-sm p-5 flex flex-col gap-2.5" style={{ maxHeight: 'calc(100vh - 200px)', overflow: 'hidden' }}>
