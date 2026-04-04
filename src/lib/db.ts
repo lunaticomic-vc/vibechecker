@@ -1,12 +1,22 @@
 import { createClient, type Client } from '@libsql/client';
 
+const isDev = process.env.NODE_ENV !== 'production';
+function dbLog(msg: string) {
+  if (isDev) {
+    const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    console.log(`\x1b[2m${ts}\x1b[0m \x1b[36m◆\x1b[0m DB ${msg}`);
+  }
+}
+
 let _client: Client | null = null;
 let _initialized = false;
 
 export function getDb(): Client {
   if (!_client) {
+    const url = process.env.TURSO_DATABASE_URL ?? 'file:vibechecker.db';
+    dbLog(`Connecting to ${url.startsWith('libsql') ? 'Turso cloud' : 'local SQLite'} (${url.substring(0, 40)}...)`);
     _client = createClient({
-      url: process.env.TURSO_DATABASE_URL ?? 'file:vibechecker.db',
+      url,
       authToken: process.env.TURSO_AUTH_TOKEN,
     });
   }
@@ -63,6 +73,7 @@ export async function initDb(): Promise<Client> {
   ]);
 
   _initialized = true;
+  dbLog('Tables initialized ✓');
   return db;
 }
 

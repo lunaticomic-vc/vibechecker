@@ -1,18 +1,24 @@
 import { NextResponse } from 'next/server';
 import { fetchMALAnimeList } from '@/lib/mal';
 import { addFavorite, getAllFavorites } from '@/lib/favorites';
+import { log } from '@/lib/logger';
 
 export async function POST(req: Request) {
+  log.api('POST', '/api/imports/mal');
   try {
     const { username } = await req.json();
 
     if (!username || typeof username !== 'string') {
+      log.warn('Missing username');
       return NextResponse.json({ error: 'Username is required' }, { status: 400 });
     }
 
+    log.ai('Fetching MAL list', `user="${username.trim()}" via ${process.env.MAL_CLIENT_ID ? 'official API' : 'Jikan'}`);
     const animeList = await fetchMALAnimeList(username.trim(), { limit: 100 });
+    log.success(`Fetched ${animeList.length} anime from MAL`);
 
     if (animeList.length === 0) {
+      log.warn('No anime found for user', username);
       return NextResponse.json({ error: 'No anime found for this user. Make sure the list is public.' }, { status: 404 });
     }
 
@@ -43,6 +49,7 @@ export async function POST(req: Request) {
       imported++;
     }
 
+    log.success(`MAL import done`, `imported=${imported} skipped=${skipped} total=${animeList.length}`);
     return NextResponse.json({
       imported,
       skipped,
@@ -51,6 +58,7 @@ export async function POST(req: Request) {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Import failed';
+    log.error('MAL import failed', err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
