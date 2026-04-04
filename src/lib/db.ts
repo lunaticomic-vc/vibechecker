@@ -1,0 +1,74 @@
+import { createClient, type Client } from '@libsql/client';
+
+let _client: Client | null = null;
+let _initialized = false;
+
+export function getDb(): Client {
+  if (!_client) {
+    _client = createClient({
+      url: process.env.TURSO_DATABASE_URL ?? 'file:vibechecker.db',
+      authToken: process.env.TURSO_AUTH_TOKEN,
+    });
+  }
+  return _client;
+}
+
+export async function initDb(): Promise<Client> {
+  const db = getDb();
+  if (_initialized) return db;
+
+  await db.batch([
+    `CREATE TABLE IF NOT EXISTS favorites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube')),
+      title TEXT NOT NULL,
+      external_id TEXT,
+      metadata TEXT,
+      image_url TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS watch_progress (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      favorite_id INTEGER REFERENCES favorites(id) ON DELETE CASCADE,
+      current_season INTEGER DEFAULT 1,
+      current_episode INTEGER DEFAULT 1,
+      total_seasons INTEGER,
+      total_episodes INTEGER,
+      status TEXT DEFAULT 'watching' CHECK(status IN ('watching', 'completed', 'dropped')),
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      platform TEXT NOT NULL CHECK(platform IN ('letterboxd', 'youtube', 'myanimelist')),
+      username TEXT NOT NULL,
+      connected_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS ratings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      favorite_id INTEGER NOT NULL REFERENCES favorites(id) ON DELETE CASCADE,
+      rating TEXT NOT NULL CHECK(rating IN ('felt_things', 'enjoyed', 'watched', 'not_my_thing')),
+      reasoning TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(favorite_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS oauth_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      platform TEXT NOT NULL UNIQUE,
+      access_token TEXT NOT NULL,
+      refresh_token TEXT,
+      expires_at TEXT,
+      scope TEXT,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+  ]);
+
+  _initialized = true;
+  return db;
+}
+
+// Helper: ensure DB is initialized before any query
+export async function db() {
+  return initDb();
+}
+
+export default getDb();

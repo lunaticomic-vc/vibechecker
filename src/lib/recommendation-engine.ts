@@ -1,0 +1,186 @@
+import { getOpenAI } from '@/lib/openai';
+import { getAllFavorites } from '@/lib/favorites';
+import { getAllProgress } from '@/lib/progress';
+import { getAllRatings } from '@/lib/ratings';
+import type { ContentType, Favorite, WatchProgress, Rating, Recommendation } from '@/types/index';
+
+type AIResponse = {
+  title: string;
+  description: string;
+  reasoning: string;
+  year?: string;
+  searchQuery?: string;
+  episodeInfo?: string;
+};
+
+const RATING_LABELS: Record<string, string> = {
+  felt_things: 'LOVED (made them feel things)',
+  enjoyed: 'ENJOYED',
+  watched: 'WATCHED (neutral)',
+  not_my_thing: 'DISLIKED (not their thing)',
+};
+
+export function buildRecommendationPrompt(
+  vibe: string,
+  contentType: ContentType,
+  favorites: Favorite[],
+  watchProgress: WatchProgress[],
+  ratings: Rating[]
+): string {
+  const ratingsMap = new Map<number, Rating>();
+  for (const r of ratings) ratingsMap.set(r.favorite_id, r);
+
+  const byType: Record<string, string[]> = {};
+  for (const fav of favorites) {
+    if (!byType[fav.type]) byType[fav.type] = [];
+    const rating = ratingsMap.get(fav.id);
+    let entry = fav.title;
+    if (rating) {
+      entry += ` [${RATING_LABELS[rating.rating]}]`;
+      if (rating.reasoning) entry += ` (reason: "${rating.reasoning}")`;
+    }
+    byType[fav.type].push(entry);
+  }
+
+  const favoritesSection = Object.entries(byType)
+    .map(([type, titles]) => `  ${type}: ${titles.join(', ')}`)
+    .join('\n');
+
+  const disliked = favorites
+    .filter(f => ratingsMap.get(f.id)?.rating === 'not_my_thing')
+    .map(f => {
+      const r = ratingsMap.get(f.id);
+      return `  "${f.title}"${r?.reasoning ? ` — reason: "${r.reasoning}"` : ''}`;
+    });
+
+  const loved = favorites
+    .filter(f => ratingsMap.get(f.id)?.rating === 'felt_things')
+    .map(f => {
+      const r = ratingsMap.get(f.id);
+      return `  "${f.title}"${r?.reasoning ? ` — what made it special: "${r.reasoning}"` : ''}`;
+    });
+
+  const progressSection = watchProgress
+    .slice(0, 5)
+    .map((p) => {
+      const fav = favorites.find((f) => f.id === p.favorite_id);
+      if (!fav) return null;
+      if (p.status === 'watching') {
+        return `  "${fav.title}" (currently on S${p.current_season}E${p.current_episode}, status: watching)`;
+      }
+      return `  "${fav.title}" (${p.status})`;
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  const instructions: Record<ContentType, string> = {
+    youtube: 'Suggest a specific YouTube video topic. Include a searchQuery field with the best search string to find it on YouTube. Estimate the ideal duration in the description.',
+    movie: 'Suggest a specific movie with its release year. Include enough detail (title + year) so it can be found on streaming sites.',
+    tv: 'Suggest a specific TV show. Include season recommendation if relevant (e.g., "start at Season 2"). Add episodeInfo if applicable.',
+    anime: 'Suggest a specific anime. Include episode count or arc recommendation in episodeInfo if helpful.',
+  };
+
+  return [
+    `The user's current vibe: "${vibe}"`,
+    `They want a recommendation for: ${contentType}`,
+    '',
+    favorites.length > 0
+      ? `The user's library (with ratings):\n${favoritesSection}`
+      : 'The user has no saved favorites yet.',
+    '',
+    loved.length > 0 ? `Content that deeply resonated with the user:\n${loved.join('\n')}` : '',
+    disliked.length > 0 ? `Content the user DISLIKED (AVOID recommending similar things):\n${disliked.join('\n')}` : '',
+    '',
+    progressSection
+      ? `What they're currently watching:\n${progressSection}`
+      : 'Nothing in their watch queue right now.',
+    '',
+    `Your task: ${instructions[contentType]}`,
+    '',
+    'IMPORTANT: The recommendation MUST match the vibe — consider duration, intensity, genre, and mood.',
+    'IMPORTANT: Prioritize content similar to what the user LOVED. AVOID anything similar to what they DISLIKED, paying attention to their stated reasons.',
+    'Always explain WHY this specific recommendation fits the vibe.',
+    '',
+    'Respond with ONLY a JSON object (no markdown, no extra text):',
+    '{',
+    '  "title": "...",',
+    '  "description": "brief plot/description",',
+    '  "reasoning": "why this fits the vibe perfectly",',
+    '  "year": "YYYY (for movies/tv/anime, omit for youtube)",',
+    '  "searchQuery": "search string (youtube only)",',
+    '  "episodeInfo": "e.g. Start at Season 2 (tv/anime only, optional)"',
+    '}',
+  ].join('\n');
+}
+
+export async function getRecommendation(
+  vibe: string,
+  contentType: ContentType
+): Promise<Recommendation> {
+  const favorites = await getAllFavorites();
+  const allProgress = await getAllProgress();
+  const ratings = await getAllRatings();
+
+  const watchProgress: WatchProgress[] = allProgress.map((p) => ({
+    id: p.id,
+    favorite_id: p.favorite_id,
+    current_season: p.current_season,
+    current_episode: p.current_episode,
+    total_seasons: p.total_seasons,
+    total_episodes: p.total_episodes,
+    status: p.status,
+    updated_at: p.updated_at,
+  }));
+
+  const userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings);
+
+  const response = await getOpenAI().chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.8,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You are a personal entertainment recommendation engine. You know the user\'s taste deeply and recommend content that matches their current vibe perfectly.',
+      },
+      {
+        role: 'user',
+        content: userPrompt,
+      },
+    ],
+  });
+
+  const raw = response.choices[0]?.message?.content ?? '{}';
+
+  let ai: AIResponse;
+  try {
+    ai = JSON.parse(raw) as AIResponse;
+  } catch {
+    throw new Error(`Failed to parse AI response: ${raw}`);
+  }
+
+  const title = ai.title ?? 'Unknown';
+
+  let actionUrl: string;
+  let actionLabel: string;
+
+  if (contentType === 'youtube') {
+    const query = ai.searchQuery ?? title;
+    actionUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+    actionLabel = 'Search on YouTube';
+  } else {
+    actionUrl = `https://sflix.to/search?q=${encodeURIComponent(title)}`;
+    actionLabel = 'Find on sflix.to';
+  }
+
+  return {
+    title,
+    type: contentType,
+    description: ai.description ?? '',
+    reasoning: ai.reasoning ?? '',
+    actionUrl,
+    actionLabel,
+    year: ai.year,
+    episodeInfo: ai.episodeInfo,
+  };
+}
