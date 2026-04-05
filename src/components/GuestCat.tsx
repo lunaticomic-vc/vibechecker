@@ -187,9 +187,15 @@ export default function GuestCat() {
           style={{ filter: 'drop-shadow(0 0 10px rgba(196,181,253,0.25))' }}
         >
           <motion.svg
-            width="100" height="100" viewBox="0 0 32 32"
-            animate={{ rotate: attacking ? [0, -6, 4, 0] : 0 }}
-            transition={{ duration: 0.4, ease: 'easeInOut' }}
+            width="200" height="200" viewBox="0 0 32 32"
+            animate={attacking
+              ? { rotate: [0, -6, 4, 0] }
+              : { rotate: [0, -1.5, 0, 1, 0], originX: '50%', originY: '70%' }
+            }
+            transition={attacking
+              ? { duration: 0.4, ease: 'easeInOut' }
+              : { duration: 6, repeat: Infinity, ease: 'easeInOut' }
+            }
             className="overflow-visible"
           >
             {/* Body — everything except eyes */}
@@ -198,6 +204,41 @@ export default function GuestCat() {
               fill={attacking ? 'rgba(180,140,220,0.4)' : 'rgba(176,168,196,0.25)'}
               className="transition-[fill] duration-300"
             />
+
+            {/* Head tilt — subtle independent rotation of the ear/head area */}
+            <motion.g
+              style={{ transformOrigin: '24px 8px' }}
+              animate={{ rotate: [0, 3, 0, -2, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+            >
+              {/* Invisible head overlay that tilts — ears region */}
+              <clipPath id="headClip">
+                <rect x="16" y="0" width="16" height="8" />
+              </clipPath>
+              <path
+                d="M28.926 1.17l-2.182 3.608c-1.876-0.608-4.669-0.489-6.426 0l-2.102-3.557c-3.452 6.448-2.475 10.523 0.159 12.549"
+                fill={attacking ? 'rgba(180,140,220,0.4)' : 'rgba(176,168,196,0.25)'}
+                className="transition-[fill] duration-300"
+                clipPath="url(#headClip)"
+              />
+            </motion.g>
+
+            {/* Tail sway — the curved tail at the bottom */}
+            <motion.g
+              style={{ transformOrigin: '22px 28px' }}
+              animate={{ rotate: [0, 4, 0, -3, 0] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <clipPath id="tailClip">
+                <rect x="18" y="24" width="16" height="8" />
+              </clipPath>
+              <path
+                d="M28.214 25.544c-2.185-2.134-4.525-2.959-6.825-3.122s-4.505 0.293-6.502 0.576c1.937 0.138 3.874 0.635 5.647 2.569 1.209 1.318 2.926-0.101 1.486-1.507"
+                fill={attacking ? 'rgba(180,140,220,0.4)' : 'rgba(176,168,196,0.25)'}
+                className="transition-[fill] duration-300"
+                clipPath="url(#tailClip)"
+              />
+            </motion.g>
 
             {/* Left eye — follows mouse */}
             <motion.path
