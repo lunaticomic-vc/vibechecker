@@ -1,39 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Inline sign function — must match src/lib/auth.ts exactly
-function sign(value: string, secret: string): string {
-  const input = value + ':' + secret;
-  let h1 = 0x811c9dc5 >>> 0;
-  let h2 = 0x01000193 >>> 0;
-  let h3 = 0xdeadbeef >>> 0;
-  let h4 = 0xcafebabe >>> 0;
-  for (let i = 0; i < input.length; i++) {
-    const c = input.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
-    h2 = Math.imul(h2 ^ c, 0x27d4eb2d) >>> 0;
-    h3 = Math.imul(h3 ^ c, 0x1b873593) >>> 0;
-    h4 = Math.imul(h4 ^ c, 0xcc9e2d51) >>> 0;
-  }
-  for (let r = 0; r < 100; r++) {
-    h1 = Math.imul(h1 ^ h4, 0x01000193) >>> 0;
-    h2 = Math.imul(h2 ^ h1, 0x27d4eb2d) >>> 0;
-    h3 = Math.imul(h3 ^ h2, 0x1b873593) >>> 0;
-    h4 = Math.imul(h4 ^ h3, 0xcc9e2d51) >>> 0;
-  }
-  const hex = (n: number) => n.toString(16).padStart(8, '0');
-  return hex(h1) + hex(h2) + hex(h3) + hex(h4) + hex(h1 ^ h2) + hex(h2 ^ h3) + hex(h3 ^ h4) + hex(h4 ^ h1);
+async function sign(value: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(value));
+  return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function isOwnerCookie(cookieValue: string | undefined): boolean {
-  if (!cookieValue) return false;
-  const secret = process.env.APP_SECRET ?? 'dev-secret-change-me';
-  const expected = sign('authenticated', secret);
-  if (cookieValue.length !== expected.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < cookieValue.length; i++) {
-    mismatch |= cookieValue.charCodeAt(i) ^ expected.charCodeAt(i);
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
-  return mismatch === 0;
+  return result === 0;
+}
+
+async function verify(value: string, expectedSig: string, secret: string): Promise<boolean> {
+  const actualSig = await sign(value, secret);
+  return timingSafeEqual(actualSig, expectedSig);
 }
 
 // API routes that modify data — only owner can use these
@@ -50,7 +37,7 @@ const WRITE_APIS = [
   '/api/cron/',
 ];
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const method = req.method;
 
@@ -59,8 +46,28 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const owner = isOwnerCookie(req.cookies.get('cc_auth')?.value);
-  const hasGuestCookie = req.cookies.has('cc_guest');
+  const secret = process.env.APP_SECRET ?? 'dev-secret-change-me';
+
+  // Verify owner cookie
+  let owner = false;
+  const authCookie = req.cookies.get('cc_auth')?.value;
+  if (authCookie) {
+    const [value, sig] = authCookie.split('.');
+    if (value && sig) {
+      owner = await verify(value, sig, secret);
+    }
+  }
+
+  // Verify guest cookie
+  let hasGuestCookie = false;
+  const guestCookie = req.cookies.get('cc_guest')?.value;
+  if (guestCookie) {
+    const [value, sig] = guestCookie.split('.');
+    if (value && sig) {
+      hasGuestCookie = await verify(value, sig, secret);
+    }
+  }
+
   const isAuthed = owner || hasGuestCookie;
 
   // Skip auth for login page, auth APIs, and static assets

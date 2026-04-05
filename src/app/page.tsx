@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ContentTypeSelector from '@/components/ContentTypeSelector';
 import VibeInput from '@/components/VibeInput';
 import RecommendationCard from '@/components/RecommendationCard';
 import { ContentType, Recommendation } from '@/types/index';
+import { useIsOwner } from '@/lib/useIsOwner';
 
 type Screen = 'pick' | 'vibe' | 'result';
 
@@ -17,13 +18,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   const [lastVibe, setLastVibe] = useState('');
-  const [isOwner, setIsOwner] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/auth/status').then(r => r.json()).then(data => {
-      if (data.role === 'owner') setIsOwner(true);
-    }).catch(() => {});
-  }, []);
+  const isOwner = useIsOwner();
+  const [showRejectReasons, setShowRejectReasons] = useState(false);
 
   const handlePickType = (type: ContentType) => {
     setSelectedType(type);
@@ -37,6 +33,7 @@ export default function Home() {
     setLastVibe(vibe);
     setLoading(true);
     setError(null);
+    setShowRejectReasons(false);
 
     try {
       const res = await fetch('/api/recommend', {
@@ -85,6 +82,7 @@ export default function Home() {
           <div className="w-full flex flex-col items-center gap-8 animate-[fadeIn_0.4s_ease-out]">
             <button
               onClick={() => setScreen('pick')}
+              aria-label="Go back"
               className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -136,6 +134,7 @@ export default function Home() {
                   if (lastVibe) handleSubmit(lastVibe);
                 }}
                 disabled={loading}
+                aria-label="Save to todo and show another"
                 className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all disabled:opacity-40"
                 title="Save to todo and show another"
               >
@@ -143,31 +142,54 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               </button>
-              {/* Reject and regenerate */}
-              <button
-                onClick={async () => {
-                  if (!recommendation || loading) return;
-                  try {
-                    await fetch('/api/rejected', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ title: recommendation.title, type: recommendation.type }),
-                    });
-                  } catch { /* save is best-effort, always regenerate */ }
-                  if (lastVibe) handleSubmit(lastVibe);
-                }}
-                disabled={loading}
-                className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-red-300 hover:text-red-400 transition-all disabled:opacity-40"
-                title="Reject and never show again"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              {/* Reject with reason */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowRejectReasons(v => !v)}
+                  disabled={loading}
+                  aria-label="Reject and never show again"
+                  className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-red-300 hover:text-red-400 transition-all disabled:opacity-40"
+                  title="Reject and never show again"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                {showRejectReasons && !loading && (
+                  <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col gap-1 bg-white/95 backdrop-blur-sm border-2 border-[#e9e4f5] rounded-xl p-2 shadow-lg z-20 min-w-[140px] animate-[fadeIn_0.15s_ease-out]">
+                    {[
+                      { value: 'wrong_vibe', label: 'Wrong vibe' },
+                      { value: 'already_seen', label: 'Already seen' },
+                      { value: 'too_mainstream', label: 'Too mainstream' },
+                      { value: 'not_interested', label: 'Not interested' },
+                    ].map(({ value, label }) => (
+                      <button
+                        key={value}
+                        onClick={async () => {
+                          if (!recommendation) return;
+                          setShowRejectReasons(false);
+                          try {
+                            await fetch('/api/rejected', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ title: recommendation.title, type: recommendation.type, reason: value }),
+                            });
+                          } catch { /* best effort */ }
+                          if (lastVibe) handleSubmit(lastVibe);
+                        }}
+                        className="text-[11px] text-[#5a5270] hover:bg-[#f5f3ff] hover:text-[#7c3aed] px-3 py-1.5 rounded-lg transition-colors text-left whitespace-nowrap"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {/* Regenerate */}
               <button
                 onClick={() => { if (lastVibe && !loading) handleSubmit(lastVibe); }}
                 disabled={loading}
+                aria-label="Regenerate with same vibe"
                 className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all disabled:opacity-40"
                 title="Regenerate with same vibe"
               >
@@ -178,6 +200,7 @@ export default function Home() {
               {/* Start over */}
               <button
                 onClick={startOver}
+                aria-label="Start over"
                 className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
                 title="Start over"
               >

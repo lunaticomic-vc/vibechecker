@@ -3,14 +3,19 @@ import { getAllFavorites } from '@/lib/favorites';
 import { getAllProgress } from '@/lib/progress';
 import { getAllRatings } from '@/lib/ratings';
 import { searchRedditForTitle } from '@/lib/reddit';
-import { searchTMDB } from '@/lib/tmdb';
+import { searchTMDB, searchTMDBMulti } from '@/lib/tmdb';
+import type { TMDBSearchResult } from '@/lib/tmdb';
 import { searchSubstackMulti, verifyUrl } from '@/lib/substack';
-// Brave image search removed — TMDB backdrops are more reliable for stills
 import type { SubstackSearchResult } from '@/lib/substack';
-import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
+import { searchYouTube, buildYouTubeWatchUrl, getVideoDetails, formatDuration } from '@/lib/youtube';
 import type { YouTubeResult } from '@/lib/youtube';
-import { searchAnimeJikan } from '@/lib/mal';
+import { searchAnimeJikan, searchAnimeJikanMulti } from '@/lib/mal';
+import type { JikanSearchResult } from '@/lib/mal';
 import type { ContentType, DiscoveryMode, Favorite, WatchProgress, Rating, Recommendation } from '@/types/index';
+import { getDb } from '@/lib/db';
+import { getAllPeople } from '@/lib/people';
+import { getUserPreferences } from '@/lib/user-preferences';
+import { log } from '@/lib/logger';
 
 type AIResponse = {
   title: string;
@@ -170,6 +175,52 @@ Rules:
   return res.choices[0]?.message?.content ?? vibe;
 }
 
+interface VibeFacets {
+  mood: string;
+  genres: string[];
+  themes: string[];
+  aesthetic: string;
+  intensity: string;
+}
+
+async function decomposeVibe(openai: ReturnType<typeof getOpenAI>, vibe: string): Promise<VibeFacets> {
+  try {
+    const res = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.5,
+      messages: [
+        {
+          role: 'system',
+          content: `Decompose a user's vibe into structured facets. Return ONLY JSON:
+{"mood": "emotional tone (e.g. melancholic, cozy, intense)", "genres": ["genre1", "genre2"], "themes": ["theme1", "theme2"], "aesthetic": "visual/tonal style", "intensity": "low/medium/high"}`,
+        },
+        { role: 'user', content: `Vibe: "${vibe}"` },
+      ],
+    });
+    return JSON.parse(res.choices[0]?.message?.content ?? '{}') as VibeFacets;
+  } catch (error) {
+    log.warn('Failed to decompose vibe into facets', String(error));
+    return { mood: vibe, genres: [], themes: [], aesthetic: '', intensity: 'medium' };
+  }
+}
+
+function analyzeTastePatterns(favorites: Favorite[], ratings: Rating[]): string {
+  const ratingsMap = new Map<number, Rating>();
+  for (const r of ratings) ratingsMap.set(r.favorite_id, r);
+
+  const loved = favorites.filter(f => ratingsMap.get(f.id)?.rating === 'felt_things');
+  if (loved.length < 2) return '';
+
+  const reasons = loved
+    .map(f => ratingsMap.get(f.id)?.reasoning)
+    .filter(Boolean);
+  const titles = loved.map(f => f.title);
+
+  return `TASTE PATTERNS from ${loved.length} loved items (${titles.join(', ')}):
+${reasons.length > 0 ? `Their reasons for loving these: ${reasons.join('; ')}` : ''}
+Identify COMMON THREADS: recurring themes, storytelling styles, emotional tones, character archetypes, or aesthetic qualities across these loved items. Prioritize recommendations that share these patterns.`;
+}
+
 async function getYouTubeRecommendation(
   vibe: string,
   userPrompt: string,
@@ -212,11 +263,18 @@ async function getYouTubeRecommendation(
   }
 
   if (allResults.length > 0) {
-    // Step 3: GPT picks the best video with validation
+    // Step 2.5: Fetch duration + view counts for quality signal (#3, #9)
     const candidates = allResults.slice(0, 12);
-    const videoList = candidates.map((v, i) =>
-      `${i + 1}. "${v.title}" by ${v.channelTitle || 'unknown'}`
-    ).join('\n');
+    const details = await getVideoDetails(candidates.map(v => v.videoId));
+    const detailsMap = new Map(details.map(d => [d.videoId, d]));
+
+    // Step 3: GPT picks the best video with validation
+    const videoList = candidates.map((v, i) => {
+      const d = detailsMap.get(v.videoId);
+      const dur = d ? formatDuration(d.durationSeconds) : '?';
+      const views = d ? `${Math.round(d.viewCount / 1000)}K views` : '';
+      return `${i + 1}. "${v.title}" by ${v.channelTitle || 'unknown'} [${dur}${views ? ', ' + views : ''}]`;
+    }).join('\n');
 
     const pickResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -231,9 +289,11 @@ RULES:
 2. Rate each candidate 1-10 for vibe relevance. Only pick videos scoring 7+.
 3. If NONE score 7+, set "pick" to 0.
 4. Interests are SECONDARY — use them only to break ties between equally relevant videos.
-5. For the "interests" array, ONLY include tags that genuinely describe this specific video. Do NOT copy the user's interest tags unless they truly apply. Justify each tag.
+5. For the "interests" array, ONLY include tags that genuinely describe this specific video. Do NOT copy the user's interest tags unless they truly apply.
+6. If the user mentions a duration preference (e.g. "long", "1 hour", "quick", "short"), prefer videos matching that length. Duration is shown in brackets.
+7. When two videos are equally relevant, prefer the one with more views (quality signal).
 
-Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief summary", "reasoning": "why this SPECIFICALLY matches the vibe", "interests": ["tag1", "tag2"], "interest_justifications": ["why tag1 applies", "why tag2 applies"]}`,
+Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief summary", "reasoning": "why this SPECIFICALLY matches the vibe", "interests": ["tag1", "tag2"]}`,
         },
         {
           role: 'user',
@@ -493,58 +553,321 @@ Generate 4-5 search queries to find Substack articles. The vibe/prompt "${vibe}"
   };
 }
 
+// --- SCREEN CONTENT (movie/tv/anime/kdrama): two-pass with real search results ---
+async function getScreenRecommendation(
+  vibe: string,
+  contentType: ContentType,
+  interests: string[],
+  tasteProfile: string | null,
+  existingTitles: string[],
+  tastePatterns: string,
+  rejectionReasons: string[],
+  peopleSection: string,
+  discoveryMode: DiscoveryMode,
+): Promise<Recommendation> {
+  const openai = getOpenAI();
+
+  // Step 1: Decompose vibe into structured facets (#6)
+  const facets = await decomposeVibe(openai, vibe);
+  const contentLabel = contentType === 'anime' ? 'anime' : contentType === 'kdrama' ? 'Korean dramas' : contentType === 'movie' ? 'movies' : 'TV shows';
+
+  // Step 2: Generate actual title suggestions from facets (TMDB needs titles, not vibes)
+  const queryResponse = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.9,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a ${contentLabel} expert. Given a user's vibe, suggest 8-10 ACTUAL ${contentLabel} TITLES that match. Return ONLY a JSON array of title strings. No markdown. These must be real, existing ${contentLabel} — not made up. Think broadly: popular picks, hidden gems, classics, and recent releases.`,
+      },
+      {
+        role: 'user',
+        content: `Vibe: "${vibe}"\nMood: ${facets.mood}\nGenres: ${facets.genres.join(', ') || 'any'}\nThemes: ${facets.themes.join(', ') || 'any'}\nAesthetic: ${facets.aesthetic || 'any'}\n\nSuggest 8-10 real ${contentLabel} titles that match this vibe.${existingTitles.length > 0 ? `\n\nDo NOT suggest any of these (already seen): ${existingTitles.slice(0, 30).join(', ')}` : ''}${rejectionReasons.length > 0 ? `\n\nUser previously rejected similar recs for: ${rejectionReasons.join('; ')}. Avoid those patterns.` : ''}`,
+      },
+    ],
+  });
+
+  let queries: string[];
+  try { queries = JSON.parse(queryResponse.choices[0]?.message?.content ?? '[]'); } catch { queries = [vibe]; }
+
+  // Step 3: Search for real content
+  type Candidate = { title: string; year: string | null; description: string; score?: number; genres?: string[] };
+  let candidates: Candidate[] = [];
+
+  if (contentType === 'anime') {
+    const results = await searchAnimeJikanMulti(queries);
+    candidates = results
+      .filter(r => !existingTitles.includes(r.title))
+      .slice(0, 15)
+      .map(r => ({ title: r.title, year: r.year, description: r.description, score: r.score, genres: r.genres }));
+  } else {
+    const tmdbType = contentType === 'movie' ? 'movie' as const : 'tv' as const;
+    const results = await searchTMDBMulti(queries, tmdbType);
+    candidates = results
+      .filter(r => !existingTitles.includes(r.title))
+      .slice(0, 15)
+      .map(r => ({ title: r.title, year: r.year, description: r.description, score: r.voteAverage }));
+  }
+
+  if (candidates.length === 0) {
+    // Fallback: broader title-based queries
+    queries = [
+      `best ${contentLabel} ${facets.mood}`,
+      `top ${contentLabel} ${facets.genres[0] || ''} ${facets.themes[0] || ''}`.trim(),
+      `popular ${contentLabel} ${vibe.split(' ').slice(0, 3).join(' ')}`,
+    ];
+    if (contentType === 'anime') {
+      const results = await searchAnimeJikanMulti(queries);
+      candidates = results.slice(0, 10).map(r => ({ title: r.title, year: r.year, description: r.description, score: r.score, genres: r.genres }));
+    } else {
+      const tmdbType = contentType === 'movie' ? 'movie' as const : 'tv' as const;
+      const results = await searchTMDBMulti(queries, tmdbType);
+      candidates = results.slice(0, 10).map(r => ({ title: r.title, year: r.year, description: r.description, score: r.voteAverage }));
+    }
+  }
+
+  // Step 4: GPT picks the best with confidence scoring (#4) + temperature ladder (#7)
+  const candidateList = candidates.map((c, i) =>
+    `${i + 1}. "${c.title}" (${c.year ?? '?'})${c.score ? ` [${c.score}/10]` : ''}${c.genres ? ` {${c.genres.join(', ')}}` : ''} — ${c.description.slice(0, 200)}`
+  ).join('\n');
+
+  const MAX_PICK_ATTEMPTS = 2;
+  let title = '', description = '', reasoning = '', year: string | undefined, episodeInfo: string | undefined;
+  let pickedActors: string[] | undefined, pickedTropes: string[] | undefined, pickedInterests: string[] | undefined;
+
+  for (let attempt = 0; attempt < MAX_PICK_ATTEMPTS; attempt++) {
+    const temperature = 0.7 + attempt * 0.15; // #7: temperature ladder
+
+    const pickResponse = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature,
+      messages: [
+        {
+          role: 'system',
+          content: `Pick the best ${contentLabel} from a list that GENUINELY matches the user's vibe.
+
+RULES:
+1. The vibe "${vibe}" is #1 priority. The pick MUST be about what the user asked for.
+2. Score each candidate 1-10 for vibe relevance. Only pick items scoring 7+.
+3. If NONE score 7+, set "pick" to 0.
+4. ${tastePatterns ? 'Use the taste patterns to break ties — pick what matches their taste DNA.' : 'Pick the most critically acclaimed option among equally relevant candidates.'}
+${peopleSection ? '5. Prefer content featuring people the user loves.' : ''}
+
+REQUIRED FIELDS — you MUST fill ALL of these with real, detailed content:
+- "description": Write a compelling 2-3 sentence plot summary from YOUR knowledge (do NOT copy the truncated text from the list). Describe what the story is actually about.
+- "reasoning": Explain in 2-3 sentences exactly WHY this pick matches the vibe "${vibe}". Be specific about what makes it fit.
+- "actors": List 2-4 real actors/voice actors who star in this. REQUIRED for movies/tv/anime/kdrama.
+- "tropes": List 2-4 narrative tropes central to the story (e.g. "found family", "enemies to lovers", "slow burn"). REQUIRED.
+- "interests": List 3-5 interest tags that describe why this matches (e.g. "dark humor", "coming of age").
+
+Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact title", "description": "...", "reasoning": "...", "year": "YYYY", "episodeInfo": "optional", "actors": ["actor1", "actor2"], "tropes": ["trope1", "trope2"], "interests": ["tag1", "tag2"]}`,
+        },
+        {
+          role: 'user',
+          content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests (tie-breaking only): ${interests.join(', ')}` : ''}${tastePatterns ? `\n\n${tastePatterns}` : ''}${peopleSection || ''}\n\nPick the ${contentLabel.slice(0, -1)} that best matches "${vibe}":\n\n${candidateList}`,
+        },
+      ],
+    });
+
+    try {
+      const parsed = JSON.parse(pickResponse.choices[0]?.message?.content ?? '{}');
+      const pick = (parsed.pick ?? 0) - 1;
+      const confidence = parsed.confidence ?? 0;
+
+      if (pick >= 0 && pick < candidates.length && confidence >= 7) {
+        title = parsed.title ?? candidates[pick].title;
+        description = parsed.description ?? '';
+        reasoning = parsed.reasoning ?? '';
+        year = parsed.year ?? candidates[pick].year ?? undefined;
+        episodeInfo = parsed.episodeInfo;
+        pickedActors = parsed.actors;
+        pickedTropes = parsed.tropes;
+        pickedInterests = parsed.interests;
+        break;
+      }
+
+      // Confidence too low or no match — retry with higher temperature
+      if (attempt === MAX_PICK_ATTEMPTS - 1 && pick >= 0 && pick < candidates.length) {
+        // Last attempt: take what we got
+        title = parsed.title ?? candidates[pick].title;
+        description = parsed.description ?? '';
+        reasoning = parsed.reasoning ?? '';
+        year = parsed.year ?? candidates[pick].year ?? undefined;
+        episodeInfo = parsed.episodeInfo;
+        pickedActors = parsed.actors;
+        pickedTropes = parsed.tropes;
+        pickedInterests = parsed.interests;
+      }
+    } catch (error) {
+      log.warn(`Pick attempt ${attempt + 1} failed to parse response`, String(error));
+    }
+  }
+
+  // If still no title, take the top candidate
+  if (!title && candidates.length > 0) {
+    title = candidates[0].title;
+    year = candidates[0].year ?? undefined;
+    description = candidates[0].description;
+  }
+
+  // Last resort: GPT suggests a title directly when search-based approach fails
+  if (!title) {
+    try {
+      const directResponse = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.8,
+        messages: [
+          {
+            role: 'system',
+            content: `Recommend a single ${contentLabel.slice(0, -1)} that matches the user's vibe. Return ONLY JSON: {"title": "exact title", "year": "YYYY", "description": "brief plot summary", "reasoning": "why this fits", "actors": ["actor1", "actor2"], "interests": ["tag1", "tag2"]}`,
+          },
+          {
+            role: 'user',
+            content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${existingTitles.length > 0 ? `\n\nDo NOT recommend any of these: ${existingTitles.slice(0, 30).join(', ')}` : ''}`,
+          },
+        ],
+      });
+      const parsed = JSON.parse(directResponse.choices[0]?.message?.content ?? '{}');
+      if (parsed.title) {
+        title = parsed.title;
+        year = parsed.year;
+        description = parsed.description ?? '';
+        reasoning = parsed.reasoning ?? '';
+        pickedActors = parsed.actors;
+        pickedInterests = parsed.interests;
+      }
+    } catch (error) { log.warn('Direct GPT title suggestion failed', String(error)); }
+  }
+
+  if (!title) {
+    throw new Error('Could not find a good recommendation for this vibe. Try rephrasing or picking a different content type!');
+  }
+
+  // Build action URL
+  const actionUrl = contentType === 'kdrama'
+    ? `https://kissasian.cam/series/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}/`
+    : `https://sflix.ps/search/${encodeURIComponent(title)}`;
+  const actionLabel = contentType === 'kdrama' ? 'Watch on KissAsian' : 'Watch on sflix';
+
+  // Fetch poster and stills
+  let imageUrls: string[] = [];
+  let thumbnailUrl: string | undefined;
+
+  if (contentType === 'anime') {
+    const [jikan, tmdb] = await Promise.all([
+      searchAnimeJikan(title),
+      searchTMDB(title, 'tv', year),
+    ]);
+    thumbnailUrl = jikan?.posterUrl ?? tmdb?.posterUrl ?? undefined;
+    imageUrls = tmdb?.backdropUrls?.length ? tmdb.backdropUrls : (jikan?.backdropUrls ?? []);
+  } else {
+    const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
+    const tmdb = await searchTMDB(title, tmdbType, year);
+    if (tmdb?.posterUrl) thumbnailUrl = tmdb.posterUrl;
+    imageUrls = tmdb?.backdropUrls ?? [];
+  }
+
+  if (imageUrls.length === 0 && !thumbnailUrl) {
+    imageUrls = [0, 1, 2].map(i => `gradient:${i}:${encodeURIComponent(title)}`);
+  }
+
+  let redditInsights;
+  try {
+    redditInsights = await searchRedditForTitle(title, contentType);
+  } catch (error) { log.warn('Failed to fetch Reddit insights', String(error)); }
+
+  return {
+    title,
+    type: contentType,
+    description,
+    reasoning,
+    actionUrl,
+    actionLabel,
+    thumbnailUrl,
+    year,
+    episodeInfo,
+    actors: pickedActors,
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+    redditInsights: redditInsights && redditInsights.length > 0 ? redditInsights : undefined,
+    interests: pickedInterests,
+    tropes: pickedTropes,
+  };
+}
+
 export async function getRecommendation(
   vibe: string,
   contentType: ContentType,
   discoveryMode: DiscoveryMode = 'something_new',
   useInterests: boolean = true
 ): Promise<Recommendation> {
-  const favorites = await getAllFavorites();
-  const allProgress = await getAllProgress();
+  vibe = vibe.replace(/[\r\n]+/g, ' ').trim().slice(0, 1000);
 
-  // Fetch rejected titles
-  let rejectedTitles: string[] = [];
-  try {
-    const { db: getDb } = await import('@/lib/db');
-    const client = await getDb();
-    const rejResult = await client.execute('SELECT title FROM rejected_recommendations');
-    rejectedTitles = rejResult.rows.map((r: unknown) => (r as { title: string }).title);
-  } catch { /* ignore */ }
-  const ratings = await getAllRatings();
+  const client = getDb();
 
-  // Fetch user interests
-  let interests: string[] = [];
-  if (useInterests) {
-    try {
-      const { db: getDb } = await import('@/lib/db');
-      const client = await getDb();
-      const intResult = await client.execute('SELECT name FROM interests ORDER BY name');
-      interests = intResult.rows.map((r: unknown) => (r as { name: string }).name);
-    } catch { /* ignore */ }
+  const [
+    favorites,
+    allProgress,
+    ratings,
+    rejectedResult,
+    historyResult,
+    interestsResult,
+    people,
+    tasteProfile,
+  ] = await Promise.all([
+    getAllFavorites(),
+    getAllProgress(),
+    getAllRatings(),
+    client.execute('SELECT title, reason FROM rejected_recommendations').catch((error: unknown) => {
+      log.warn('Failed to load rejected recommendations', String(error));
+      return { rows: [] };
+    }),
+    client.execute('SELECT title FROM recommendation_history ORDER BY created_at DESC LIMIT 50').catch((error: unknown) => {
+      log.warn('Failed to load recommendation history', String(error));
+      return { rows: [] };
+    }),
+    useInterests
+      ? client.execute('SELECT name FROM interests ORDER BY name').catch((error: unknown) => {
+          log.warn('Failed to load user interests', String(error));
+          return { rows: [] };
+        })
+      : Promise.resolve({ rows: [] }),
+    getAllPeople().catch((error: unknown) => {
+      log.warn('Failed to load people', String(error));
+      return [];
+    }),
+    getUserPreferences().catch((error: unknown) => {
+      log.warn('Failed to load user preferences', String(error));
+      return null;
+    }),
+  ]);
+
+  // Extract rejected titles WITH reasons (#2)
+  const rejectedTitles: string[] = rejectedResult.rows.map((r: unknown) => (r as { title: string }).title);
+  const rejectionReasons: string[] = rejectedResult.rows
+    .filter((r: unknown) => (r as { reason?: string }).reason)
+    .map((r: unknown) => `"${(r as { title: string }).title}": ${(r as { reason: string }).reason}`)
+    .slice(-5);
+
+  // Extract recommendation history for anti-repetition (#5)
+  const historyTitles: string[] = historyResult.rows.map((r: unknown) => (r as { title: string }).title);
+
+  // Extract user interests
+  const interests: string[] = interestsResult.rows.map((r: unknown) => (r as { name: string }).name);
+
+  // Build people section
+  let peopleSection = '';
+  if (people.length > 0) {
+    const grouped: Record<string, string[]> = {};
+    for (const p of people) {
+      const role = p.role ?? 'creator';
+      if (!grouped[role]) grouped[role] = [];
+      grouped[role].push(p.name);
+    }
+    peopleSection = '\n\nPeople the user loves:\n' + Object.entries(grouped).map(([role, names]) => `  ${role}s: ${names.join(', ')}`).join('\n') + '\n\nPrioritize content featuring or created by these people.';
   }
 
-  // Fetch people the user loves
-  let peopleSection = '';
-  try {
-    const { getAllPeople } = await import('@/lib/people');
-    const people = await getAllPeople();
-    if (people.length > 0) {
-      const grouped: Record<string, string[]> = {};
-      for (const p of people) {
-        const role = p.role ?? 'creator';
-        if (!grouped[role]) grouped[role] = [];
-        grouped[role].push(p.name);
-      }
-      peopleSection = '\n\nPeople the user loves:\n' + Object.entries(grouped).map(([role, names]) => `  ${role}s: ${names.join(', ')}`).join('\n') + '\n\nPrioritize content featuring or created by these people. If recommending something new, look for works by the same people or similar creators.';
-    }
-  } catch { /* ignore */ }
-
-  // Load user preferences (condensed taste profile)
-  let tasteProfile: string | null = null;
-  try {
-    const { getUserPreferences } = await import('@/lib/user-preferences');
-    tasteProfile = await getUserPreferences();
-  } catch { /* ignore */ }
+  // Analyze taste patterns from loved content (#8)
+  const tastePatterns = analyzeTastePatterns(favorites, ratings);
 
   const watchProgress: WatchProgress[] = allProgress.map((p) => ({
     id: p.id,
@@ -557,7 +880,7 @@ export async function getRecommendation(
     updated_at: p.updated_at,
   }));
 
-  // If we have a taste profile, use it instead of the full library for efficiency
+  // Build user prompt for YouTube/Substack
   let userPrompt: string;
   if (tasteProfile) {
     userPrompt = [
@@ -566,6 +889,7 @@ export async function getRecommendation(
       interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : '',
       peopleSection,
       `\n--- USER TASTE PROFILE ---\n${tasteProfile}\n--- END PROFILE ---`,
+      tastePatterns ? `\n${tastePatterns}` : '',
       '',
       discoveryMode === 'from_library'
         ? `Recommend something from their existing library.`
@@ -577,7 +901,9 @@ export async function getRecommendation(
     userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode, interests);
   }
 
-  const existingTitles = [...favorites.map(f => f.title), ...rejectedTitles];
+  // Combine all titles to exclude (#5)
+  const allTitles = [...favorites.map(f => f.title), ...rejectedTitles, ...historyTitles];
+  const existingTitles = Array.from(new Set(allTitles));
 
   // --- YOUTUBE: two-pass approach with real videos ---
   if (contentType === 'youtube') {
@@ -589,85 +915,9 @@ export async function getRecommendation(
     return getSubstackRecommendation(vibe, userPrompt, interests, tasteProfile, existingTitles);
   }
 
-  const response = await getOpenAI().chat.completions.create({
-    model: 'gpt-4o-mini',
-    temperature: 0.8,
-    messages: [
-      {
-        role: 'system',
-        content:
-          'You are a personal entertainment recommendation engine. The user\'s vibe/prompt is your ABSOLUTE #1 priority — never ignore or drift from what they asked for. Their interests and taste profile help you find the BEST match within their requested topic, but they never override the vibe. If they say "feminist mythology", every recommendation must be directly about feminist mythology.',
-      },
-      {
-        role: 'user',
-        content: userPrompt,
-      },
-    ],
-  });
-
-  const raw = response.choices[0]?.message?.content ?? '{}';
-
-  let ai: AIResponse;
-  try {
-    ai = JSON.parse(raw) as AIResponse;
-  } catch {
-    throw new Error(`Failed to parse AI response: ${raw}`);
-  }
-
-  const title = ai.title ?? 'Unknown';
-
-  // At this point contentType is movie/tv/anime/kdrama
-  const actionUrl = contentType === 'kdrama'
-    ? `https://kissasian.cam/series/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}/`
-    : `https://sflix.ps/search/${encodeURIComponent(title)}`;
-  const actionLabel = contentType === 'kdrama' ? 'Watch on KissAsian' : 'Watch on sflix';
-
-  // Fetch poster and stills
-  let imageUrls: string[] = [];
-  let thumbnailUrl: string | undefined;
-
-  if (contentType === 'anime') {
-    // Jikan for poster, TMDB for episode stills/backdrops, Jikan art as last resort
-    const [jikan, tmdb] = await Promise.all([
-      searchAnimeJikan(title),
-      searchTMDB(title, 'tv', ai.year),
-    ]);
-    thumbnailUrl = jikan?.posterUrl ?? tmdb?.posterUrl ?? undefined;
-    imageUrls = tmdb?.backdropUrls?.length ? tmdb.backdropUrls : (jikan?.backdropUrls ?? []);
-  } else {
-    const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
-    const tmdb = await searchTMDB(title, tmdbType, ai.year);
-    if (tmdb?.posterUrl) thumbnailUrl = tmdb.posterUrl;
-    imageUrls = tmdb?.backdropUrls ?? [];
-  }
-
-  // Gradient fallbacks if no images found
-  if (imageUrls.length === 0 && !thumbnailUrl) {
-    imageUrls = [0, 1, 2].map(i => `gradient:${i}:${encodeURIComponent(title)}`);
-  }
-
-  // Fetch Reddit insights
-  let redditInsights;
-  try {
-    redditInsights = await searchRedditForTitle(title, contentType);
-  } catch {
-    // Reddit search is best-effort
-  }
-
-  return {
-    title,
-    type: contentType,
-    description: ai.description ?? '',
-    reasoning: ai.reasoning ?? '',
-    actionUrl,
-    actionLabel,
-    thumbnailUrl,
-    year: ai.year,
-    episodeInfo: ai.episodeInfo,
-    actors: ai.actors,
-    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-    redditInsights: redditInsights && redditInsights.length > 0 ? redditInsights : undefined,
-    interests: ai.interests,
-    tropes: ai.tropes,
-  };
+  // --- MOVIE/TV/ANIME/KDRAMA: two-pass with TMDB/Jikan verification (#1) ---
+  return getScreenRecommendation(
+    vibe, contentType, interests, tasteProfile, existingTitles,
+    tastePatterns, rejectionReasons, peopleSection, discoveryMode,
+  );
 }

@@ -93,9 +93,11 @@ export async function getFavoriteById(id: number): Promise<Favorite | undefined>
   return result.rows[0] as unknown as Favorite | undefined;
 }
 
+const ALLOWED_FIELDS = ['title', 'type', 'external_id', 'metadata', 'image_url'];
+
 export async function updateFavorite(id: number, data: Partial<Omit<Favorite, 'id' | 'created_at'>>): Promise<Favorite> {
   const client = await db();
-  const fields = Object.keys(data).filter(k => data[k as keyof typeof data] !== undefined);
+  const fields = Object.keys(data).filter(k => ALLOWED_FIELDS.includes(k) && data[k as keyof typeof data] !== undefined);
   if (fields.length === 0) return (await getFavoriteById(id))!;
   const set = fields.map(f => `${f} = ?`).join(', ');
   const values = fields.map(f => data[f as keyof typeof data] as string | number | null);
@@ -105,6 +107,6 @@ export async function updateFavorite(id: number, data: Partial<Omit<Favorite, 'i
 
 export async function searchFavorites(query: string): Promise<Favorite[]> {
   const client = await db();
-  const result = await client.execute({ sql: 'SELECT * FROM favorites WHERE title LIKE ? ORDER BY created_at DESC', args: [`%${query}%`] });
+  const result = await client.execute({ sql: 'SELECT * FROM favorites WHERE title LIKE ? ORDER BY created_at DESC LIMIT 50', args: [`%${query}%`] });
   return result.rows as unknown as Favorite[];
 }

@@ -4,6 +4,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import Particles from '@/components/Particles';
 import GuestCat from '@/components/GuestCat';
+import { AuthProvider } from '@/components/AuthProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
@@ -30,7 +31,9 @@ export default function RootLayout({
       <body className={`${inter.className} ${playfair.variable} ${caveat.variable} min-h-screen`}>
         <Particles />
         <Header />
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <GuestCat />
       </body>
     </html>

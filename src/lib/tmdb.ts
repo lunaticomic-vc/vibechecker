@@ -47,7 +47,7 @@ export async function searchTMDB(
             .slice(0, 3)
             .map((s: { file_path: string }) => `${IMG_BASE}/w780${s.file_path}`);
         }
-      } catch { /* fallback to backdrops */ }
+      } catch (error) { log.warn('Failed to fetch TMDB episode stills, falling back to backdrops', String(error)); }
 
       // If not enough stills, try more episodes
       if (screencapUrls.length < 3) {
@@ -66,7 +66,7 @@ export async function searchTMDB(
                 if (!screencapUrls.includes(url)) screencapUrls.push(url);
               }
             }
-          } catch { /* skip */ }
+          } catch (error) { log.warn(`Failed to fetch TMDB stills for episode ${ep}`, String(error)); }
         }
       }
     }
@@ -89,7 +89,7 @@ export async function searchTMDB(
             .map((b: { file_path: string }) => `${IMG_BASE}/w780${b.file_path}`);
           screencapUrls.push(...newUrls);
         }
-      } catch { /* ignore */ }
+      } catch (error) { log.warn('Failed to fetch TMDB backdrops', String(error)); }
     }
 
     log.success(`TMDB: found "${top.title ?? top.name}"`, `poster + ${screencapUrls.length} screencaps`);
@@ -152,7 +152,7 @@ export async function searchTMDBDetailed(
           .slice(0, 4)
           .map((c: { name: string }) => c.name);
       }
-    } catch { /* best effort */ }
+    } catch (error) { log.warn('Failed to fetch TMDB credits', String(error)); }
 
     // Reuse existing image logic
     const images = await searchTMDB(title, type);
@@ -215,7 +215,7 @@ export async function searchTMDBMulti(
           voteAverage: item.vote_average ?? 0,
         });
       }
-    } catch { continue; }
+    } catch (error) { log.warn(`Failed to search TMDB for query: ${query}`, String(error)); continue; }
   }
 
   return results;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuthCookie } from '@/lib/auth';
+import { verifyAuthCookie, verifyGuestCookie } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET(req: NextRequest) {
@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
   }
 
   // Check for guest cookie
-  const { verifyGuestCookie } = await import('@/lib/auth');
   const isGuest = verifyGuestCookie(req.cookies.get('cc_guest')?.value);
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';

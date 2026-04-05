@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRecommendation } from '@/lib/recommendation-engine';
-
+import { db } from '@/lib/db';
 import { verifyAuthCookie } from '@/lib/auth';
-import { checkRateLimit, incrementUsage } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { log } from '@/lib/logger';
 import type { ContentType } from '@/types/index';
 
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   // Rate limit guests (owner gets unlimited)
   const isOwner = verifyAuthCookie(req.cookies.get('cc_auth')?.value);
   if (!isOwner) {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
+    const ip = req.headers.get('x-real-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
     const { allowed } = await checkRateLimit(ip);
     if (!allowed) {
       return NextResponse.json({ error: 'You\'ve used all 3 free recommendations. Thanks for trying Consumption Corner!' }, { status: 429 });
@@ -50,23 +50,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'vibe is required' }, { status: 400 });
   }
 
+  if (vibe.length > 1000) {
+    log.warn('Vibe too long', `${vibe.length} chars`);
+    return NextResponse.json({ error: 'Vibe is too long (max 1000 characters)' }, { status: 400 });
+  }
+
   try {
     log.ai('Calling OpenAI gpt-4o-mini...');
     const recommendation = await getRecommendation(vibe.trim(), contentType as ContentType, (discoveryMode as 'from_library' | 'something_new') ?? 'something_new', useInterests);
     log.success(`Got recommendation: "${recommendation.title}"`, `(${recommendation.type})`);
 
-    if (!isOwner) {
-      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
-      await incrementUsage(ip);
-    }
+    // Save to recommendation history for anti-repetition
+    try {
+      const client = await db();
+      await client.execute({
+        sql: 'INSERT INTO recommendation_history (title, type, vibe) VALUES (?, ?, ?)',
+        args: [recommendation.title, recommendation.type, vibe],
+      });
+    } catch (error) { log.warn('Failed to save recommendation history', String(error)); }
 
     // YouTube recommendations already have the correct URL/thumbnail
     // from getYouTubeRecommendation — no second search needed
 
     return NextResponse.json(recommendation);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Recommendation failed';
+    console.error('Recommendation failed:', error);
     log.error('Recommendation failed', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: 'Recommendation failed' }, { status: 500 });
   }
 }

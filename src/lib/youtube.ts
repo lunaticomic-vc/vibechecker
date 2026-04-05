@@ -22,7 +22,7 @@ export async function searchYouTube(query: string, excludeShorts = true): Promis
 
   const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=10${excludeShorts ? '&videoDuration=medium' : ''}`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!res.ok) return searchYouTubeBrave(query);
 
   const data = await res.json();
@@ -58,7 +58,7 @@ async function searchYouTubeBrave(query: string): Promise<YouTubeResult[]> {
         return { videoId, title: decodeHtml((r.title as string) ?? ''), thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`, channelTitle: '' };
       })
       .filter((r: YouTubeResult) => r.videoId);
-  } catch { return []; }
+  } catch (error) { console.warn('Failed to search YouTube via Brave fallback', error); return []; }
 }
 
 export function buildYouTubeWatchUrl(videoId: string): string {
@@ -83,7 +83,8 @@ export async function getVideoDetails(videoIds: string[]): Promise<YouTubeVideoD
   try {
     const ids = videoIds.slice(0, 50).join(',');
     const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${ids}&key=${apiKey}`
+      `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${ids}&key=${apiKey}`,
+      { signal: AbortSignal.timeout(8000) }
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -92,7 +93,7 @@ export async function getVideoDetails(videoIds: string[]): Promise<YouTubeVideoD
       durationSeconds: parseISO8601Duration(item.contentDetails?.duration ?? ''),
       viewCount: parseInt(item.statistics?.viewCount ?? '0'),
     }));
-  } catch { return []; }
+  } catch (error) { console.warn('Failed to fetch YouTube video details', error); return []; }
 }
 
 export function formatDuration(seconds: number): string {

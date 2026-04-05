@@ -27,6 +27,12 @@ export async function initDb(): Promise<Client> {
   const db = getDb();
   if (_initialized) return db;
 
+  const isLocal = !(process.env.TURSO_DATABASE_URL?.startsWith('libsql'));
+  if (isLocal) {
+    await db.execute('PRAGMA foreign_keys = ON');
+    await db.execute('PRAGMA journal_mode=WAL');
+  }
+
   await db.batch([
     `CREATE TABLE IF NOT EXISTS favorites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,7 +52,8 @@ export async function initDb(): Promise<Client> {
       total_episodes INTEGER,
       status TEXT DEFAULT 'watching' CHECK(status IN ('todo', 'watching', 'completed', 'dropped', 'on_hold')),
       stopped_at TEXT,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(favorite_id)
     )`,
     `CREATE TABLE IF NOT EXISTS accounts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +78,8 @@ export async function initDb(): Promise<Client> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       type TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(title, type)
     )`,
     `CREATE TABLE IF NOT EXISTS people (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,18 +101,43 @@ export async function initDb(): Promise<Client> {
     `CREATE TABLE IF NOT EXISTS ip_usage (
       ip TEXT PRIMARY KEY,
       count INTEGER DEFAULT 0,
+      window_start TEXT DEFAULT (datetime('now')),
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS recommendation_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      type TEXT NOT NULL,
+      vibe TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS user_preferences (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      content TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now'))
     )`,
   ]);
 
-  // Migration: ensure 'substack' is in the favorites type CHECK constraint
-  // SQLite can't ALTER CHECK constraints, so recreate the table if needed
-  try {
-    await db.execute("INSERT INTO favorites (type, title) VALUES ('substack', '__migration_test__')");
-    await db.execute("DELETE FROM favorites WHERE title = '__migration_test__'");
-  } catch {
-    // CHECK constraint failed — need to recreate table
-    dbLog('Migrating favorites table to add substack type...');
+  // Create indexes
+  await db.batch([
+    'CREATE INDEX IF NOT EXISTS idx_favorites_type ON favorites(type)',
+    'CREATE INDEX IF NOT EXISTS idx_favorites_created ON favorites(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_watch_progress_favorite ON watch_progress(favorite_id)',
+    'CREATE INDEX IF NOT EXISTS idx_ratings_favorite ON ratings(favorite_id)',
+    'CREATE INDEX IF NOT EXISTS idx_rejected_title_type ON rejected_recommendations(title, type)',
+    'CREATE INDEX IF NOT EXISTS idx_ip_usage_ip ON ip_usage(ip)',
+    'CREATE INDEX IF NOT EXISTS idx_people_name ON people(name)',
+    'CREATE INDEX IF NOT EXISTS idx_interests_name ON interests(name)',
+    'CREATE INDEX IF NOT EXISTS idx_accounts_platform ON accounts(platform)',
+  ]);
+
+  // Migration: ensure favorites type CHECK constraint includes 'substack' and 'kdrama'
+  // Use sqlite_master to inspect the table definition instead of INSERT+DELETE probes
+  const tableInfo = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='favorites'");
+  const tableSql = (tableInfo.rows[0] as unknown as { sql: string })?.sql ?? '';
+
+  if (!tableSql.includes("'substack'") || !tableSql.includes("'kdrama'")) {
+    dbLog('Migrating favorites table to update type CHECK constraint...');
     await db.batch([
       `CREATE TABLE favorites_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -122,27 +155,14 @@ export async function initDb(): Promise<Client> {
     dbLog('Favorites table migrated ✓');
   }
 
-  // Migration: ensure 'kdrama' is in the favorites type CHECK constraint
+  // Migration: add reason column to rejected_recommendations
   try {
-    await db.execute("INSERT INTO favorites (type, title) VALUES ('kdrama', '__migration_test__')");
-    await db.execute("DELETE FROM favorites WHERE title = '__migration_test__'");
+    await db.execute('SELECT reason FROM rejected_recommendations LIMIT 1');
   } catch {
-    dbLog('Migrating favorites table to add kdrama type...');
-    await db.batch([
-      `CREATE TABLE favorites_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama')),
-        title TEXT NOT NULL,
-        external_id TEXT,
-        metadata TEXT,
-        image_url TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `INSERT INTO favorites_new SELECT * FROM favorites`,
-      `DROP TABLE favorites`,
-      `ALTER TABLE favorites_new RENAME TO favorites`,
-    ]);
-    dbLog('Favorites table migrated (kdrama) ✓');
+    try {
+      await db.execute('ALTER TABLE rejected_recommendations ADD COLUMN reason TEXT');
+      dbLog('Added reason column to rejected_recommendations ✓');
+    } catch { /* already exists or other issue */ }
   }
 
   _initialized = true;

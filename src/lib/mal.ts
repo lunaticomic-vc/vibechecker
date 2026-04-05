@@ -30,6 +30,8 @@ export async function fetchMALAnimeList(
     plan_to_watch: 'plan_to_watch',
   };
 
+  let malRetries = 0;
+  const MAL_MAX_RETRIES = 3;
   while (results.length < limit) {
     const params = new URLSearchParams({
       fields: 'list_status,num_episodes,main_picture',
@@ -46,7 +48,9 @@ export async function fetchMALAnimeList(
       if (res.status === 404) throw new Error(`MAL user "${username}" not found`);
       if (res.status === 403) throw new Error('MAL list is private. Set your anime list to public in MAL Settings → Privacy.');
       if (res.status === 429) {
-        await delay(2000);
+        malRetries++;
+        if (malRetries >= MAL_MAX_RETRIES) throw new Error('MAL API rate limited after ' + MAL_MAX_RETRIES + ' retries');
+        await delay(1000 * malRetries);
         continue;
       }
       const body = await res.text();
@@ -129,10 +133,11 @@ export async function searchAnimeJikan(
           if (va?.person?.name) actors.push(va.person.name);
         }
       }
-    } catch { /* best effort */ }
+    } catch (error) { console.warn('Failed to fetch additional Jikan anime pictures/characters', error); }
 
     return { posterUrl, backdropUrls, year, description, actors };
-  } catch {
+  } catch (error) {
+    console.warn('Failed to search anime via Jikan', error);
     return null;
   }
 }
@@ -148,6 +153,8 @@ async function fetchViaJikan(
   let page = 1;
   let hasMore = true;
 
+  let jikanRetries = 0;
+  const JIKAN_MAX_RETRIES = 3;
   while (hasMore && results.length < limit) {
     const res = await fetch(
       `${JIKAN_BASE}/users/${encodeURIComponent(username)}/animelist?page=${page}&limit=25&order_by=score&sort=desc`
@@ -156,7 +163,9 @@ async function fetchViaJikan(
     if (!res.ok) {
       if (res.status === 404) throw new Error(`MAL user "${username}" not found, or anime list is private. Set it to public in MAL Settings → Privacy.`);
       if (res.status === 429) {
-        await delay(1500);
+        jikanRetries++;
+        if (jikanRetries >= JIKAN_MAX_RETRIES) throw new Error('MAL API rate limited after ' + JIKAN_MAX_RETRIES + ' retries');
+        await delay(1000 * jikanRetries);
         continue;
       }
       throw new Error(`MAL API error: ${res.status}`);
@@ -226,7 +235,7 @@ export async function searchAnimeJikanMulti(queries: string[]): Promise<JikanSea
           genres: (item.genres ?? []).map((g: { name: string }) => g.name),
         });
       }
-    } catch { continue; }
+    } catch (error) { console.warn(`Failed to search anime via Jikan for query: ${query}`, error); continue; }
   }
 
   return results;

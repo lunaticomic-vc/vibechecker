@@ -33,7 +33,8 @@ export default function LoginPage() {
         setPassword('');
         catSay('nice try~');
       }
-    } catch {
+    } catch (error) {
+      console.error('Login request failed', error);
       setError('something went wrong');
     }
     setLoading(false);
@@ -47,7 +48,7 @@ export default function LoginPage() {
         window.location.href = '/';
         return;
       }
-    } catch { /* */ }
+    } catch (error) { console.error('Guest auth request failed', error); }
     setLoading(false);
   }
 

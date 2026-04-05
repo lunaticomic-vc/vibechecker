@@ -5,6 +5,7 @@ import FavoriteCard from '@/components/favorites/FavoriteCard';
 import StatusDragProvider from '@/components/StatusDragOverlay';
 import GlassTabs from '@/components/GlassTabs';
 import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index';
+import { useIsOwner } from '@/lib/useIsOwner';
 
 type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
 
@@ -20,10 +21,10 @@ const SECTION_ORDER: StatusGroup[] = ['Todo', 'In Progress', 'On Hold', 'Complet
 const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
 
 export default function YouTubePage() {
+  const isOwner = useIsOwner();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [ratingsMap, setRatingsMap] = useState<Record<number, { rating: RatingValue; reasoning?: string }>>({});
   const [progressMap, setProgressMap] = useState<Record<number, WatchProgress>>({});
-  const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -45,7 +46,6 @@ export default function YouTubePage() {
     if (!res.ok) return;
     const data = await res.json();
     setFavorites(prev => append ? [...prev, ...data.favorites] : data.favorites);
-    setTotal(data.total);
     setHasMore(data.hasMore);
     setOffset(currentOffset + data.favorites.length);
   }
@@ -104,7 +104,7 @@ export default function YouTubePage() {
         const data = await res.json();
         if (data.title) setFetchedTitle(data.title);
       }
-    } catch { /* best effort */ }
+    } catch (error) { console.warn('Failed to fetch YouTube video title', error); }
     setFetchingTitle(false);
   }
 
@@ -140,7 +140,6 @@ export default function YouTubePage() {
   async function handleDelete(id: number) {
     await fetch(`/api/favorites?id=${id}`, { method: 'DELETE' });
     setFavorites(prev => prev.filter(f => f.id !== id));
-    setTotal(prev => prev - 1);
   }
 
   async function handleRate(favoriteId: number, rating: RatingValue, reasoning?: string) {
@@ -190,16 +189,18 @@ export default function YouTubePage() {
           <div>
             <h1 className="text-2xl font-semibold text-[#2d2640]">YouTube</h1>
           </div>
+          {isOwner && (
           <button
             onClick={() => setShowAdd(v => !v)}
             className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm"
           >
             {showAdd ? 'Cancel' : '+ Add'}
           </button>
+          )}
         </div>
 
         {/* Add form — collapsed by default */}
-        {showAdd && (
+        {isOwner && showAdd && (
           <form onSubmit={handleAdd} className="mb-8 bg-white border-2 border-[#e9e4f5] rounded-xl p-4 space-y-3">
             <h3 className="text-sm font-semibold text-[#2d2640]">Add Video</h3>
             <input
@@ -231,7 +232,7 @@ export default function YouTubePage() {
           </form>
         )}
 
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-4" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." aria-label="Search" className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-4" />
 
         <div className="mb-4">
           <GlassTabs tabs={SECTION_ORDER} active={activeTab} onChange={(tab) => { setActiveTab(tab); setOffset(0); fetchFavorites(0, false, statusGroupToApi[tab]); }} layoutId="youtube-tab" />
@@ -270,6 +271,7 @@ export default function YouTubePage() {
                     rating={ratingsMap[fav.id]}
                     currentStatus={getCurrentStatus(fav)}
                     landscape
+                    isGuest={!isOwner}
                     onDelete={handleDelete}
                     onRate={handleRate}
                     onStatusChange={handleStatusChange}

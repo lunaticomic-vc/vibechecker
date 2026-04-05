@@ -2,14 +2,16 @@
 
 import { useState } from 'react';
 import { Recommendation } from '@/types/index';
+import { TYPE_COLORS as BASE_TYPE_COLORS } from '@/lib/constants';
 
+// RecommendationCard needs border colors in addition to bg/text — extend with borders
 const TYPE_COLORS: Record<string, string> = {
-  movie: 'bg-[#f3f0ff] text-[#7c3aed] border-[#c4b5fd]',
-  tv: 'bg-[#f0f7ef] text-[#6b9a65] border-[#a7c4a0]',
-  youtube: 'bg-[#fef2f2] text-[#dc2626] border-[#fca5a5]',
-  anime: 'bg-[#f5f3ff] text-[#8b5cf6] border-[#c4b5fd]',
-  substack: 'bg-[#fff7ed] text-[#c2410c] border-[#fdba74]',
-  kdrama: 'bg-[#fdf2f8] text-[#db2777] border-[#f9a8d4]',
+  movie: `${BASE_TYPE_COLORS.movie} border-[#c4b5fd]`,
+  tv: `${BASE_TYPE_COLORS.tv} border-[#a7c4a0]`,
+  youtube: `${BASE_TYPE_COLORS.youtube} border-[#fca5a5]`,
+  anime: `${BASE_TYPE_COLORS.anime} border-[#c4b5fd]`,
+  substack: `${BASE_TYPE_COLORS.substack} border-[#fdba74]`,
+  kdrama: `${BASE_TYPE_COLORS.kdrama} border-[#f9a8d4]`,
 };
 
 async function autoAddToProgress(rec: Recommendation) {
@@ -308,10 +310,12 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
               <div className={`overflow-hidden transition-all duration-300 ${openSection === 'description' ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}><p className="px-3 pb-3 text-xs text-[#5a5270] leading-relaxed">{description}</p></div>
             </div>
           )}
+          {reasoning && (
           <div className="rounded-lg border border-[#d4e6d1] overflow-hidden">
             <button onClick={() => toggleSection('vibe')} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65] hover:bg-[#f6faf5] transition-colors">Why this fits {chevron(openSection === 'vibe')}</button>
             <div className={`overflow-hidden transition-all duration-300 ${openSection === 'vibe' ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'}`}><p className="px-3 pb-3 text-xs italic text-[#4a7044] leading-relaxed max-h-52 overflow-y-auto scrollbar-thin">{reasoning}</p></div>
           </div>
+          )}
           {redditInsights && redditInsights.length > 0 && (
             <RedditCarouselWithSpoilers insights={redditInsights} isOpen={openSection === 'reddit'} onToggle={() => toggleSection('reddit')} chevron={chevron} />
           )}

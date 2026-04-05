@@ -1,5 +1,21 @@
 export type ContentType = 'movie' | 'tv' | 'anime' | 'youtube' | 'substack' | 'kdrama';
 
+export type FavoriteMetadata =
+  | { source: 'recommendation'; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; year?: string }
+  | { source: 'manual'; year?: string; description?: string; actors?: string[] }
+  | { status?: string }
+  | { notes: string };
+
+export function parseFavoriteMetadata(raw: string | undefined): FavoriteMetadata | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as FavoriteMetadata;
+  } catch {
+    // Plain text metadata stored as notes
+    return { notes: raw };
+  }
+}
+
 export interface Favorite {
   id: number;
   type: ContentType;

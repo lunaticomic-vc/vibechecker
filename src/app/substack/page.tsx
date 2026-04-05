@@ -5,6 +5,7 @@ import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index
 import RatingSelector from '@/components/RatingSelector';
 import StatusDragProvider, { useDragStatus } from '@/components/StatusDragOverlay';
 import GlassTabs from '@/components/GlassTabs';
+import { useIsOwner } from '@/lib/useIsOwner';
 
 type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
 
@@ -19,11 +20,94 @@ const PROGRESS_STATUS_MAP: Record<WatchProgress['status'], StatusGroup> = {
 const SECTION_ORDER: StatusGroup[] = ['Todo', 'In Progress', 'On Hold', 'Completed'];
 const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
 
+function extractDomain(url: string): string {
+  try { return new URL(url).hostname.replace('www.', ''); } catch { return ''; }
+}
+
+interface ArticleRowProps {
+  fav: Favorite;
+  ratingsMap: Record<number, { rating: RatingValue; reasoning?: string }>;
+  getCurrentStatus: (fav: Favorite) => string;
+  onStatusChange: (favoriteId: number, newStatus: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
+  onRate: (favoriteId: number, rating: RatingValue, reasoning?: string) => void;
+  isOwner: boolean;
+}
+
+function ArticleRow({ fav, ratingsMap, getCurrentStatus, onStatusChange, onDelete, onRate, isOwner }: ArticleRowProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const holdTimer = useRef<NodeJS.Timeout | null>(null);
+  const { startDrag } = useDragStatus();
+  const status = getCurrentStatus(fav);
+  const rating = ratingsMap[fav.id];
+
+  function handleClick() {
+    if (!fav.external_id) return;
+    if (status === 'todo') onStatusChange(fav.id, 'watching');
+    window.open(fav.external_id, '_blank');
+  }
+
+  function handlePointerDown(e: React.MouseEvent | React.TouchEvent) {
+    e.preventDefault();
+    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    holdTimer.current = setTimeout(() => {
+      startDrag(fav.id, fav.title, status, x, y);
+    }, 500);
+  }
+
+  function handlePointerUp() {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+  }
+
+  return (
+    <div
+      className="flex items-center gap-3 bg-white border-2 border-[#e9e4f5] rounded-xl px-4 py-3 hover:border-[#c4b5fd] transition-colors group select-none"
+      onMouseDown={handlePointerDown}
+      onMouseUp={handlePointerUp}
+      onMouseLeave={handlePointerUp}
+      onTouchStart={handlePointerDown}
+      onTouchEnd={handlePointerUp}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          {fav.external_id ? (
+            <button onClick={handleClick} className="text-sm font-medium text-[#2d2640] hover:text-[#7c3aed] hover:underline truncate text-left">
+              {fav.title}
+            </button>
+          ) : (
+            <p className="text-sm font-medium text-[#2d2640] truncate">{fav.title}</p>
+          )}
+        </div>
+        {fav.external_id && (
+          <p className="text-[10px] text-[#b0a8c4] mt-0.5 truncate">{extractDomain(fav.external_id)}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {isOwner && status !== 'todo' && rating && (
+          <RatingSelector favoriteId={fav.id} currentRating={rating.rating} currentReasoning={rating.reasoning} onRate={onRate} compact />
+        )}
+        {isOwner && (
+        <button
+          onClick={() => { if (!confirmDelete) { setConfirmDelete(true); return; } onDelete(fav.id); }}
+          onBlur={() => setConfirmDelete(false)}
+          className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity ${
+            confirmDelete ? 'bg-red-500 text-white opacity-100' : 'bg-[#f5f3ff] text-[#7c7291] hover:bg-red-500 hover:text-white'
+          }`}
+        >
+          {confirmDelete ? '!' : '×'}
+        </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SubstackPage() {
+  const isOwner = useIsOwner();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [ratingsMap, setRatingsMap] = useState<Record<number, { rating: RatingValue; reasoning?: string }>>({});
   const [progressMap, setProgressMap] = useState<Record<number, WatchProgress>>({});
-  const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -45,7 +129,6 @@ export default function SubstackPage() {
     if (!res.ok) return;
     const data = await res.json();
     setFavorites(prev => append ? [...prev, ...data.favorites] : data.favorites);
-    setTotal(data.total);
     setHasMore(data.hasMore);
     setOffset(currentOffset + data.favorites.length);
   }
@@ -104,7 +187,7 @@ export default function SubstackPage() {
         const data = await res.json();
         if (data.title) setFetchedTitle(data.title);
       }
-    } catch { /* best effort */ }
+    } catch (error) { console.warn('Failed to fetch article title', error); }
     setFetchingTitle(false);
   }
 
@@ -140,7 +223,6 @@ export default function SubstackPage() {
   async function handleDelete(id: number) {
     await fetch(`/api/favorites?id=${id}`, { method: 'DELETE' });
     setFavorites(prev => prev.filter(f => f.id !== id));
-    setTotal(prev => prev - 1);
   }
 
   async function handleRate(favoriteId: number, rating: RatingValue, reasoning?: string) {
@@ -181,77 +263,6 @@ export default function SubstackPage() {
 
   const inputClass = "bg-white border-2 border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd] w-full";
 
-  function extractDomain(url: string): string {
-    try { return new URL(url).hostname.replace('www.', ''); } catch { return ''; }
-  }
-
-  function ArticleRow({ fav }: { fav: Favorite }) {
-    const [confirmDelete, setConfirmDelete] = useState(false);
-    const holdTimer = useRef<NodeJS.Timeout | null>(null);
-    const { startDrag } = useDragStatus();
-    const status = getCurrentStatus(fav);
-    const rating = ratingsMap[fav.id];
-
-    function handleClick() {
-      if (!fav.external_id) return;
-      if (status === 'todo') handleStatusChange(fav.id, 'watching');
-      window.open(fav.external_id, '_blank');
-    }
-
-    function handlePointerDown(e: React.MouseEvent | React.TouchEvent) {
-      e.preventDefault();
-      const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      holdTimer.current = setTimeout(() => {
-        startDrag(fav.id, fav.title, status, x, y);
-      }, 500);
-    }
-
-    function handlePointerUp() {
-      if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
-    }
-
-    return (
-      <div
-        className="flex items-center gap-3 bg-white border-2 border-[#e9e4f5] rounded-xl px-4 py-3 hover:border-[#c4b5fd] transition-colors group select-none"
-        onMouseDown={handlePointerDown}
-        onMouseUp={handlePointerUp}
-        onMouseLeave={handlePointerUp}
-        onTouchStart={handlePointerDown}
-        onTouchEnd={handlePointerUp}
-      >
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {fav.external_id ? (
-              <button onClick={handleClick} className="text-sm font-medium text-[#2d2640] hover:text-[#7c3aed] hover:underline truncate text-left">
-                {fav.title}
-              </button>
-            ) : (
-              <p className="text-sm font-medium text-[#2d2640] truncate">{fav.title}</p>
-            )}
-          </div>
-          {fav.external_id && (
-            <p className="text-[10px] text-[#b0a8c4] mt-0.5 truncate">{extractDomain(fav.external_id)}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {status !== 'todo' && rating && (
-            <RatingSelector favoriteId={fav.id} currentRating={rating.rating} currentReasoning={rating.reasoning} onRate={handleRate} compact />
-          )}
-          <button
-            onClick={() => { if (!confirmDelete) { setConfirmDelete(true); return; } handleDelete(fav.id); }}
-            onBlur={() => setConfirmDelete(false)}
-            className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity ${
-              confirmDelete ? 'bg-red-500 text-white opacity-100' : 'bg-[#f5f3ff] text-[#7c7291] hover:bg-red-500 hover:text-white'
-            }`}
-          >
-            {confirmDelete ? '!' : '×'}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <StatusDragProvider onStatusChange={handleStatusChange}>
     <div className="min-h-screen overflow-y-auto relative z-10">
@@ -261,16 +272,18 @@ export default function SubstackPage() {
           <div>
             <h1 className="text-2xl font-semibold text-[#2d2640]">Substack</h1>
           </div>
+          {isOwner && (
           <button
             onClick={() => setShowAddForm(v => !v)}
             className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm"
           >
             {showAddForm ? 'Cancel' : '+ Add'}
           </button>
+          )}
         </div>
 
         {/* Add form — collapsed by default, link-only with auto-fetch title */}
-        {showAddForm && (
+        {isOwner && showAddForm && (
           <form onSubmit={handleAdd} className="bg-white border-2 border-[#e9e4f5] rounded-xl p-5 mb-8 space-y-3">
             <h3 className="text-sm font-semibold text-[#2d2640]">Add Article</h3>
             <input
@@ -303,7 +316,7 @@ export default function SubstackPage() {
           </form>
         )}
 
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-4" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." aria-label="Search" className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-4" />
 
         <div className="mb-4">
           <GlassTabs tabs={SECTION_ORDER} active={activeTab} onChange={(tab) => { setActiveTab(tab); setOffset(0); fetchFavorites(0, false, statusGroupToApi[tab]); }} layoutId="substack-tab" />
@@ -336,7 +349,7 @@ export default function SubstackPage() {
             ) : (
               <div className="space-y-2">
                 {activeItems.map(fav => (
-                  <ArticleRow key={fav.id} fav={fav} />
+                  <ArticleRow key={fav.id} fav={fav} ratingsMap={ratingsMap} getCurrentStatus={getCurrentStatus} onStatusChange={handleStatusChange} onDelete={handleDelete} onRate={handleRate} isOwner={isOwner} />
                 ))}
               </div>
             )}

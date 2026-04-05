@@ -1,21 +1,18 @@
 import { db } from '@/lib/db';
 import { getOpenAI } from '@/lib/openai';
 import { log } from '@/lib/logger';
-import fs from 'fs/promises';
-import path from 'path';
-
-const PREFS_PATH = path.join(process.cwd(), 'userpreferences.md');
 
 export async function buildUserPreferences(): Promise<string> {
   const client = await db();
 
   // Fetch all favorites with ratings and notes
-  const favs = await client.execute('SELECT f.*, r.rating, r.reasoning FROM favorites f LEFT JOIN ratings r ON r.favorite_id = f.id ORDER BY f.type, r.rating');
+  const favs = await client.execute('SELECT f.*, r.rating, r.reasoning FROM favorites f LEFT JOIN ratings r ON r.favorite_id = f.id ORDER BY f.type, r.rating LIMIT 500');
 
-  const interests = await client.execute('SELECT name FROM interests ORDER BY name');
+  const interests = await client.execute('SELECT name FROM interests ORDER BY name LIMIT 100');
   const progress = await client.execute(`
     SELECT wp.status, f.title, f.type FROM watch_progress wp
     JOIN favorites f ON f.id = wp.favorite_id
+    LIMIT 500
   `);
 
   // Group by type and rating, including user notes from metadata
@@ -111,21 +108,30 @@ ${profile}
 - Completed: ${completed.length} items
 `;
 
-    await fs.writeFile(PREFS_PATH, md, 'utf-8');
+    await client.execute({
+      sql: 'INSERT OR REPLACE INTO user_preferences (id, content, updated_at) VALUES (1, ?, datetime(\'now\'))',
+      args: [md],
+    });
     log.success('User preferences updated', `${favs.rows.length} items analyzed`);
     return md;
   } catch (err) {
     log.error('Failed to build user preferences', err);
     // Fallback: write raw data without AI analysis
     const fallback = `# User Preferences\n\n> Raw data (AI analysis failed)\n> Last updated: ${new Date().toISOString().split('T')[0]}\n\n${rawData}`;
-    await fs.writeFile(PREFS_PATH, fallback, 'utf-8');
+    await client.execute({
+      sql: 'INSERT OR REPLACE INTO user_preferences (id, content, updated_at) VALUES (1, ?, datetime(\'now\'))',
+      args: [fallback],
+    });
     return fallback;
   }
 }
 
 export async function getUserPreferences(): Promise<string | null> {
   try {
-    return await fs.readFile(PREFS_PATH, 'utf-8');
+    const client = await db();
+    const result = await client.execute('SELECT content FROM user_preferences WHERE id = 1');
+    const row = result.rows[0] as unknown as { content: string } | undefined;
+    return row?.content ?? null;
   } catch {
     return null;
   }

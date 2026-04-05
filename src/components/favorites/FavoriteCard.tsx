@@ -3,26 +3,10 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Favorite, RatingValue } from '@/types/index';
+import { parseFavoriteMetadata } from '@/types/index';
 import RatingSelector from '@/components/RatingSelector';
 import { useDragStatus } from '@/components/StatusDragOverlay';
-
-const TYPE_LABELS: Record<string, string> = {
-  movie: 'Movie',
-  tv: 'TV Show',
-  anime: 'Anime',
-  youtube: 'YouTube',
-  substack: 'Substack',
-  kdrama: 'K-Drama',
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  movie: 'bg-[#f3f0ff] text-[#7c3aed]',
-  tv: 'bg-[#f0f7ef] text-[#6b9a65]',
-  anime: 'bg-[#f5f3ff] text-[#8b5cf6]',
-  youtube: 'bg-[#fef2f2] text-[#dc2626]',
-  substack: 'bg-[#fff7ed] text-[#c2410c]',
-  kdrama: 'bg-[#fdf2f8] text-[#db2777]',
-};
+import { TYPE_COLORS, TYPE_LABELS } from '@/lib/constants';
 
 interface FavoriteCardProps {
   favorite: Favorite;
@@ -30,6 +14,7 @@ interface FavoriteCardProps {
   currentStatus?: string;
   showTypeLabel?: boolean;
   landscape?: boolean;
+  isGuest?: boolean;
   onDelete: (id: number) => void;
   onRate: (favoriteId: number, rating: RatingValue, reasoning?: string) => void;
   onStatusChange?: (favoriteId: number, newStatus: string) => void;
@@ -37,12 +22,7 @@ interface FavoriteCardProps {
 
 type AccordionSection = 'about' | 'vibe' | 'rating' | null;
 
-function parseMeta(metadata?: string): Record<string, unknown> | null {
-  if (!metadata) return null;
-  try { return JSON.parse(metadata); } catch { return null; }
-}
-
-export default function FavoriteCard({ favorite, rating, currentStatus, showTypeLabel, landscape, onDelete, onRate, onStatusChange }: FavoriteCardProps) {
+export default function FavoriteCard({ favorite, rating, currentStatus, showTypeLabel, landscape, isGuest, onDelete, onRate, onStatusChange }: FavoriteCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [openSection, setOpenSection] = useState<AccordionSection>(null);
@@ -89,9 +69,10 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
     onDelete(favorite.id);
   }
 
-  const meta = parseMeta(favorite.metadata);
-  const isRec = meta?.source === 'recommendation';
-  const plainNotes = !meta && favorite.metadata ? favorite.metadata : meta?.notes as string | undefined;
+  const meta = parseFavoriteMetadata(favorite.metadata);
+  const isRec = meta !== null && 'source' in meta && meta.source === 'recommendation';
+  const recMeta = isRec ? (meta as Extract<typeof meta, { source: 'recommendation' }>) : null;
+  const plainNotes = meta !== null && 'notes' in meta ? meta.notes : undefined;
 
   const chevron = (open: boolean) => (
     <svg className={`w-3 h-3 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -105,11 +86,11 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
       <div
         ref={cardRef}
         className="select-none"
-        onMouseDown={!expanded ? handlePointerDown : undefined}
-        onMouseUp={!expanded ? handlePointerUp : undefined}
-        onMouseLeave={!expanded ? handlePointerUp : undefined}
-        onTouchStart={!expanded ? handlePointerDown : undefined}
-        onTouchEnd={!expanded ? handlePointerUp : undefined}
+        onMouseDown={!expanded && !isGuest ? handlePointerDown : undefined}
+        onMouseUp={!expanded && !isGuest ? handlePointerUp : undefined}
+        onMouseLeave={!expanded && !isGuest ? handlePointerUp : undefined}
+        onTouchStart={!expanded && !isGuest ? handlePointerDown : undefined}
+        onTouchEnd={!expanded && !isGuest ? handlePointerUp : undefined}
         onClick={!expanded ? handleClick : undefined}
       >
         {expanded ? (
@@ -142,6 +123,7 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
             </div>
 
             {/* Delete */}
+            {!isGuest && (
             <button
               onClick={(e) => { e.stopPropagation(); handleDelete(); }}
               onBlur={() => setConfirming(false)}
@@ -151,6 +133,7 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
             >
               {confirming ? '!' : '×'}
             </button>
+            )}
 
             <div className="p-2.5 flex-1 min-w-0">
               {showTypeLabel && (
@@ -203,7 +186,7 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
                     {favorite.title}
                   </a>
                 ) : (
-                  <a href={`https://sflix.ps/search/${encodeURIComponent(favorite.title)}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-lg font-bold text-[#2d2640] leading-tight hover:text-[#7c3aed] hover:underline block">
+                  <a href={favorite.type === 'youtube' ? `https://www.youtube.com/results?search_query=${encodeURIComponent(favorite.title)}` : favorite.type === 'substack' ? `https://substack.com/search/${encodeURIComponent(favorite.title)}` : `https://sflix.ps/search/${encodeURIComponent(favorite.title)}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-lg font-bold text-[#2d2640] leading-tight hover:text-[#7c3aed] hover:underline block">
                     {favorite.title}
                   </a>
                 )}
@@ -211,49 +194,49 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${TYPE_COLORS[favorite.type]}`}>
                     {TYPE_LABELS[favorite.type]}
                   </span>
-                  {isRec && !!meta?.year && <span className="text-[10px] text-[#7c7291]">{String(meta.year)}</span>}
+                  {recMeta?.year && <span className="text-[10px] text-[#7c7291]">{recMeta.year}</span>}
                 </div>
               </div>
 
               {/* Interest tags */}
-              {isRec && (meta?.interests as string[])?.length > 0 && (
+              {recMeta?.interests && recMeta.interests.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {(meta.interests as string[]).map((tag, i) => (
+                  {recMeta.interests.map((tag, i) => (
                     <span key={i} className="text-[9px] text-[#7c3aed] bg-[#f5f3ff] border border-[#e9e4f5] px-1.5 py-0.5 rounded-full">{tag}</span>
                   ))}
                 </div>
               )}
 
               {/* Actors */}
-              {isRec && (meta?.actors as string[])?.length > 0 && (
+              {recMeta?.actors && recMeta.actors.length > 0 && (
                 <div className="flex flex-wrap gap-1 items-center">
                   <span className="text-[9px] tracking-widest uppercase text-[#c8c2d6]">starring</span>
-                  {(meta.actors as string[]).map((actor, i) => (
+                  {recMeta.actors.map((actor, i) => (
                     <span key={i} className="text-[10px] text-[#5a5270] bg-[#f5f3ff] border border-[#e9e4f5] px-1.5 py-0.5 rounded-full">{actor}</span>
                   ))}
                 </div>
               )}
 
               {/* About */}
-              {(isRec ? !!meta?.description : !!plainNotes) && (
+              {(recMeta ? !!recMeta.description : !!plainNotes) && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1">About</p>
                   <p className="text-xs text-[#5a5270] leading-relaxed">
-                    {isRec ? String(meta.description) : plainNotes}
+                    {recMeta ? recMeta.description : plainNotes}
                   </p>
                 </div>
               )}
 
               {/* Why this fits */}
-              {isRec && !!meta?.reasoning && (
+              {recMeta?.reasoning && (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65] mb-1">Why this fits</p>
-                  <p className="text-xs italic text-[#4a7044] leading-relaxed">{String(meta.reasoning)}</p>
+                  <p className="text-xs italic text-[#4a7044] leading-relaxed">{recMeta.reasoning}</p>
                 </div>
               )}
 
               {/* Rating */}
-              {currentStatus && currentStatus !== 'todo' && (
+              {currentStatus && currentStatus !== 'todo' && !isGuest && (
                 <div onClick={e => e.stopPropagation()}>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1">Rating</p>
                   <RatingSelector favoriteId={favorite.id} currentRating={rating?.rating} currentReasoning={rating?.reasoning} onRate={onRate} />
