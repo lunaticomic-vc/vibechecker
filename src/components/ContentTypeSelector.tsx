@@ -152,25 +152,36 @@ interface Props {
 
 export default function ContentTypeSelector({ selected, onSelect }: Props) {
   return (
-    <div className="flex flex-wrap justify-center gap-5 sm:gap-6 w-full max-w-[400px] sm:max-w-[460px] mx-auto">
-      {CONTENT_TYPES.map(({ type, label, icon }) => {
+    <div className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px] mx-auto">
+      {CONTENT_TYPES.map(({ type, label, icon }, index) => {
         const isSelected = selected === type;
+        const total = CONTENT_TYPES.length;
+        // Arrange in circle: start from top (-90deg), distribute evenly
+        const angle = ((index / total) * 360 - 90) * (Math.PI / 180);
+        const radius = 42; // percentage from center
+        const cx = 50 + Math.cos(angle) * radius;
+        const cy = 50 + Math.sin(angle) * radius;
+
         return (
           <button
             key={type}
             onClick={() => onSelect(type)}
-            className={`group w-[140px] h-[140px] sm:w-[160px] sm:h-[160px] flex flex-col items-center justify-center gap-3 rounded-3xl border-2 transition-all duration-500 active:scale-95 ${
+            className={`group absolute w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] flex flex-col items-center justify-center gap-2 rounded-3xl border-2 transition-all duration-500 active:scale-95 -translate-x-1/2 -translate-y-1/2 ${
               isSelected
-                ? 'border-[#c4b5fd] bg-white/90 shadow-xl shadow-purple-100/60 scale-[1.03]'
+                ? 'border-[#c4b5fd] bg-white/90 shadow-xl shadow-purple-100/60 scale-[1.08]'
                 : 'border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#d4cee6] hover:shadow-lg hover:shadow-purple-50/40'
             }`}
+            style={{
+              left: `${cx}%`,
+              top: `${cy}%`,
+            }}
           >
-            <span className={`transition-all duration-500 ${
-              isSelected ? 'text-[#a78bfa] scale-110' : 'text-[#c8c2d6] group-hover:text-[#b0a8c4] group-hover:scale-105'
+            <span className={`transition-all duration-500 scale-75 sm:scale-90 ${
+              isSelected ? 'text-[#a78bfa] scale-90 sm:scale-100' : 'text-[#c8c2d6] group-hover:text-[#b0a8c4]'
             }`}>
               {icon}
             </span>
-            <span className={`text-[10px] tracking-[0.2em] uppercase font-light transition-colors duration-500 ${
+            <span className={`text-[9px] sm:text-[10px] tracking-[0.15em] uppercase font-light transition-colors duration-500 ${
               isSelected ? 'text-[#8b5cf6]' : 'text-[#d0cadc] group-hover:text-[#b0a8c4]'
             }`}>
               {label}
