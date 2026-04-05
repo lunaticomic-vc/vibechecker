@@ -126,7 +126,7 @@ export default function LoginPage() {
               you're on the couch, food's ready, and you open Netflix. then YouTube. then your anime list. then back to Netflix. 20 minutes later you're still scrolling, the food's cold, and you've watched nothing.
             </p>
             <p className="text-xs text-[#7c7291] leading-relaxed">
-              this app kills the choice paralysis. tell it how you feel and it picks something perfect — a movie, show, anime, k-drama, youtube video, or article. based on what you actually love, not what's trending.
+              this app kills the choice paralysis. tell it how you feel and it picks something perfect — a movie, show, anime, k-drama, youtube video, or article. with direct links so you can start watching immediately. based on what you actually love, not what's trending.
             </p>
             <button onClick={() => { setStep('wanna-try'); catSay('interested?~'); }} className={btnClass}>cool, got it</button>
           </div>
