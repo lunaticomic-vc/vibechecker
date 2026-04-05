@@ -131,6 +131,13 @@ export async function initDb(): Promise<Client> {
     'CREATE INDEX IF NOT EXISTS idx_accounts_platform ON accounts(platform)',
   ]);
 
+  // Migration: add window_start column to ip_usage if missing (table may predate the column)
+  try {
+    await db.execute(`ALTER TABLE ip_usage ADD COLUMN window_start TEXT DEFAULT (datetime('now'))`);
+  } catch {
+    // Column already exists — ignore
+  }
+
   // Migration: ensure favorites type CHECK constraint includes 'substack' and 'kdrama'
   // Use sqlite_master to inspect the table definition instead of INSERT+DELETE probes
   const tableInfo = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='favorites'");

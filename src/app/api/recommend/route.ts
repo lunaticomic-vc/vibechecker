@@ -60,14 +60,16 @@ export async function POST(req: NextRequest) {
     const recommendation = await enrichRecommendation(raw);
     log.success(`Got recommendation: "${recommendation.title}"`, `(${recommendation.type})`);
 
-    // Save to recommendation history for anti-repetition
-    try {
-      const client = await db();
-      await client.execute({
-        sql: 'INSERT INTO recommendation_history (title, type, vibe) VALUES (?, ?, ?)',
-        args: [recommendation.title, recommendation.type, vibe],
-      });
-    } catch (error) { log.warn('Failed to save recommendation history', String(error)); }
+    // Save to recommendation history for anti-repetition (owner only)
+    if (isOwner) {
+      try {
+        const client = await db();
+        await client.execute({
+          sql: 'INSERT INTO recommendation_history (title, type, vibe) VALUES (?, ?, ?)',
+          args: [recommendation.title, recommendation.type, vibe],
+        });
+      } catch (error) { log.warn('Failed to save recommendation history', String(error)); }
+    }
 
     // YouTube recommendations already have the correct URL/thumbnail
     // from getYouTubeRecommendation — no second search needed

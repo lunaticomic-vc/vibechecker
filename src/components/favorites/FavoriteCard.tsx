@@ -20,7 +20,7 @@ interface FavoriteCardProps {
   onStatusChange?: (favoriteId: number, newStatus: string) => void;
 }
 
-type AccordionSection = 'about' | 'vibe' | 'rating' | null;
+type AccordionSection = 'about' | 'vibe' | 'rating' | 'reddit' | null;
 
 export default function FavoriteCard({ favorite, rating, currentStatus, showTypeLabel, landscape, isGuest, onDelete, onRate, onStatusChange }: FavoriteCardProps) {
   const [confirming, setConfirming] = useState(false);
@@ -252,13 +252,13 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
               {recMeta?.redditInsights && recMeta.redditInsights.length > 0 && (
                 <div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setOpenSection(openSection === 'about' ? null : 'about'); }}
+                    onClick={(e) => { e.stopPropagation(); setOpenSection(openSection === 'reddit' ? null : 'reddit'); }}
                     className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1"
                   >
-                    Reddit {chevron(openSection === 'about')}
+                    Reddit {chevron(openSection === 'reddit')}
                   </button>
                   <AnimatePresence>
-                    {openSection === 'about' && (
+                    {openSection === 'reddit' && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}

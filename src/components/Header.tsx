@@ -2,10 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/components/AuthProvider';
 
 export default function Header() {
-  const { isAuthed } = useAuth();
   const [open, setOpen] = useState(false);
   const [contentOpen, setContentOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
@@ -98,7 +96,7 @@ export default function Header() {
 
     draw();
     return () => cancelAnimationFrame(animId);
-  }, [hovering, open, isAuthed]);
+  }, [hovering, open]);
 
   function navClick() {
     setOpen(false);
@@ -106,8 +104,6 @@ export default function Header() {
   }
 
   const linkClass = "px-3 py-1.5 rounded-lg text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors whitespace-nowrap";
-
-  if (!isAuthed) return null;
 
   return (
     <div ref={menuRef} className="fixed top-0 left-0 right-0 z-[60] pointer-events-none">

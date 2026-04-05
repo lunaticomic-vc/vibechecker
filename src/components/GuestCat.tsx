@@ -147,7 +147,7 @@ const OWNER_GENERAL = [
 ];
 
 export default function GuestCat() {
-  const { isOwner, remaining } = useAuth();
+  const { isOwner, remaining, isLoading } = useAuth();
   const [attacking, setAttacking] = useState(false);
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [pawPrint, setPawPrint] = useState<{ x: number; y: number } | null>(null);
@@ -267,7 +267,7 @@ export default function GuestCat() {
     }, 800);
   }
 
-  if (remaining === null && !isOwner) return null;
+  if (isLoading) return null;
 
   return (
     <div
@@ -371,9 +371,9 @@ export default function GuestCat() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.85 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 max-w-[180px] text-center bg-white/85 backdrop-blur-md border border-[#e9e4f5]/60 rounded-xl px-3 py-1 shadow-[0_2px_12px_rgba(196,181,253,0.15)]"
+              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 max-w-[180px] text-center bg-white/85 backdrop-blur-md border border-[#e9e4f5]/60 rounded-xl px-2.5 py-0.5 shadow-[0_2px_12px_rgba(196,181,253,0.15)]"
             >
-              <span className="text-[11px] text-[#7c7291]" style={{ lineHeight: '1.15' }}>{bubble}</span>
+              <span className="text-[11px] leading-tight text-[#7c7291]">{bubble}</span>
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white/85 border-r border-b border-[#e9e4f5]/60 rotate-45" />
             </motion.div>
           )}
