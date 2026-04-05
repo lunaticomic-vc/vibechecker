@@ -19,7 +19,7 @@ export async function searchRedditForTitle(title: string, type: string): Promise
 
   for (const sub of subreddits.slice(0, 2)) {
     try {
-      const query = encodeURIComponent(title);
+      const query = encodeURIComponent(`"${title}"`);
       const res = await fetch(
         `https://www.reddit.com/r/${sub}/search.json?q=${query}&restrict_sr=on&sort=relevance&limit=3`,
         { headers: { 'User-Agent': 'VibeChecker/1.0' } }
@@ -33,6 +33,9 @@ export async function searchRedditForTitle(title: string, type: string): Promise
       for (const post of posts.slice(0, 2)) {
         const postData = post.data;
         if (!postData?.permalink) continue;
+        // Verify the post is actually about this title
+        const postTitle = (postData.title ?? '').toLowerCase();
+        if (!postTitle.includes(title.toLowerCase().split(':')[0].trim())) continue;
 
         // Fetch top comments from the post
         try {

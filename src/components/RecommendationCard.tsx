@@ -56,12 +56,12 @@ function RedditCarousel({ insights, isOpen, onToggle, chevron }: {
       <button onClick={onToggle} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] hover:bg-[#faf8ff] transition-colors">
         What people say {chevron(isOpen)}
       </button>
-      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
+      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="px-3 pb-3">
-          <div className="text-[10px] text-[#5a5270] leading-relaxed min-h-[40px]">
+          <div className="text-[10px] text-[#5a5270] leading-relaxed min-h-[40px] max-h-[200px] overflow-y-auto">
             <span className="text-[9px] text-[#c4b5fd] font-medium">r/{current.subreddit}</span>
             <span className="text-[9px] text-[#d0cadc] ml-1">+{current.score}</span>
-            <p className="mt-1">&ldquo;{current.comment.length > 200 ? current.comment.substring(0, 200) + '...' : current.comment}&rdquo;</p>
+            <p className="mt-1">&ldquo;{current.comment}&rdquo;</p>
           </div>
           {insights.length > 1 && (
             <div className="flex items-center justify-center gap-3 mt-2">
