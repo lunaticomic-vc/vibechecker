@@ -120,11 +120,11 @@ export default function Particles() {
             const dither = (Math.random() - 0.5) * 0.08;
             const v = Math.max(0, Math.min(1, val + dither));
 
-            // Light grey palette — subtle depth gradient
-            const depth = waterNx * 0.15;
-            r = Math.round(228 - depth * 25 + v * 15);
-            g = Math.round(226 - depth * 25 + v * 15);
-            b = Math.round(232 - depth * 18 + v * 12);
+            // Distinct light grey — clearly different from the sand/white side
+            const depth = waterNx * 0.2;
+            r = Math.round(205 - depth * 30 + v * 20);
+            g = Math.round(203 - depth * 30 + v * 20);
+            b = Math.round(210 - depth * 20 + v * 15);
           }
 
           r = Math.max(0, Math.min(255, r));
