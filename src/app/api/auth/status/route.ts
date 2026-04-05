@@ -13,7 +13,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ role: 'owner', remaining: Infinity });
   }
 
+  // Check for guest cookie
+  const { verifyGuestCookie } = await import('@/lib/auth');
+  const isGuest = verifyGuestCookie(req.cookies.get('cc_guest')?.value);
+
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
   const { remaining } = await checkRateLimit(ip);
-  return NextResponse.json({ role: 'guest', remaining });
+
+  if (isGuest) {
+    return NextResponse.json({ role: 'guest', remaining });
+  }
+
+  return NextResponse.json({ role: 'anonymous', remaining });
 }

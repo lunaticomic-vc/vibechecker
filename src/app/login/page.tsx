@@ -31,6 +31,7 @@ export default function LoginPage() {
       } else {
         setError('wrong password');
         setPassword('');
+        catSay('nice try~');
       }
     } catch {
       setError('something went wrong');
@@ -50,6 +51,10 @@ export default function LoginPage() {
     setLoading(false);
   }
 
+  function catSay(msg: string) {
+    window.dispatchEvent(new CustomEvent('cat-speak', { detail: msg }));
+  }
+
   const btnClass = "py-3 px-6 rounded-2xl border-2 border-[#e8e3f3]/80 bg-white/40 text-[#7c7291] text-sm hover:bg-white/70 hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all duration-300 w-full max-w-[260px]";
 
   return (
@@ -60,8 +65,8 @@ export default function LoginPage() {
           <>
             <p className="text-lg text-[#2d2640] font-medium tracking-wide">Are you Danitsa?</p>
             <div className="flex flex-col gap-3 w-full items-center">
-              <button onClick={() => setStep('login')} className={btnClass}>yes</button>
-              <button onClick={() => setStep('wanna-try')} className={btnClass}>no</button>
+              <button onClick={() => { setStep('login'); catSay('prove it~'); }} className={btnClass}>yes</button>
+              <button onClick={() => { setStep('wanna-try'); catSay('hmm a stranger...'); }} className={btnClass}>no</button>
             </div>
           </>
         )}
@@ -110,8 +115,8 @@ export default function LoginPage() {
           <>
             <p className="text-lg text-[#2d2640] font-medium tracking-wide">wanna try out the app?</p>
             <div className="flex flex-col gap-3 w-full items-center">
-              <button onClick={() => setStep('guest-welcome')} className={btnClass}>yes</button>
-              <button onClick={() => setStep('bye')} className={btnClass}>no</button>
+              <button onClick={() => { setStep('guest-welcome'); catSay('3 recs on the house~'); }} className={btnClass}>yes</button>
+              <button onClick={() => { setStep('bye'); catSay('nuh uh'); }} className={btnClass}>no</button>
             </div>
           </>
         )}
@@ -156,7 +161,7 @@ export default function LoginPage() {
             <p className="text-lg text-[#2d2640] font-medium tracking-wide text-center">nuh uh</p>
             <p className="text-xs text-[#b0a8c4]">what are you doing here</p>
             <button
-              onClick={() => setStep('wanna-try')}
+              onClick={() => { setStep('wanna-try'); catSay('changed your mind?'); }}
               className="text-xs text-[#c4b5fd] hover:text-[#7c3aed] transition-colors mt-2"
             >
               fine, show me

@@ -13,7 +13,7 @@ export default function Header() {
 
   useEffect(() => {
     fetch('/api/auth/status').then(r => r.json()).then(data => {
-      if (data.role === 'owner') setAuthed(true);
+      if (data.role === 'owner' || data.role === 'guest') setAuthed(true);
     }).catch(() => {});
   }, []);
 

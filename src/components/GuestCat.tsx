@@ -44,9 +44,9 @@ export default function GuestCat() {
     bubbleTimer.current = setTimeout(() => setBubble(null), duration);
   }
 
-  // Show rec count on first load for guests
+  // Show rec count on first load for guests (only on non-login pages)
   useEffect(() => {
-    if (!isOwner && remaining !== null) {
+    if (!isOwner && remaining !== null && window.location.pathname !== '/login') {
       const msgs = remaining === 0
         ? ["no recs left... sorry!"]
         : [`${remaining} rec${remaining !== 1 ? 's' : ''} left`, "click wisely~"];
@@ -57,6 +57,17 @@ export default function GuestCat() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, isOwner]);
+
+  // Listen for login page events
+  useEffect(() => {
+    function handleCatSpeak(e: Event) {
+      const msg = (e as CustomEvent).detail;
+      if (msg) showBubble(msg, 3000);
+    }
+    window.addEventListener('cat-speak', handleCatSpeak);
+    return () => window.removeEventListener('cat-speak', handleCatSpeak);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const ATTACK_MESSAGES = ['ow!', 'hey!', 'mrrow!', 'hiss!', '*chomp*', 'rude.', '>:3'];
 
@@ -77,7 +88,7 @@ export default function GuestCat() {
       className="fixed bottom-3 left-3 z-50 cursor-pointer select-none"
     >
       <div className="flex flex-col items-center gap-0.5">
-        <svg width="140" height="170" viewBox="0 0 120 150" fill="none" stroke="#c0b8d0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="280" height="340" viewBox="0 0 120 150" fill="none" stroke="#c0b8d0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
 
           {/* Tail — smooth Framer Motion swing */}
           <motion.path
