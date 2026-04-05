@@ -69,6 +69,7 @@ export interface Recommendation {
   redditInsights?: RedditInsight[];
   interests?: string[];
   tropes?: string[];
+  channelName?: string;
 }
 
 export interface VibeRequest {

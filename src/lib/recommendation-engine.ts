@@ -251,6 +251,7 @@ async function getYouTubeRecommendation(
       actionLabel: 'Watch on YouTube',
       thumbnailUrl: chosen.thumbnail,
       interests: videoInterests,
+      channelName: chosen.channelTitle || undefined,
     };
   }
 

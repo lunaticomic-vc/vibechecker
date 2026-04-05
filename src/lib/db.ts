@@ -90,6 +90,11 @@ export async function initDb(): Promise<Client> {
       scope TEXT,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS ip_usage (
+      ip TEXT PRIMARY KEY,
+      count INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
   ]);
 
   // Migration: ensure 'substack' is in the favorites type CHECK constraint

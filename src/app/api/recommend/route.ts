@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRecommendation } from '@/lib/recommendation-engine';
-import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
+
+import { verifyAuthCookie } from '@/lib/auth';
+import { checkRateLimit, incrementUsage } from '@/lib/rate-limit';
 import { log } from '@/lib/logger';
 import type { ContentType } from '@/types/index';
 
@@ -12,6 +14,16 @@ export async function POST(req: NextRequest) {
   if (!process.env.OPENAI_API_KEY) {
     log.error('OpenAI API key not configured');
     return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 503 });
+  }
+
+  // Rate limit guests (owner gets unlimited)
+  const isOwner = verifyAuthCookie(req.cookies.get('cc_auth')?.value);
+  if (!isOwner) {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
+    const { allowed } = await checkRateLimit(ip);
+    if (!allowed) {
+      return NextResponse.json({ error: 'You\'ve used all 3 free recommendations. Thanks for trying Consumption Corner!' }, { status: 429 });
+    }
   }
 
   let body: { contentType?: string; vibe?: string; discoveryMode?: string; useInterests?: boolean };
@@ -43,19 +55,13 @@ export async function POST(req: NextRequest) {
     const recommendation = await getRecommendation(vibe.trim(), contentType as ContentType, (discoveryMode as 'from_library' | 'something_new') ?? 'something_new', useInterests);
     log.success(`Got recommendation: "${recommendation.title}"`, `(${recommendation.type})`);
 
-    if (contentType === 'youtube') {
-      const searchQuery = vibe + ' ' + recommendation.title;
-      log.ai('Searching YouTube', `"${searchQuery}"`);
-      const results = await searchYouTube(searchQuery);
-      if (results.length > 0) {
-        recommendation.actionUrl = buildYouTubeWatchUrl(results[0].videoId);
-        recommendation.actionLabel = 'Watch on YouTube';
-        recommendation.thumbnailUrl = results[0].thumbnail;
-        log.success('Found YouTube video', results[0].videoId);
-      } else {
-        log.warn('No YouTube results found');
-      }
+    if (!isOwner) {
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
+      await incrementUsage(ip);
     }
+
+    // YouTube recommendations already have the correct URL/thumbnail
+    // from getYouTubeRecommendation — no second search needed
 
     return NextResponse.json(recommendation);
   } catch (error) {

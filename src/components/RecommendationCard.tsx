@@ -180,7 +180,7 @@ function ScreencapCard({ src, alt, width, delay }: { src: string; alt: string; w
 }
 
 export default function RecommendationCard({ recommendation, onAccept }: Props) {
-  const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights, interests, tropes } = recommendation;
+  const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights, interests, tropes, channelName } = recommendation;
   const [openSection, setOpenSection] = useState<AccordionSection>('description');
 
   const isYouTube = type === 'youtube';
@@ -225,22 +225,9 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
               {interests.map((tag, i) => <span key={i} className="text-[9px] text-[#7c3aed] bg-[#f5f3ff] border border-[#e9e4f5] px-1.5 py-0.5 rounded-full">{tag}</span>)}
             </div>
           )}
-          <div className="flex flex-col gap-1">
-            {description && (
-              <div className="rounded-lg border border-[#e9e4f5] overflow-hidden">
-                <button onClick={() => toggleSection('description')} className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#7c7291] hover:bg-[#faf8ff] transition-colors">About {chevron(openSection === 'description')}</button>
-                <div className={`overflow-hidden transition-all duration-300 ${openSection === 'description' ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-                  <p className="px-3 pb-2 text-xs text-[#5a5270] leading-relaxed">{description}</p>
-                </div>
-              </div>
-            )}
-            <div className="rounded-lg border border-[#d4e6d1] overflow-hidden">
-              <button onClick={() => toggleSection('vibe')} className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65] hover:bg-[#f6faf5] transition-colors">Why this fits {chevron(openSection === 'vibe')}</button>
-              <div className={`overflow-hidden transition-all duration-300 ${openSection === 'vibe' ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'}`}>
-                <p className="px-3 pb-2 text-xs italic text-[#4a7044] leading-relaxed max-h-52 overflow-y-auto scrollbar-thin">{reasoning}</p>
-              </div>
-            </div>
-          </div>
+          {channelName && (
+            <p className="text-[11px] text-[#7c7291]">{channelName}</p>
+          )}
           <button onClick={handleWatch} className="flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-4 py-2 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] text-xs">
             Watch
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
