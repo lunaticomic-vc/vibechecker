@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 const EXAMPLE_VIBES = [
-  'eating, something light and ~20 mins',
+  'i\'m having lunch rn, something light and ~20 mins',
   'sleepover binge with the girls',
   'can\'t sleep, something cozy',
   'need a good cry',
