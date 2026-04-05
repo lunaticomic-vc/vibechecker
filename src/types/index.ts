@@ -67,6 +67,7 @@ export interface Recommendation {
   year?: string;
   episodeInfo?: string;
   redditInsights?: RedditInsight[];
+  interests?: string[];
 }
 
 export interface VibeRequest {

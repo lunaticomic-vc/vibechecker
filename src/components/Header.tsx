@@ -148,6 +148,9 @@ export default function Header() {
           <Link href="/progress" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
             Progress
           </Link>
+          <Link href="/interests" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
+            Interests
+          </Link>
         </div>
       </div>
     </div>

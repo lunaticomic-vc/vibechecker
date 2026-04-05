@@ -62,6 +62,11 @@ export async function initDb(): Promise<Client> {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(favorite_id)
     )`,
+    `CREATE TABLE IF NOT EXISTS interests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
     `CREATE TABLE IF NOT EXISTS oauth_tokens (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       platform TEXT NOT NULL UNIQUE,

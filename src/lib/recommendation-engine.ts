@@ -15,6 +15,7 @@ type AIResponse = {
   episodeInfo?: string;
   actors?: string[];
   imageSearchTerms?: string[];
+  interests?: string[];
 };
 
 const RATING_LABELS: Record<string, string> = {
@@ -30,7 +31,8 @@ export function buildRecommendationPrompt(
   favorites: Favorite[],
   watchProgress: WatchProgress[],
   ratings: Rating[],
-  discoveryMode: DiscoveryMode = 'something_new'
+  discoveryMode: DiscoveryMode = 'something_new',
+  interests: string[] = []
 ): string {
   const ratingsMap = new Map<number, Rating>();
   for (const r of ratings) ratingsMap.set(r.favorite_id, r);
@@ -79,7 +81,7 @@ export function buildRecommendationPrompt(
     .join('\n');
 
   const instructions: Record<ContentType, string> = {
-    youtube: 'Suggest a specific YouTube video topic. Include a searchQuery field with the best search string to find it on YouTube. Estimate the ideal duration in the description.',
+    youtube: 'Think creatively about the user\'s interests, humor, taste profile, and vibe. Don\'t suggest the most obvious mainstream video — dig deeper. Think about niche creators, essay channels, video essays, obscure gems, underrated creators that match their sensibility. Include a searchQuery field with a specific, targeted search string. Include an "interests" array of 3-5 interest tags that explain WHY this video matches them (e.g., ["dark humor", "philosophy", "visual storytelling"]). Estimate duration in the description.',
     movie: 'Suggest a specific movie with its release year. Include enough detail (title + year) so it can be found on streaming sites.',
     tv: 'Suggest a specific TV show. Include season recommendation if relevant (e.g., "start at Season 2"). Add episodeInfo if applicable.',
     anime: 'Suggest a specific anime. Include episode count or arc recommendation in episodeInfo if helpful.',
@@ -88,6 +90,7 @@ export function buildRecommendationPrompt(
   return [
     `The user's current vibe: "${vibe}"`,
     `They want a recommendation for: ${contentType}`,
+    interests.length > 0 ? `\nThe user's interests/passions: ${interests.join(', ')}. Use these to find content that aligns with what they care about deeply.` : '',
     '',
     favorites.length > 0
       ? `The user's library (with ratings):\n${favoritesSection}`
@@ -137,6 +140,15 @@ export async function getRecommendation(
   const allProgress = await getAllProgress();
   const ratings = await getAllRatings();
 
+  // Fetch user interests
+  let interests: string[] = [];
+  try {
+    const { db: getDb } = await import('@/lib/db');
+    const client = await getDb();
+    const intResult = await client.execute('SELECT name FROM interests ORDER BY name');
+    interests = intResult.rows.map((r: unknown) => (r as { name: string }).name);
+  } catch { /* ignore */ }
+
   const watchProgress: WatchProgress[] = allProgress.map((p) => ({
     id: p.id,
     favorite_id: p.favorite_id,
@@ -148,7 +160,7 @@ export async function getRecommendation(
     updated_at: p.updated_at,
   }));
 
-  const userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode);
+  const userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode, interests);
 
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
@@ -228,5 +240,6 @@ export async function getRecommendation(
     actors: ai.actors,
     imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     redditInsights: redditInsights && redditInsights.length > 0 ? redditInsights : undefined,
+    interests: ai.interests,
   };
 }
