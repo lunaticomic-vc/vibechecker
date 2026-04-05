@@ -1,8 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import type { ProgressWithFavorite } from '@/lib/progress';
 import { useDragStatus } from '@/components/StatusDragOverlay';
+import { TYPE_COLORS } from '@/lib/constants';
+import { useLongPress } from '@/lib/hooks';
 
 interface ProgressCardProps {
   item: ProgressWithFavorite;
@@ -18,18 +20,11 @@ const STATUS_COLORS: Record<string, string> = {
   on_hold: 'bg-[#fefce8] text-[#a16207] border border-[#fde68a]',
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  movie: 'bg-[#f3f0ff] text-[#7c3aed]',
-  tv: 'bg-[#f0f7ef] text-[#6b9a65]',
-  anime: 'bg-[#f5f3ff] text-[#8b5cf6]',
-  youtube: 'bg-[#fef2f2] text-[#dc2626]',
-  substack: 'bg-[#fff7ed] text-[#c2410c]',
-  kdrama: 'bg-[#fdf2f8] text-[#db2777]',
-};
-
 export default function ProgressCard({ item, isGuest, onUpdate }: ProgressCardProps) {
-  const holdTimer = useRef<NodeJS.Timeout | null>(null);
   const { startDrag } = useDragStatus();
+  const { onPointerDown: handlePointerDown, onPointerUp: handlePointerUp } = useLongPress(
+    (x, y) => startDrag(item.favorite_id, item.favorite_title, item.status, x, y)
+  );
   const [editingTimestamp, setEditingTimestamp] = useState(false);
   const [timestampVal, setTimestampVal] = useState(item.stopped_at ?? '');
   const [fading, setFading] = useState<string | null>(null);
@@ -37,18 +32,6 @@ export default function ProgressCard({ item, isGuest, onUpdate }: ProgressCardPr
   const [editingEpisode, setEditingEpisode] = useState(false);
   const [seasonVal, setSeasonVal] = useState(String(item.current_season));
   const [episodeVal, setEpisodeVal] = useState(String(item.current_episode));
-
-  function handlePointerDown(e: React.MouseEvent | React.TouchEvent) {
-    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    holdTimer.current = setTimeout(() => {
-      startDrag(item.favorite_id, item.favorite_title, item.status, x, y);
-    }, 500);
-  }
-
-  function handlePointerUp() {
-    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
-  }
 
   const progressPercent =
     item.total_episodes

@@ -26,6 +26,17 @@ export const TYPE_COLORS: Record<string, string> = {
   youtube: 'bg-[#fef2f2] text-[#dc2626]',
   substack: 'bg-[#fff7ed] text-[#c2410c]',
   kdrama: 'bg-[#fdf2f8] text-[#db2777]',
+  research: 'bg-[#f0f4ff] text-[#2563eb]',
+};
+
+export const TYPE_BORDER_COLORS: Record<string, string> = {
+  movie: 'border-[#c4b5fd]',
+  tv: 'border-[#a7c4a0]',
+  anime: 'border-[#c4b5fd]',
+  youtube: 'border-[#fca5a5]',
+  substack: 'border-[#fdba74]',
+  kdrama: 'border-[#f9a8d4]',
+  research: 'border-[#93c5fd]',
 };
 
 export const TYPE_LABELS: Record<string, string> = {
@@ -35,6 +46,7 @@ export const TYPE_LABELS: Record<string, string> = {
   youtube: 'YouTube',
   substack: 'Substack',
   kdrama: 'K-Drama',
+  research: 'Research',
 };
 
 export const RATING_ORDER: Record<string, number> = {

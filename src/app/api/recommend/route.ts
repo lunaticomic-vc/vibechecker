@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRecommendation } from '@/lib/recommendation-engine';
+import { getResearchRecommendation } from '@/lib/research-recommendation';
 import { enrichRecommendation } from '@/lib/enrich';
 import { db } from '@/lib/db';
 import { verifyAuthCookie } from '@/lib/auth';
@@ -58,8 +59,10 @@ export async function POST(req: NextRequest) {
 
   try {
     log.ai('Calling OpenAI gpt-4o-mini...');
-    const raw = await getRecommendation(vibe.trim(), contentType as ContentType, (discoveryMode as 'from_library' | 'something_new') ?? 'something_new', useInterests);
-    const recommendation = await enrichRecommendation(raw);
+    const raw = contentType === 'research'
+      ? await getResearchRecommendation(vibe.trim())
+      : await getRecommendation(vibe.trim(), contentType as ContentType, (discoveryMode as 'from_library' | 'something_new') ?? 'something_new', useInterests);
+    const recommendation = contentType === 'research' ? raw : await enrichRecommendation(raw);
     log.success(`Got recommendation: "${recommendation.title}"`, `(${recommendation.type})`);
 
     // Save to recommendation history for anti-repetition (owner only)

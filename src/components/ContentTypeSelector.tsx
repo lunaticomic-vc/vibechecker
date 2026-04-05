@@ -144,6 +144,29 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
     ),
   },
   {
+    type: 'research' as ContentType,
+    label: 'research',
+    icon: (
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Magnifying glass */}
+        <circle cx="30" cy="30" r="16" />
+        <line x1="41.3" y1="41.3" x2="58" y2="58" strokeWidth="2.5" strokeLinecap="round" />
+        {/* Inner lens glimmer */}
+        <circle cx="30" cy="30" r="11" strokeWidth="0.7" opacity="0.3" />
+        {/* Lightbulb filament inside lens */}
+        <path d="M26 28 Q 30 22, 34 28 Q 34 32, 30 34 Q 26 32, 26 28 Z" strokeWidth="0.9" opacity="0.5" />
+        <line x1="30" y1="34" x2="30" y2="37" strokeWidth="0.9" opacity="0.4" />
+        <line x1="28" y1="36" x2="32" y2="36" strokeWidth="0.9" opacity="0.35" />
+        {/* Sparkle accents around lens */}
+        <path d="M16 14 L16 10 M14 12 L18 12" strokeWidth="0.8" opacity="0.2" />
+        <path d="M48 12 L48 8 M46 10 L50 10" strokeWidth="0.8" opacity="0.2" />
+        {/* Decorative arc flourish */}
+        <path d="M10 38 Q 6 30, 14 22" strokeWidth="0.7" opacity="0.15" />
+        <path d="M48 10 Q 56 18, 50 28" strokeWidth="0.7" opacity="0.15" />
+      </svg>
+    ),
+  },
+  {
     type: 'kdrama' as ContentType,
     label: 'k-drama',
     icon: (
@@ -207,6 +230,39 @@ export default function ContentTypeSelector({ selected, onSelect }: Props) {
           </button>
         );
       })}
+
+      {/* Choose for me — center orb */}
+      <button
+        onClick={() => {
+          const randomType = CONTENT_TYPES[Math.floor(Math.random() * CONTENT_TYPES.length)].type;
+          onSelect(randomType);
+        }}
+        className="choose-orb absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[84px] h-[84px] sm:w-[96px] sm:h-[96px] flex flex-col items-center justify-center gap-1.5 rounded-full border border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#c4b5fd] hover:shadow-lg hover:shadow-purple-100/60 transition-all duration-500 active:scale-95"
+      >
+        <span className="text-[#c8c2d6] transition-colors duration-500">
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+            {/* 4-point sparkle */}
+            <path d="M14 3 L15.2 11.4 L23 14 L15.2 16.6 L14 25 L12.8 16.6 L5 14 L12.8 11.4 Z" />
+            {/* Tiny accent dots */}
+            <circle cx="5.5" cy="5.5" r="0.8" fill="currentColor" stroke="none" opacity="0.35" />
+            <circle cx="22.5" cy="5.5" r="0.8" fill="currentColor" stroke="none" opacity="0.35" />
+            <circle cx="22.5" cy="22.5" r="0.6" fill="currentColor" stroke="none" opacity="0.25" />
+          </svg>
+        </span>
+        <span className="text-[8px] sm:text-[9px] tracking-[0.12em] uppercase font-light text-[#d0cadc]">
+          choose
+        </span>
+      </button>
+
+      <style jsx>{`
+        .choose-orb {
+          animation: choose-pulse 3.5s ease-in-out infinite;
+        }
+        @keyframes choose-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(196, 181, 253, 0); }
+          50% { box-shadow: 0 0 14px 4px rgba(196, 181, 253, 0.22); }
+        }
+      `}</style>
     </div>
   );
 }

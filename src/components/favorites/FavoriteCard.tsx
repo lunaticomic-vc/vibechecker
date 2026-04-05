@@ -7,6 +7,8 @@ import { parseFavoriteMetadata } from '@/types/index';
 import RatingSelector from '@/components/RatingSelector';
 import { useDragStatus } from '@/components/StatusDragOverlay';
 import { TYPE_COLORS, TYPE_LABELS } from '@/lib/constants';
+import { useLongPress } from '@/lib/hooks';
+import Accordion from '@/components/Accordion';
 
 interface FavoriteCardProps {
   favorite: Favorite;
@@ -27,30 +29,17 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
   const [expanded, setExpanded] = useState(false);
   const [openSection, setOpenSection] = useState<AccordionSection>(null);
   const [cardOrigin, setCardOrigin] = useState({ x: 0, y: 0 });
-  const holdTimer = useRef<NodeJS.Timeout | null>(null);
-  const didDrag = useRef(false);
   const clickLock = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { startDrag } = useDragStatus();
-
-  function handlePointerDown(e: React.MouseEvent | React.TouchEvent) {
-    e.preventDefault();
-    didDrag.current = false;
-    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    holdTimer.current = setTimeout(() => {
-      didDrag.current = true;
-      startDrag(favorite.id, favorite.title, currentStatus ?? 'todo', x, y);
-    }, 500);
-  }
-
-  function handlePointerUp() {
-    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
-  }
+  const { onPointerDown: handlePointerDown, onPointerUp: handlePointerUp, didLongPress } = useLongPress(
+    (x, y) => startDrag(favorite.id, favorite.title, currentStatus ?? 'todo', x, y),
+    { preventDefault: true }
+  );
 
   function handleClick() {
     if (clickLock.current) return;
-    if (!didDrag.current) {
+    if (!didLongPress.current) {
       clickLock.current = true;
       setTimeout(() => { clickLock.current = false; }, 300);
       if (cardRef.current) {
@@ -250,34 +239,23 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
 
               {/* Reddit insights */}
               {recMeta?.redditInsights && recMeta.redditInsights.length > 0 && (
-                <div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setOpenSection(openSection === 'reddit' ? null : 'reddit'); }}
-                    className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1"
-                  >
-                    Reddit {chevron(openSection === 'reddit')}
-                  </button>
-                  <AnimatePresence>
-                    {openSection === 'reddit' && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden space-y-2"
-                      >
-                        {recMeta.redditInsights.map((insight, i) => (
-                          <div key={i} className="bg-[#f5f3ff] rounded-lg p-2.5">
-                            <p className="text-[10px] text-[#5a5270] leading-relaxed">{insight.comment}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[9px] text-[#b0a8c4]">r/{insight.subreddit}</span>
-                              <span className="text-[9px] text-[#b0a8c4]">{insight.score} pts</span>
-                            </div>
-                          </div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <Accordion
+                  isOpen={openSection === 'reddit'}
+                  onToggle={() => setOpenSection(openSection === 'reddit' ? null : 'reddit')}
+                  headerClassName="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1"
+                  header={<>Reddit {chevron(openSection === 'reddit')}</>}
+                  contentClassName="space-y-2"
+                >
+                  {recMeta.redditInsights.map((insight, i) => (
+                    <div key={i} className="bg-[#f5f3ff] rounded-lg p-2.5">
+                      <p className="text-[10px] text-[#5a5270] leading-relaxed">{insight.comment}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] text-[#b0a8c4]">r/{insight.subreddit}</span>
+                        <span className="text-[9px] text-[#b0a8c4]">{insight.score} pts</span>
+                      </div>
+                    </div>
+                  ))}
+                </Accordion>
               )}
 
               {/* Rating */}

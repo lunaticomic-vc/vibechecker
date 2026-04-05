@@ -22,6 +22,7 @@ const CONTENT_LABELS: Record<ContentType, string> = {
   youtube: 'YouTube video/channel',
   substack: 'Substack article',
   kdrama: 'Korean drama',
+  research: 'research topic',
 };
 
 /** Look up external metadata (poster, year, actors, canonical title) from type-specific APIs */

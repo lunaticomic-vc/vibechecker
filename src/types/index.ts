@@ -1,4 +1,4 @@
-export const CONTENT_TYPES = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama'] as const;
+export const CONTENT_TYPES = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'research'] as const;
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
 export type FavoriteMetadata =
@@ -71,6 +71,19 @@ export interface RedditInsight {
   score: number;
 }
 
+export interface ResearchLink {
+  title: string;
+  url: string;
+  sourceType: 'academic' | 'video' | 'article' | 'community' | 'book';
+  description: string;
+}
+
+export interface KnowledgeChecklistItem {
+  concept: string;
+  explanation: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+}
+
 export interface Recommendation {
   title: string;
   type: ContentType;
@@ -87,6 +100,8 @@ export interface Recommendation {
   interests?: string[];
   tropes?: string[];
   channelName?: string;
+  researchLinks?: ResearchLink[];
+  knowledgeChecklist?: KnowledgeChecklistItem[];
 }
 
 export interface VibeRequest {
