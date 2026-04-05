@@ -27,6 +27,7 @@ export default function Home() {
   const [lastWatching, setLastWatching] = useState<LastWatching | null>(null);
   const [lastDismissed, setLastDismissed] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [lastVibe, setLastVibe] = useState('');
 
   // Fetch last watching item on mount
   useState(() => {
@@ -58,7 +59,7 @@ export default function Home() {
           type: recommendation.type,
           title: recommendation.title,
           image_url: recommendation.thumbnailUrl ?? recommendation.imageUrls?.[0],
-          metadata: JSON.stringify({ year: recommendation.year, source: 'recommendation' }),
+          metadata: JSON.stringify({ year: recommendation.year, source: 'recommendation', description: recommendation.description, reasoning: recommendation.reasoning, interests: recommendation.interests, actors: recommendation.actors }),
         }),
       });
       const fav = await favRes.json();
@@ -97,6 +98,7 @@ export default function Home() {
 
   const handleSubmit = async (vibe: string) => {
     if (!selectedType) return;
+    setLastVibe(vibe);
     setLoading(true);
     setError(null);
 
@@ -209,9 +211,10 @@ export default function Home() {
 
             <div className="flex gap-3 mt-2 items-center">
               <button
-                onClick={() => setScreen('vibe')}
-                className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
-                title="Try different vibe"
+                onClick={() => { if (lastVibe) handleSubmit(lastVibe); }}
+                disabled={loading}
+                className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all disabled:opacity-40"
+                title="Regenerate with same vibe"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

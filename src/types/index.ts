@@ -39,11 +39,11 @@ export interface Rating {
   created_at: string;
 }
 
-export const RATING_OPTIONS: { value: RatingValue; label: string; emoji: string; hasReasoning: boolean }[] = [
-  { value: 'felt_things', label: 'It made me feel things', emoji: '💜', hasReasoning: true },
-  { value: 'enjoyed', label: 'I enjoyed it', emoji: '👍', hasReasoning: false },
-  { value: 'watched', label: 'I watched it', emoji: '👁', hasReasoning: false },
-  { value: 'not_my_thing', label: 'Not my thing', emoji: '👎', hasReasoning: true },
+export const RATING_OPTIONS: { value: RatingValue; label: string; symbol: string; hasReasoning: boolean }[] = [
+  { value: 'felt_things', label: 'felt things', symbol: '♡', hasReasoning: true },
+  { value: 'enjoyed', label: 'enjoyed', symbol: '✦', hasReasoning: false },
+  { value: 'watched', label: 'okayish', symbol: '◎', hasReasoning: false },
+  { value: 'not_my_thing', label: 'not my thing', symbol: '✕', hasReasoning: true },
 ];
 
 export type DiscoveryMode = 'from_library' | 'something_new';

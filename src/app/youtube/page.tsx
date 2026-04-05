@@ -1,192 +1,296 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import FavoriteCard from '@/components/favorites/FavoriteCard';
-import type { Favorite, Rating, RatingValue } from '@/types/index';
+import StatusDragProvider from '@/components/StatusDragOverlay';
+import GlassTabs from '@/components/GlassTabs';
+import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index';
 
-function getYouTubeSource(fav: Favorite): 'video' | 'channel' {
-  try {
-    const meta = fav.metadata ? JSON.parse(fav.metadata) : null;
-    if (meta?.source === 'youtube_subscription') return 'channel';
-  } catch { /* ignore */ }
-  return 'video';
-}
+type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
+
+const PROGRESS_STATUS_MAP: Record<WatchProgress['status'], StatusGroup> = {
+  todo: 'Todo',
+  watching: 'In Progress',
+  on_hold: 'On Hold',
+  completed: 'Completed',
+  dropped: 'Completed',
+};
+
+const SECTION_ORDER: StatusGroup[] = ['Todo', 'In Progress', 'On Hold', 'Completed'];
+const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
 
 export default function YouTubePage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [ratings, setRatings] = useState<Record<number, Rating>>({});
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(false);
+  const [ratingsMap, setRatingsMap] = useState<Record<number, { rating: RatingValue; reasoning?: string }>>({});
+  const [progressMap, setProgressMap] = useState<Record<number, WatchProgress>>({});
   const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
-  const [addTitle, setAddTitle] = useState('');
+  const [activeTab, setActiveTab] = useState<StatusGroup>('Todo');
+  const [ratingFilter, setRatingFilter] = useState<RatingValue | 'all'>('all');
+  const [search, setSearch] = useState('');
+
+  // Add form state
   const [addUrl, setAddUrl] = useState('');
+  const [fetchedTitle, setFetchedTitle] = useState('');
   const [addLoading, setAddLoading] = useState(false);
-  const PAGE_SIZE = 25;
+  const [fetchingTitle, setFetchingTitle] = useState(false);
+  const [addError, setAddError] = useState('');
 
-  const fetchFavorites = useCallback(async (append = false) => {
-    if (!append) setLoading(true);
-    const offset = append ? favorites.length : 0;
-    const params = new URLSearchParams({ type: 'youtube', limit: String(PAGE_SIZE), offset: String(offset) });
-    const res = await fetch(`/api/favorites?${params}`);
+  async function fetchFavorites(currentOffset: number, append = false, status?: string) {
+    const apiStatus = status ?? statusGroupToApi[activeTab];
+    const res = await fetch(`/api/favorites?type=youtube&status=${apiStatus}&limit=25&offset=${currentOffset}`);
+    if (!res.ok) return;
     const data = await res.json();
-    const items: Favorite[] = data.favorites ?? (Array.isArray(data) ? data : []);
-    setFavorites(prev => append ? [...prev, ...items] : items);
-    setHasMore(data.hasMore ?? false);
-    setTotal(data.total ?? items.length);
-    setLoading(false);
-    if (!append) {
-      fetch('/api/ratings').then(r => r.json()).then(all => {
-        const map: Record<number, Rating> = {};
-        if (Array.isArray(all)) for (const r of all) map[r.favorite_id] = r;
-        setRatings(map);
-      }).catch(() => {});
-    }
-  }, [favorites.length]);
-
-  useEffect(() => { fetchFavorites(); }, []);
-
-  async function handleDelete(id: number) {
-    await fetch(`/api/favorites?id=${id}`, { method: 'DELETE' });
-    fetchFavorites();
+    setFavorites(prev => append ? [...prev, ...data.favorites] : data.favorites);
+    setTotal(data.total);
+    setHasMore(data.hasMore);
+    setOffset(currentOffset + data.favorites.length);
   }
 
-  async function handleRate(favoriteId: number, rating: RatingValue, reasoning?: string) {
-    await fetch('/api/ratings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favorite_id: favoriteId, rating, reasoning }) });
-    const res = await fetch(`/api/ratings?favorite_id=${favoriteId}`);
-    const updated = await res.json();
-    if (updated) setRatings(prev => ({ ...prev, [favoriteId]: updated }));
+  async function fetchRatings() {
+    const res = await fetch('/api/ratings');
+    if (!res.ok) return;
+    const data: Rating[] = await res.json();
+    const map: Record<number, { rating: RatingValue; reasoning?: string }> = {};
+    for (const r of data) map[r.favorite_id] = { rating: r.rating, reasoning: r.reasoning };
+    setRatingsMap(map);
+  }
+
+  async function fetchProgress() {
+    const res = await fetch('/api/progress');
+    if (!res.ok) return;
+    const data: WatchProgress[] = await res.json();
+    const map: Record<number, WatchProgress> = {};
+    for (const p of data) map[p.favorite_id] = p;
+    setProgressMap(map);
+  }
+
+  useEffect(() => {
+    Promise.all([fetchFavorites(0), fetchRatings(), fetchProgress()]).finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function getGroup(fav: Favorite): StatusGroup {
+    const progress = progressMap[fav.id];
+    if (progress) return PROGRESS_STATUS_MAP[progress.status];
+    return 'Todo';
+  }
+
+  function getCurrentStatus(fav: Favorite): string {
+    return statusGroupToApi[getGroup(fav)];
+  }
+
+  async function handleStatusChange(favoriteId: number, newStatus: string) {
+    await fetch('/api/progress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favorite_id: favoriteId, status: newStatus }) });
+    await fetchProgress();
+  }
+
+  async function handleUrlChange(val: string) {
+    setAddUrl(val);
+    setAddError('');
+    setFetchedTitle('');
+
+    const trimmed = val.trim();
+    if (!trimmed) return;
+
+    try { new URL(trimmed); } catch { return; }
+
+    setFetchingTitle(true);
+    try {
+      const res = await fetch(`/api/fetch-title?url=${encodeURIComponent(trimmed)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.title) setFetchedTitle(data.title);
+      }
+    } catch { /* best effort */ }
+    setFetchingTitle(false);
   }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!addTitle.trim()) return;
+    const trimmedUrl = addUrl.trim();
+    if (!trimmedUrl) { setAddError('Link is required.'); return; }
+
+    try { new URL(trimmedUrl); } catch { setAddError('Please enter a valid URL.'); return; }
+
+    const title = fetchedTitle || new URL(trimmedUrl).pathname.split('/').filter(Boolean).pop()?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || trimmedUrl;
+
     setAddLoading(true);
-    await fetch('/api/favorites', {
+    setAddError('');
+    const res = await fetch('/api/favorites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'youtube', title: addTitle.trim(), external_id: addUrl.trim() || undefined }),
+      body: JSON.stringify({ type: 'youtube', title, external_id: trimmedUrl }),
     });
-    setAddTitle('');
-    setAddUrl('');
+    if (!res.ok) {
+      setAddError('Failed to add.');
+    } else {
+      setAddUrl('');
+      setFetchedTitle('');
+      setShowAdd(false);
+      setLoading(true);
+      await fetchFavorites(0);
+      setLoading(false);
+    }
     setAddLoading(false);
-    setShowAdd(false);
-    fetchFavorites();
   }
 
-  const videos = favorites.filter(f => getYouTubeSource(f) === 'video');
-  const channels = favorites.filter(f => getYouTubeSource(f) === 'channel');
+  async function handleDelete(id: number) {
+    await fetch(`/api/favorites?id=${id}`, { method: 'DELETE' });
+    setFavorites(prev => prev.filter(f => f.id !== id));
+    setTotal(prev => prev - 1);
+  }
 
-  const inputClass = "bg-[#f5f3ff] border-2 border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd]";
+  async function handleRate(favoriteId: number, rating: RatingValue, reasoning?: string) {
+    const res = await fetch('/api/ratings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ favorite_id: favoriteId, rating, reasoning }),
+    });
+    if (!res.ok) return;
+    setRatingsMap(prev => ({ ...prev, [favoriteId]: { rating, reasoning } }));
+  }
+
+  const grouped = SECTION_ORDER.reduce<Record<StatusGroup, Favorite[]>>((acc, s) => {
+    acc[s] = [];
+    return acc;
+  }, {} as Record<StatusGroup, Favorite[]>);
+
+  for (const fav of favorites) {
+    grouped[getGroup(fav)].push(fav);
+  }
+
+  const ratingOrder: Record<string, number> = { felt_things: 0, enjoyed: 1, watched: 2, not_my_thing: 3 };
+  let activeItems: Favorite[] = grouped[activeTab] ?? [];
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    activeItems = activeItems.filter(f => f.title.toLowerCase().includes(q));
+  }
+  if (ratingFilter !== 'all' && activeTab !== 'Todo') {
+    activeItems = activeItems.filter(f => ratingsMap[f.id]?.rating === ratingFilter);
+  }
+  if (activeTab !== 'Todo') {
+    activeItems = [...activeItems].sort((a, b) => {
+      const oa = ratingOrder[ratingsMap[a.id]?.rating] ?? 4;
+      const ob = ratingOrder[ratingsMap[b.id]?.rating] ?? 4;
+      return oa - ob;
+    });
+  }
+
+  const inputClass = "bg-white border-2 border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd] w-full";
 
   return (
-    <main className="min-h-screen px-4 py-8 max-w-6xl mx-auto overflow-y-auto" style={{ maxHeight: '100vh' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#2d2640]">YouTube</h1>
-          <p className="text-xs text-[#7c7291] mt-0.5">{total} items</p>
-        </div>
-        <button
-          onClick={() => setShowAdd(v => !v)}
-          className="px-4 py-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-sm text-white rounded-lg transition-colors"
-        >
-          {showAdd ? 'Cancel' : '+ Add'}
-        </button>
-      </div>
-
-      {/* Add form */}
-      {showAdd && (
-        <form onSubmit={handleAdd} className="mb-6 bg-white border-2 border-[#e9e4f5] rounded-xl p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-[#2d2640]">Add YouTube Item</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-[#7c7291]">Title *</label>
-              <input
-                type="text"
-                value={addTitle}
-                onChange={e => setAddTitle(e.target.value)}
-                placeholder="Video or channel title..."
-                className={inputClass}
-                autoFocus
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-[#7c7291]">YouTube URL (optional)</label>
-              <input
-                type="url"
-                value={addUrl}
-                onChange={e => setAddUrl(e.target.value)}
-                placeholder="https://youtube.com/watch?v=..."
-                className={inputClass}
-              />
-            </div>
+    <StatusDragProvider onStatusChange={handleStatusChange}>
+    <div className="min-h-screen bg-[#faf8ff] overflow-y-auto">
+      <div className="max-w-5xl mx-auto px-4 pt-20 pb-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold text-[#2d2640]">YouTube</h1>
           </div>
-          <div className="flex gap-2 justify-end">
-            <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2 text-sm text-[#7c7291] hover:text-[#2d2640] transition-colors">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={addLoading || !addTitle.trim()}
-              className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors"
-            >
-              {addLoading ? 'Adding...' : 'Add'}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {loading ? (
-        <div className="text-center text-[#b8b0c8] py-16">Loading...</div>
-      ) : favorites.length === 0 ? (
-        <div className="text-center text-[#b8b0c8] py-16">
-          <p className="text-lg mb-2">No YouTube items yet</p>
-          <p className="text-sm">Connect YouTube in settings to import liked videos and subscriptions.</p>
-        </div>
-      ) : (
-        <div className="space-y-8 mb-8">
-          {videos.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-[#7c7291] mb-3 uppercase tracking-wider flex items-center gap-2">
-                Videos
-                <span className="text-[10px] text-[#b0a8c4] font-normal">({videos.length})</span>
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {videos.map(fav => (
-                  <FavoriteCard key={fav.id} favorite={fav} rating={ratings[fav.id]} onDelete={handleDelete} onRate={handleRate} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {channels.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-[#7c7291] mb-3 uppercase tracking-wider flex items-center gap-2">
-                Channels
-                <span className="text-[10px] text-[#b0a8c4] font-normal">({channels.length})</span>
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {channels.map(fav => (
-                  <FavoriteCard key={fav.id} favorite={fav} rating={ratings[fav.id]} onDelete={handleDelete} onRate={handleRate} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Show more */}
-      {hasMore && (
-        <div className="text-center mb-8">
           <button
-            onClick={() => fetchFavorites(true)}
-            className="px-6 py-2 text-xs border-2 border-[#e9e4f5] text-[#7c7291] rounded-xl hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
+            onClick={() => setShowAdd(v => !v)}
+            className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg transition-colors"
           >
-            Show more ({favorites.length}/{total})
+            {showAdd ? 'Cancel' : '+ Add'}
           </button>
         </div>
-      )}
-    </main>
+
+        {/* Add form — collapsed by default */}
+        {showAdd && (
+          <form onSubmit={handleAdd} className="mb-8 bg-white border-2 border-[#e9e4f5] rounded-xl p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-[#2d2640]">Add Video</h3>
+            <input
+              type="url"
+              value={addUrl}
+              onChange={e => handleUrlChange(e.target.value)}
+              placeholder="Paste YouTube link..."
+              className={inputClass}
+              autoFocus
+            />
+            {fetchingTitle && (
+              <p className="text-[10px] text-[#b0a8c4]">Fetching title...</p>
+            )}
+            {fetchedTitle && (
+              <p className="text-xs text-[#5a5270] bg-[#f5f3ff] rounded-lg px-3 py-2 border border-[#e9e4f5]">
+                {fetchedTitle}
+              </p>
+            )}
+            {addError && <p className="text-xs text-red-500">{addError}</p>}
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={addLoading || !addUrl.trim()}
+                className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors"
+              >
+                {addLoading ? 'Adding...' : 'Add'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-4" />
+
+        <div className="mb-4">
+          <GlassTabs tabs={SECTION_ORDER} active={activeTab} onChange={(tab) => { setActiveTab(tab); setOffset(0); fetchFavorites(0, false, statusGroupToApi[tab]); }} layoutId="youtube-tab" />
+        </div>
+
+        {/* Rating filter — hidden on Todo tab */}
+        {activeTab !== 'Todo' && (
+          <div className="flex gap-1.5 mb-6 flex-wrap items-center">
+            {(['all', 'felt_things', 'enjoyed', 'watched', 'not_my_thing'] as const).map(v => (
+              <button key={v} onClick={() => setRatingFilter(v)}
+                className={`text-[10px] px-2 py-1 rounded-full border transition-all ${
+                  ratingFilter === v ? 'border-[#8b5cf6] bg-[#f5f3ff] text-[#7c3aed]' : 'border-[#e9e4f5] text-[#b0a8c4] hover:text-[#7c7291]'
+                }`}>
+                {v === 'all' ? 'all' : v === 'felt_things' ? '♡ felt things' : v === 'enjoyed' ? '✦ enjoyed' : v === 'watched' ? '◎ okayish' : '✕ not my thing'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-6 h-6 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div>
+            {activeItems.length === 0 ? (
+              <p className="text-center text-[#7c7291] py-16 text-sm">
+                {activeTab === 'Todo' ? 'Nothing in your watch list. Add some videos!' : `No ${activeTab.toLowerCase()} videos.`}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {activeItems.map(fav => (
+                  <FavoriteCard
+                    key={fav.id}
+                    favorite={fav}
+                    rating={ratingsMap[fav.id]}
+                    currentStatus={getCurrentStatus(fav)}
+                    landscape
+                    onDelete={handleDelete}
+                    onRate={handleRate}
+                  />
+                ))}
+              </div>
+            )}
+
+            {hasMore && (
+              <div className="flex justify-center pt-6">
+                <button
+                  onClick={() => fetchFavorites(offset, true)}
+                  className="px-6 py-2 text-sm border-2 border-[#e9e4f5] text-[#7c7291] hover:border-[#c4b5fd] hover:text-[#2d2640] rounded-lg transition-colors"
+                >
+                  Show more
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+    </StatusDragProvider>
   );
 }

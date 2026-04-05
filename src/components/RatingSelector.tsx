@@ -50,7 +50,7 @@ export default function RatingSelector({ favoriteId, currentRating, currentReaso
     if (current) {
       return (
         <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium ${RATING_COLORS[current.value]}`}>
-          {current.emoji} {current.label}
+          {current.symbol} {current.label}
         </span>
       );
     }
@@ -70,24 +70,24 @@ export default function RatingSelector({ favoriteId, currentRating, currentReaso
                 : 'border-[#e9e4f5] bg-white text-[#7c7291] hover:border-[#c4b5fd]'
             }`}
           >
-            {option.emoji} {option.label}
+            {option.symbol} {option.label}
           </button>
         ))}
       </div>
 
       {showReasoning && needsReasoning && (
-        <div className="flex gap-1.5 items-start">
+        <div className="flex flex-col gap-1.5">
           <input
             type="text"
             value={reasoning}
             onChange={e => setReasoning(e.target.value)}
             placeholder={selected === 'felt_things' ? 'What made it special?' : 'What didn\'t work?'}
-            className="flex-1 border border-[#e9e4f5] rounded-lg px-2 py-1 text-[10px] text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd]"
+            className="w-full border border-[#e9e4f5] rounded-lg px-2 py-1 text-[10px] text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd]"
             onKeyDown={e => e.key === 'Enter' && handleSubmitReasoning()}
           />
           <button
             onClick={handleSubmitReasoning}
-            className="px-2 py-1 text-[10px] bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-colors shrink-0"
+            className="w-full px-2 py-1 text-[10px] bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-colors"
           >
             Save
           </button>

@@ -4,6 +4,8 @@ import { getAllProgress } from '@/lib/progress';
 import { getAllRatings } from '@/lib/ratings';
 import { searchRedditForTitle } from '@/lib/reddit';
 import { searchTMDB } from '@/lib/tmdb';
+import { searchSubstackMulti, verifyUrl } from '@/lib/substack';
+import type { SubstackSearchResult } from '@/lib/substack';
 import type { ContentType, DiscoveryMode, Favorite, WatchProgress, Rating, Recommendation } from '@/types/index';
 
 type AIResponse = {
@@ -12,6 +14,7 @@ type AIResponse = {
   reasoning: string;
   year?: string;
   searchQuery?: string;
+  substackUrl?: string;
   episodeInfo?: string;
   actors?: string[];
   imageSearchTerms?: string[];
@@ -21,7 +24,7 @@ type AIResponse = {
 const RATING_LABELS: Record<string, string> = {
   felt_things: 'LOVED (made them feel things)',
   enjoyed: 'ENJOYED',
-  watched: 'WATCHED (neutral)',
+  watched: 'OKAYISH (neutral)',
   not_my_thing: 'DISLIKED (not their thing)',
 };
 
@@ -81,11 +84,11 @@ export function buildRecommendationPrompt(
     .join('\n');
 
   const instructions: Record<ContentType, string> = {
-    youtube: 'Think creatively about the user\'s interests, humor, taste profile, and vibe. Don\'t suggest the most obvious mainstream video — dig deeper. Think about niche creators, essay channels, video essays, obscure gems, underrated creators that match their sensibility. Include a searchQuery field with a specific, targeted search string. Include an "interests" array of 3-5 interest tags that explain WHY this video matches them (e.g., ["dark humor", "philosophy", "visual storytelling"]). Estimate duration in the description.',
+    youtube: 'Think creatively about the user\'s interests, humor, taste profile, and vibe. Don\'t suggest the most obvious mainstream video — dig deeper. Think about niche creators, essay channels, video essays, obscure gems, underrated creators that match their sensibility. NEVER recommend YouTube Shorts — only full-length videos (at least 3+ minutes). Include a searchQuery field with a specific, targeted search string. Include an "interests" array of 3-5 interest tags that explain WHY this video matches them (e.g., ["dark humor", "philosophy", "visual storytelling"]). Estimate duration in the description.',
     movie: 'Suggest a specific movie with its release year. Include enough detail (title + year) so it can be found on streaming sites.',
     tv: 'Suggest a specific TV show. Include season recommendation if relevant (e.g., "start at Season 2"). Add episodeInfo if applicable.',
     anime: 'Suggest a specific anime. Include episode count or arc recommendation in episodeInfo if helpful.',
-    substack: 'Suggest a specific Substack article or newsletter that matches the vibe. Include the author/publication name, article title, and a searchQuery to find it. Focus on the user\'s interests for topic matching.',
+    substack: 'Suggest a SPECIFIC Substack article (NOT a newsletter or publication — a single article). Include the exact article title, the author/publication name, and most importantly a "substackUrl" field with the direct URL to the article (e.g. "https://authorname.substack.com/p/article-slug"). Also include a searchQuery as fallback. Focus on the user\'s interests for topic matching.',
   };
 
   return [
@@ -124,12 +127,152 @@ export function buildRecommendationPrompt(
     '  "description": "brief plot/description",',
     '  "reasoning": "why this fits the vibe perfectly",',
     '  "year": "YYYY (for movies/tv/anime, omit for youtube)",',
-    '  "searchQuery": "search string (youtube only)",',
+    '  "searchQuery": "search string (youtube/substack)",',
+    '  "substackUrl": "direct URL to the specific article (substack only)",',
     '  "episodeInfo": "e.g. Start at Season 2 (tv/anime only, optional)",',
     '  "actors": ["Actor 1", "Actor 2"] (omit for youtube),',
     '  "imageSearchTerms": ["scene description 1", "scene description 2", "scene description 3"]',
     '}',
   ].join('\n');
+}
+
+async function getSubstackRecommendation(
+  vibe: string,
+  _userPrompt: string,
+  interests: string[],
+  tasteProfile: string | null = null
+): Promise<Recommendation> {
+  const openai = getOpenAI();
+
+  // Step 1: GPT generates search queries
+  const queryResponse = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.9,
+    messages: [
+      {
+        role: 'system',
+        content: `You generate creative, diverse search queries to find Substack articles. Think laterally — don't just restate the vibe, explore unexpected angles, adjacent topics, metaphors, and niche intersections. Mix the user's vibe with their interests in surprising ways.
+
+Return ONLY a JSON array of 4-5 search strings. No markdown.`,
+      },
+      {
+        role: 'user',
+        content: `Vibe: "${vibe}"${interests.length > 0 ? `\nTheir interests/passions: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\n--- TASTE PROFILE ---\n${tasteProfile.slice(0, 800)}\n--- END ---` : ''}
+
+Generate 4-5 search queries to find Substack articles. Rules:
+- 2 queries should directly match the vibe (highest priority)
+- 2 queries should creatively blend the vibe with their interests and taste profile (e.g. if vibe is "melancholy" and they love dark humor + philosophy, try "existential absurdism modern loneliness essay")
+- 1 query should be a wild card — an unexpected angle based on their personality that could surprise and delight them
+- Be specific and descriptive, not generic. Use rich keywords.`,
+      },
+    ],
+  });
+
+  let queries: string[];
+  try {
+    queries = JSON.parse(queryResponse.choices[0]?.message?.content ?? '[]');
+  } catch {
+    queries = [vibe, ...interests.slice(0, 2)];
+  }
+
+  // Step 2: Search for real articles via Brave
+  const realArticles: SubstackSearchResult[] = await searchSubstackMulti(queries);
+
+  if (realArticles.length > 0) {
+    // Step 3: GPT picks the best from real results
+    const articleList = realArticles.slice(0, 15).map((a, i) =>
+      `${i + 1}. "${a.title}"\n   ${a.url}\n   ${a.description}`
+    ).join('\n');
+
+    const pickResponse = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.7,
+      messages: [
+        {
+          role: 'system',
+          content: 'Pick the best article from a list of real Substack articles. Return ONLY JSON: {"pick": <number>, "reasoning": "why this fits", "interests": ["tag1", "tag2", "tag3"]}',
+        },
+        {
+          role: 'user',
+          content: `Vibe: "${vibe}"\n${interests.length > 0 ? `Interests: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\nUser taste: ${tasteProfile.slice(0, 400)}` : ''}\n\nPick the article that best matches their vibe AND resonates with their personality:\n\n${articleList}`,
+        },
+      ],
+    });
+
+    let pick = 0;
+    let reasoning = '';
+    let articleInterests: string[] = [];
+    try {
+      const parsed = JSON.parse(pickResponse.choices[0]?.message?.content ?? '{}');
+      pick = (parsed.pick ?? 1) - 1;
+      reasoning = parsed.reasoning ?? '';
+      articleInterests = parsed.interests ?? [];
+    } catch { pick = 0; }
+
+    const chosen = realArticles[Math.min(Math.max(pick, 0), realArticles.length - 1)];
+    return {
+      title: chosen.title,
+      type: 'substack',
+      description: chosen.description || 'A Substack article matching your vibe.',
+      reasoning,
+      actionUrl: chosen.url,
+      actionLabel: 'Read on Substack',
+      interests: articleInterests,
+    };
+  }
+
+  // Fallback: GPT hallucinate-and-verify loop (no Brave key or no results)
+  const MAX_ATTEMPTS = 5;
+  const tried: string[] = [];
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.9 + attempt * 0.02,
+      messages: [
+        {
+          role: 'system',
+          content: `Recommend a REAL Substack article from a well-known publication. Include the exact URL. Respond with ONLY JSON:
+{"title": "...", "author": "...", "substackUrl": "https://author.substack.com/p/slug", "description": "...", "reasoning": "...", "interests": ["tag1", "tag2"]}`,
+        },
+        {
+          role: 'user',
+          content: `Vibe: "${vibe}"\n${interests.length > 0 ? `Interests: ${interests.join(', ')}` : ''}\n${tried.length > 0 ? `These didn't work, try different ones:\n${tried.map(t => `- ${t}`).join('\n')}` : ''}`,
+        },
+      ],
+    });
+
+    let ai: { title?: string; author?: string; substackUrl?: string; description?: string; reasoning?: string; interests?: string[] };
+    try { ai = JSON.parse(response.choices[0]?.message?.content ?? '{}'); } catch { continue; }
+
+    const url = ai.substackUrl;
+    const title = ai.title ?? 'Unknown';
+    if (!url || tried.includes(title)) continue;
+    tried.push(title);
+
+    if (await verifyUrl(url)) {
+      return {
+        title,
+        type: 'substack',
+        description: ai.description ?? `By ${ai.author ?? 'unknown'}`,
+        reasoning: ai.reasoning ?? '',
+        actionUrl: url,
+        actionLabel: 'Read on Substack',
+        interests: ai.interests,
+      };
+    }
+  }
+
+  const query = `${vibe} ${interests.slice(0, 2).join(' ')}`.trim();
+  return {
+    title: tried[0] ?? vibe,
+    type: 'substack',
+    description: `Couldn't find a verified article. Here's a search instead.`,
+    reasoning: '',
+    actionUrl: `https://substack.com/search/${encodeURIComponent(query)}`,
+    actionLabel: 'Search Substack',
+    interests: interests.slice(0, 5),
+  };
 }
 
 export async function getRecommendation(
@@ -187,6 +330,11 @@ export async function getRecommendation(
     userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode, interests);
   }
 
+  // --- SUBSTACK: two-pass approach with real articles ---
+  if (contentType === 'substack') {
+    return getSubstackRecommendation(vibe, userPrompt, interests, tasteProfile);
+  }
+
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',
     temperature: 0.8,
@@ -221,10 +369,6 @@ export async function getRecommendation(
     const query = ai.searchQuery ?? title;
     actionUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
     actionLabel = 'Search on YouTube';
-  } else if (contentType === 'substack') {
-    const query = ai.searchQuery ?? title;
-    actionUrl = `https://substack.com/search/${encodeURIComponent(query)}`;
-    actionLabel = 'Find on Substack';
   } else {
     actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
     actionLabel = 'Watch on sflix';

@@ -55,10 +55,10 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { current_episode, current_season, status } = body;
+    const { current_episode, current_season, status, stopped_at } = body;
     log.db('UPDATE progress', `id=${id} ep=${current_episode ?? '-'} season=${current_season ?? '-'} status=${status ?? '-'}`);
 
-    const progress = await updateProgress(Number(id), { current_episode, current_season, status });
+    const progress = await updateProgress(Number(id), { current_episode, current_season, status, stopped_at });
     log.success('Patched progress', `id=${id}`);
     return NextResponse.json(progress);
   } catch (err) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { ProgressWithFavorite } from '@/lib/progress';
 import { useDragStatus } from '@/components/StatusDragOverlay';
 
@@ -28,6 +28,12 @@ const TYPE_COLORS: Record<string, string> = {
 export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
   const { startDrag } = useDragStatus();
+  const [editingTimestamp, setEditingTimestamp] = useState(false);
+  const [timestampVal, setTimestampVal] = useState(item.stopped_at ?? '');
+  const [editingSeason, setEditingSeason] = useState(false);
+  const [editingEpisode, setEditingEpisode] = useState(false);
+  const [seasonVal, setSeasonVal] = useState(String(item.current_season));
+  const [episodeVal, setEpisodeVal] = useState(String(item.current_episode));
 
   function handlePointerDown(e: React.MouseEvent | React.TouchEvent) {
     const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -69,7 +75,13 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
         {item.favorite_image ? (
           <img src={item.favorite_image} alt={item.favorite_title} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-[#c4b5fd] text-4xl">🎬</div>
+          <div className="w-full h-full flex items-center justify-center text-[#c4b5fd]">
+            <svg width="40" height="40" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="36" cy="36" r="22" /><circle cx="36" cy="36" r="7" /><circle cx="36" cy="36" r="2.5" fill="currentColor" stroke="none" />
+              <line x1="36" y1="14" x2="36" y2="29" /><line x1="36" y1="43" x2="36" y2="58" />
+              <line x1="14" y1="36" x2="29" y2="36" /><line x1="43" y1="36" x2="58" y2="36" />
+            </svg>
+          </div>
         )}
         <span className={`absolute top-2 left-2 text-[10px] font-medium px-2 py-0.5 rounded-full ${TYPE_COLORS[item.favorite_type]}`}>
           {item.favorite_type.toUpperCase()}
@@ -90,12 +102,36 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
           <>
             <div className="flex gap-3 items-center">
               <div className="text-center">
-                <div className="text-xl font-bold text-[#2d2640]">{item.current_season}</div>
+                {editingSeason ? (
+                  <input
+                    type="number"
+                    value={seasonVal}
+                    onChange={e => setSeasonVal(e.target.value)}
+                    onBlur={() => { patch({ current_season: Number(seasonVal) || 1 }); setEditingSeason(false); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { patch({ current_season: Number(seasonVal) || 1 }); setEditingSeason(false); } }}
+                    className="w-10 text-xl font-bold text-[#2d2640] text-center bg-[#f5f3ff] border border-[#c4b5fd] rounded focus:outline-none"
+                    autoFocus
+                  />
+                ) : (
+                  <div className="text-xl font-bold text-[#2d2640] cursor-pointer hover:text-[#7c3aed] transition-colors" onClick={() => setEditingSeason(true)}>{item.current_season}</div>
+                )}
                 <div className="text-[10px] text-[#7c7291]">Season</div>
               </div>
               <div className="text-[#c4b5fd] text-lg font-light">×</div>
               <div className="text-center">
-                <div className="text-xl font-bold text-[#2d2640]">{item.current_episode}</div>
+                {editingEpisode ? (
+                  <input
+                    type="number"
+                    value={episodeVal}
+                    onChange={e => setEpisodeVal(e.target.value)}
+                    onBlur={() => { patch({ current_episode: Number(episodeVal) || 1 }); setEditingEpisode(false); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { patch({ current_episode: Number(episodeVal) || 1 }); setEditingEpisode(false); } }}
+                    className="w-10 text-xl font-bold text-[#2d2640] text-center bg-[#f5f3ff] border border-[#c4b5fd] rounded focus:outline-none"
+                    autoFocus
+                  />
+                ) : (
+                  <div className="text-xl font-bold text-[#2d2640] cursor-pointer hover:text-[#7c3aed] transition-colors" onClick={() => setEditingEpisode(true)}>{item.current_episode}</div>
+                )}
                 <div className="text-[10px] text-[#7c7291]">Episode</div>
               </div>
               {item.total_episodes && (
@@ -110,10 +146,27 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
           </>
         )}
 
-        {/* Stopped at timestamp for movies */}
-        {item.favorite_type === 'movie' && item.stopped_at && (
+        {/* Stopped at timestamp for movies/youtube */}
+        {(item.favorite_type === 'movie' || item.favorite_type === 'youtube') && (
           <div className="text-xs text-[#7c7291]">
-            Stopped at <span className="font-medium text-[#2d2640]">{item.stopped_at}</span>
+            {editingTimestamp ? (
+              <div className="flex gap-1 items-center">
+                <input
+                  type="text"
+                  value={timestampVal}
+                  onChange={e => setTimestampVal(e.target.value)}
+                  placeholder="e.g. 1:23:45"
+                  className="border border-[#e9e4f5] rounded px-1.5 py-0.5 text-[10px] text-[#2d2640] w-20 focus:outline-none focus:border-[#c4b5fd]"
+                  onKeyDown={e => { if (e.key === 'Enter') { patch({ stopped_at: timestampVal || null }); setEditingTimestamp(false); } }}
+                  autoFocus
+                />
+                <button onClick={() => { patch({ stopped_at: timestampVal || null }); setEditingTimestamp(false); }} className="text-[10px] text-[#8b5cf6] hover:text-[#7c3aed]">save</button>
+              </div>
+            ) : (
+              <button onClick={() => setEditingTimestamp(true)} className="hover:text-[#7c3aed] transition-colors">
+                {item.stopped_at ? <>at <span className="font-medium text-[#2d2640]">{item.stopped_at}</span></> : 'set timestamp'}
+              </button>
+            )}
           </div>
         )}
 

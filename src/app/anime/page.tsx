@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import FavoriteCard from '@/components/favorites/FavoriteCard';
 import StatusDragProvider from '@/components/StatusDragOverlay';
+import GlassTabs from '@/components/GlassTabs';
 import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index';
 
 type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
@@ -30,6 +31,7 @@ export default function AnimePage() {
   const [addTitle, setAddTitle] = useState('');
   const [activeTab, setActiveTab] = useState<StatusGroup>('Todo');
   const [ratingFilter, setRatingFilter] = useState<RatingValue | 'all'>('all');
+  const [search, setSearch] = useState('');
 
   async function fetchFavorites(currentOffset: number, append = false, status?: string) {
     const apiStatus = status ?? statusGroupToApi[activeTab] ?? 'todo';
@@ -113,17 +115,17 @@ export default function AnimePage() {
 
   const ratingOrder: Record<string, number> = { felt_things: 0, enjoyed: 1, watched: 2, not_my_thing: 3 };
   let activeItems: Favorite[] = grouped[activeTab] ?? [];
+  if (search.trim()) { const q = search.toLowerCase(); activeItems = activeItems.filter(f => f.title.toLowerCase().includes(q)); }
   if (ratingFilter !== 'all' && activeTab !== 'Todo') { activeItems = activeItems.filter(f => ratingsMap[f.id]?.rating === ratingFilter); }
   if (activeTab !== 'Todo') activeItems = [...activeItems].sort((a, b) => (ratingOrder[ratingsMap[a.id]?.rating] ?? 4) - (ratingOrder[ratingsMap[b.id]?.rating] ?? 4));
 
   return (
     <StatusDragProvider onStatusChange={handleStatusChange}>
-    <div className="min-h-screen bg-white overflow-y-auto">
+    <div className="min-h-screen bg-[#faf8ff] overflow-y-auto">
       <div className="max-w-5xl mx-auto px-4 pt-20 pb-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-semibold text-[#2d2640]">Anime</h1>
-            {!loading && <p className="text-sm text-[#7c7291] mt-0.5">{total} titles</p>}
           </div>
           <button onClick={() => setShowAdd(v => !v)} className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg transition-colors">
             {showAdd ? 'Cancel' : '+ Add'}
@@ -137,13 +139,10 @@ export default function AnimePage() {
           </form>
         )}
 
-        <div className="flex gap-1 mb-3 border-b border-[#e9e4f5]">
-          {SECTION_ORDER.map(tab => (
-            <button key={tab} onClick={() => { setActiveTab(tab); setOffset(0); fetchFavorites(0, false, statusGroupToApi[tab]); }}
-              className={`px-4 py-2 text-xs font-medium rounded-t-lg transition-colors -mb-px border-b-2 ${activeTab === tab ? 'border-[#8b5cf6] text-[#7c3aed]' : 'border-transparent text-[#7c7291] hover:text-[#2d2640]'}`}>
-              {tab}
-            </button>
-          ))}
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-4" />
+
+        <div className="mb-4">
+          <GlassTabs tabs={SECTION_ORDER} active={activeTab} onChange={(tab) => { setActiveTab(tab); setOffset(0); fetchFavorites(0, false, statusGroupToApi[tab]); }} layoutId="anime-tab" />
         </div>
 
         {activeTab !== 'Todo' && (
@@ -151,7 +150,7 @@ export default function AnimePage() {
             {(['all', 'felt_things', 'enjoyed', 'watched', 'not_my_thing'] as const).map(v => (
               <button key={v} onClick={() => setRatingFilter(v)}
                 className={`text-[10px] px-2 py-1 rounded-full border transition-all ${ratingFilter === v ? 'border-[#8b5cf6] bg-[#f5f3ff] text-[#7c3aed]' : 'border-[#e9e4f5] text-[#b0a8c4] hover:text-[#7c7291]'}`}>
-                {v === 'all' ? 'all' : v === 'felt_things' ? '💜 felt things' : v === 'enjoyed' ? '👍 enjoyed' : v === 'watched' ? '👁 watched' : '👎 not my thing'}
+                {v === 'all' ? 'all' : v === 'felt_things' ? '♡ felt things' : v === 'enjoyed' ? '✦ enjoyed' : v === 'watched' ? '◎ okayish' : '✕ not my thing'}
               </button>
             ))}
           </div>

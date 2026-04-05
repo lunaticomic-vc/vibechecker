@@ -30,43 +30,49 @@ export default function InterestsPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 pt-20 pb-8 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold text-[#2d2640] mb-1">Interests</h1>
-      <p className="text-xs text-[#7c7291] mb-8">These shape all your recommendations.</p>
+    <div className="min-h-screen bg-[#faf8ff] overflow-y-auto">
+      <div className="max-w-5xl mx-auto px-4 pt-20 pb-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-[#2d2640]">Interests</h1>
+          <p className="text-xs text-[#7c7291] mt-0.5">These shape all your recommendations.</p>
+        </div>
 
-      <div className="flex gap-2 mb-8">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && addInterest()}
-          placeholder="e.g., dark humor, philosophy, visual storytelling..."
-          className="flex-1 bg-white border-2 border-[#e9e4f5] rounded-xl px-4 py-2.5 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd]"
-        />
-        <button onClick={addInterest} disabled={!input.trim()} className="px-5 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white text-sm rounded-xl transition-colors">
-          Add
-        </button>
+        <div className="flex gap-2 mb-8 max-w-lg">
+          <input
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addInterest()}
+            placeholder="e.g., dark humor, philosophy, visual storytelling..."
+            className="flex-1 bg-transparent rounded-xl px-4 py-2.5 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none"
+          />
+          <button onClick={addInterest} disabled={!input.trim()} className="px-5 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white text-sm rounded-xl transition-colors">
+            Add
+          </button>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-6 h-6 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : interests.length === 0 ? (
+          <div className="text-center py-16 text-[#7c7291]">
+            <p className="text-base mb-1">No interests yet</p>
+            <p className="text-xs">Add what you care about — it makes recommendations smarter.</p>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {interests.map(interest => (
+              <span key={interest.id} className="group flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#e9e4f5] rounded-full text-sm text-[#5a5270] hover:border-[#c4b5fd] transition-colors">
+                {interest.name}
+                <button onClick={() => removeInterest(interest.id)} className="w-4 h-4 flex items-center justify-center rounded-full text-[#c8c2d6] hover:text-red-400 hover:bg-red-50 transition-colors text-xs">
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-
-      {isLoading ? (
-        <p className="text-[#b8b0c8] text-sm">Loading...</p>
-      ) : interests.length === 0 ? (
-        <div className="text-center py-16 text-[#b8b0c8]">
-          <p className="text-base mb-1">No interests yet</p>
-          <p className="text-xs">Add what you care about — it makes recommendations smarter.</p>
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {interests.map(interest => (
-            <span key={interest.id} className="group flex items-center gap-1.5 px-3 py-1.5 bg-[#f5f3ff] border-2 border-[#e9e4f5] rounded-full text-sm text-[#5a5270] hover:border-[#c4b5fd] transition-colors">
-              {interest.name}
-              <button onClick={() => removeInterest(interest.id)} className="w-4 h-4 flex items-center justify-center rounded-full text-[#c8c2d6] hover:text-red-400 hover:bg-red-50 transition-colors text-xs">
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </main>
+    </div>
   );
 }

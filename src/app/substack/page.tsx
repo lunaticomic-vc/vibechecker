@@ -1,87 +1,138 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index';
 import RatingSelector from '@/components/RatingSelector';
-import type { Favorite, Rating, RatingValue } from '@/types/index';
+import StatusDragProvider, { useDragStatus } from '@/components/StatusDragOverlay';
+import GlassTabs from '@/components/GlassTabs';
 
-const PAGE_SIZE = 25;
+type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
+
+const PROGRESS_STATUS_MAP: Record<WatchProgress['status'], StatusGroup> = {
+  todo: 'Todo',
+  watching: 'In Progress',
+  on_hold: 'On Hold',
+  completed: 'Completed',
+  dropped: 'Completed',
+};
+
+const SECTION_ORDER: StatusGroup[] = ['Todo', 'In Progress', 'On Hold', 'Completed'];
+const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
 
 export default function SubstackPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [ratings, setRatings] = useState<Record<number, Rating>>({});
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(false);
+  const [ratingsMap, setRatingsMap] = useState<Record<number, { rating: RatingValue; reasoning?: string }>>({});
+  const [progressMap, setProgressMap] = useState<Record<number, WatchProgress>>({});
   const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<StatusGroup>('Todo');
+  const [ratingFilter, setRatingFilter] = useState<RatingValue | 'all'>('all');
+  const [search, setSearch] = useState('');
 
   // Add form state
   const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
+  const [fetchedTitle, setFetchedTitle] = useState('');
   const [addLoading, setAddLoading] = useState(false);
+  const [fetchingTitle, setFetchingTitle] = useState(false);
   const [addError, setAddError] = useState('');
 
-  const fetchFavorites = useCallback(async (append = false) => {
-    if (!append) setLoading(true);
-    const offset = append ? favorites.length : 0;
-    const params = new URLSearchParams({ type: 'substack', limit: String(PAGE_SIZE), offset: String(offset) });
-    const res = await fetch(`/api/favorites?${params}`);
+  async function fetchFavorites(currentOffset: number, append = false, status?: string) {
+    const apiStatus = status ?? statusGroupToApi[activeTab];
+    const res = await fetch(`/api/favorites?type=substack&status=${apiStatus}&limit=25&offset=${currentOffset}`);
+    if (!res.ok) return;
     const data = await res.json();
-    const items: Favorite[] = data.favorites ?? (Array.isArray(data) ? data : []);
-    setFavorites(prev => append ? [...prev, ...items] : items);
-    setHasMore(data.hasMore ?? false);
-    setTotal(data.total ?? items.length);
-    setLoading(false);
-    if (!append) {
-      fetch('/api/ratings').then(r => r.json()).then(all => {
-        const map: Record<number, Rating> = {};
-        if (Array.isArray(all)) for (const r of all) map[r.favorite_id] = r;
-        setRatings(map);
-      }).catch(() => {});
-    }
-  }, [favorites.length]);
-
-  useEffect(() => { fetchFavorites(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Extract title from URL: use pathname segments as a fallback
-  function extractTitleFromUrl(rawUrl: string): string {
-    try {
-      const u = new URL(rawUrl);
-      const parts = u.pathname.split('/').filter(Boolean);
-      if (parts.length > 0) {
-        return parts[parts.length - 1]
-          .replace(/-/g, ' ')
-          .replace(/\b\w/g, c => c.toUpperCase());
-      }
-    } catch { /* ignore */ }
-    return '';
+    setFavorites(prev => append ? [...prev, ...data.favorites] : data.favorites);
+    setTotal(data.total);
+    setHasMore(data.hasMore);
+    setOffset(currentOffset + data.favorites.length);
   }
 
-  function handleUrlChange(val: string) {
+  async function fetchRatings() {
+    const res = await fetch('/api/ratings');
+    if (!res.ok) return;
+    const data: Rating[] = await res.json();
+    const map: Record<number, { rating: RatingValue; reasoning?: string }> = {};
+    for (const r of data) map[r.favorite_id] = { rating: r.rating, reasoning: r.reasoning };
+    setRatingsMap(map);
+  }
+
+  async function fetchProgress() {
+    const res = await fetch('/api/progress');
+    if (!res.ok) return;
+    const data: WatchProgress[] = await res.json();
+    const map: Record<number, WatchProgress> = {};
+    for (const p of data) map[p.favorite_id] = p;
+    setProgressMap(map);
+  }
+
+  useEffect(() => {
+    Promise.all([fetchFavorites(0), fetchRatings(), fetchProgress()]).finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function getGroup(fav: Favorite): StatusGroup {
+    const progress = progressMap[fav.id];
+    if (progress) return PROGRESS_STATUS_MAP[progress.status];
+    return 'Todo';
+  }
+
+  function getCurrentStatus(fav: Favorite): string {
+    return statusGroupToApi[getGroup(fav)];
+  }
+
+  async function handleStatusChange(favoriteId: number, newStatus: string) {
+    await fetch('/api/progress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favorite_id: favoriteId, status: newStatus }) });
+    await fetchProgress();
+  }
+
+  async function handleUrlChange(val: string) {
     setUrl(val);
     setAddError('');
-    if (!title) {
-      const extracted = extractTitleFromUrl(val);
-      if (extracted) setTitle(extracted);
-    }
+    setFetchedTitle('');
+
+    const trimmed = val.trim();
+    if (!trimmed) return;
+
+    try { new URL(trimmed); } catch { return; }
+
+    setFetchingTitle(true);
+    try {
+      const res = await fetch(`/api/fetch-title?url=${encodeURIComponent(trimmed)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.title) setFetchedTitle(data.title);
+      }
+    } catch { /* best effort */ }
+    setFetchingTitle(false);
   }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     const trimmedUrl = url.trim();
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) { setAddError('Title is required.'); return; }
+    if (!trimmedUrl) { setAddError('Link is required.'); return; }
+
+    try { new URL(trimmedUrl); } catch { setAddError('Please enter a valid URL.'); return; }
+
+    const title = fetchedTitle || new URL(trimmedUrl).pathname.split('/').filter(Boolean).pop()?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || trimmedUrl;
+
     setAddLoading(true);
     setAddError('');
     const res = await fetch('/api/favorites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'substack', title: trimmedTitle, external_id: trimmedUrl || undefined }),
+      body: JSON.stringify({ type: 'substack', title, external_id: trimmedUrl }),
     });
     if (!res.ok) {
       setAddError('Failed to add article.');
     } else {
       setUrl('');
-      setTitle('');
-      fetchFavorites();
+      setFetchedTitle('');
+      setShowAddForm(false);
+      setLoading(true);
+      await fetchFavorites(0);
+      setLoading(false);
     }
     setAddLoading(false);
   }
@@ -93,169 +144,217 @@ export default function SubstackPage() {
   }
 
   async function handleRate(favoriteId: number, rating: RatingValue, reasoning?: string) {
-    await fetch('/api/ratings', {
+    const res = await fetch('/api/ratings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ favorite_id: favoriteId, rating, reasoning }),
     });
-    const res = await fetch(`/api/ratings?favorite_id=${favoriteId}`);
-    const updated = await res.json();
-    if (updated) setRatings(prev => ({ ...prev, [favoriteId]: updated }));
+    if (!res.ok) return;
+    setRatingsMap(prev => ({ ...prev, [favoriteId]: { rating, reasoning } }));
   }
 
-  function isCompleted(fav: Favorite): boolean {
-    try {
-      const meta = fav.metadata ? JSON.parse(fav.metadata) : null;
-      return meta?.status === 'completed';
-    } catch { return false; }
+  const grouped = SECTION_ORDER.reduce<Record<StatusGroup, Favorite[]>>((acc, s) => {
+    acc[s] = [];
+    return acc;
+  }, {} as Record<StatusGroup, Favorite[]>);
+
+  for (const fav of favorites) {
+    grouped[getGroup(fav)].push(fav);
   }
 
-  const wantToRead = favorites.filter(f => !isCompleted(f));
-  const haveRead = favorites.filter(f => isCompleted(f));
+  const ratingOrder: Record<string, number> = { felt_things: 0, enjoyed: 1, watched: 2, not_my_thing: 3 };
+  let activeItems: Favorite[] = grouped[activeTab] ?? [];
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    activeItems = activeItems.filter(f => f.title.toLowerCase().includes(q));
+  }
+  if (ratingFilter !== 'all' && activeTab !== 'Todo') {
+    activeItems = activeItems.filter(f => ratingsMap[f.id]?.rating === ratingFilter);
+  }
+  if (activeTab !== 'Todo') {
+    activeItems = [...activeItems].sort((a, b) => {
+      const oa = ratingOrder[ratingsMap[a.id]?.rating] ?? 4;
+      const ob = ratingOrder[ratingsMap[b.id]?.rating] ?? 4;
+      return oa - ob;
+    });
+  }
 
   const inputClass = "bg-white border-2 border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd] w-full";
 
-  function ArticleItem({ fav }: { fav: Favorite }) {
+  function extractDomain(url: string): string {
+    try { return new URL(url).hostname.replace('www.', ''); } catch { return ''; }
+  }
+
+  function ArticleRow({ fav }: { fav: Favorite }) {
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const holdTimer = useRef<NodeJS.Timeout | null>(null);
+    const { startDrag } = useDragStatus();
+    const status = getCurrentStatus(fav);
+    const rating = ratingsMap[fav.id];
+
+    function handleClick() {
+      if (!fav.external_id) return;
+      if (status === 'todo') handleStatusChange(fav.id, 'watching');
+      window.open(fav.external_id, '_blank');
+    }
+
+    function handlePointerDown(e: React.MouseEvent | React.TouchEvent) {
+      e.preventDefault();
+      const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      holdTimer.current = setTimeout(() => {
+        startDrag(fav.id, fav.title, status, x, y);
+      }, 500);
+    }
+
+    function handlePointerUp() {
+      if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+    }
+
     return (
-      <div className="flex items-start gap-3 py-3 border-b border-[#f0edf8] last:border-0">
+      <div
+        className="flex items-center gap-3 bg-white border-2 border-[#e9e4f5] rounded-xl px-4 py-3 hover:border-[#c4b5fd] transition-colors group select-none"
+        onMouseDown={handlePointerDown}
+        onMouseUp={handlePointerUp}
+        onMouseLeave={handlePointerUp}
+        onTouchStart={handlePointerDown}
+        onTouchEnd={handlePointerUp}
+      >
         <div className="flex-1 min-w-0">
-          {fav.external_id ? (
-            <a
-              href={fav.external_id}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-[#2d2640] hover:text-[#7c3aed] hover:underline line-clamp-2 block"
-            >
-              {fav.title}
-            </a>
-          ) : (
-            <p className="text-sm font-medium text-[#2d2640] line-clamp-2">{fav.title}</p>
-          )}
-          {fav.external_id && (
-            <p className="text-[10px] text-[#b0a8c4] mt-0.5 truncate">{fav.external_id}</p>
-          )}
-          <div className="mt-2">
-            <RatingSelector
-              favoriteId={fav.id}
-              currentRating={ratings[fav.id]?.rating}
-              currentReasoning={ratings[fav.id]?.reasoning}
-              onRate={handleRate}
-              compact
-            />
+          <div className="flex items-center gap-2">
+            {fav.external_id ? (
+              <button onClick={handleClick} className="text-sm font-medium text-[#2d2640] hover:text-[#7c3aed] hover:underline truncate text-left">
+                {fav.title}
+              </button>
+            ) : (
+              <p className="text-sm font-medium text-[#2d2640] truncate">{fav.title}</p>
+            )}
           </div>
+          {fav.external_id && (
+            <p className="text-[10px] text-[#b0a8c4] mt-0.5 truncate">{extractDomain(fav.external_id)}</p>
+          )}
         </div>
-        <button
-          onClick={() => {
-            if (!confirmDelete) { setConfirmDelete(true); return; }
-            handleDelete(fav.id);
-          }}
-          onBlur={() => setConfirmDelete(false)}
-          className={`shrink-0 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition-colors ${
-            confirmDelete
-              ? 'bg-red-500 text-white'
-              : 'bg-[#f5f3ff] text-[#7c7291] hover:bg-red-500 hover:text-white'
-          }`}
-          title={confirmDelete ? 'Click again to confirm' : 'Delete'}
-        >
-          {confirmDelete ? '!' : '×'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {status !== 'todo' && rating && (
+            <RatingSelector favoriteId={fav.id} currentRating={rating.rating} currentReasoning={rating.reasoning} onRate={handleRate} compact />
+          )}
+          <button
+            onClick={() => { if (!confirmDelete) { setConfirmDelete(true); return; } handleDelete(fav.id); }}
+            onBlur={() => setConfirmDelete(false)}
+            className={`rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity ${
+              confirmDelete ? 'bg-red-500 text-white opacity-100' : 'bg-[#f5f3ff] text-[#7c7291] hover:bg-red-500 hover:text-white'
+            }`}
+          >
+            {confirmDelete ? '!' : '×'}
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen px-4 py-8 max-w-2xl mx-auto overflow-y-auto" style={{ maxHeight: '100vh' }}>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#2d2640]">Substack</h1>
-        <p className="text-xs text-[#7c7291] mt-0.5">{total} articles</p>
+    <StatusDragProvider onStatusChange={handleStatusChange}>
+    <div className="min-h-screen bg-[#faf8ff] overflow-y-auto">
+      <div className="max-w-5xl mx-auto px-4 pt-20 pb-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold text-[#2d2640]">Substack</h1>
+          </div>
+          <button
+            onClick={() => setShowAddForm(v => !v)}
+            className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg transition-colors"
+          >
+            {showAddForm ? 'Cancel' : '+ Add'}
+          </button>
+        </div>
+
+        {/* Add form — collapsed by default, link-only with auto-fetch title */}
+        {showAddForm && (
+          <form onSubmit={handleAdd} className="bg-white border-2 border-[#e9e4f5] rounded-xl p-5 mb-8 space-y-3">
+            <h3 className="text-sm font-semibold text-[#2d2640]">Add Article</h3>
+            <input
+              type="url"
+              value={url}
+              onChange={e => handleUrlChange(e.target.value)}
+              placeholder="Paste article link..."
+              className={inputClass}
+              autoFocus
+            />
+            {fetchingTitle && (
+              <p className="text-[10px] text-[#b0a8c4]">Fetching title...</p>
+            )}
+            {fetchedTitle && (
+              <p className="text-xs text-[#5a5270] bg-[#f5f3ff] rounded-lg px-3 py-2 border border-[#e9e4f5]">
+                {fetchedTitle}
+              </p>
+            )}
+            {addError && <p className="text-xs text-red-500">{addError}</p>}
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 text-sm text-[#7c7291] hover:text-[#2d2640] transition-colors">Cancel</button>
+              <button
+                type="submit"
+                disabled={addLoading || !url.trim()}
+                className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors"
+              >
+                {addLoading ? 'Adding...' : 'Add'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-4" />
+
+        <div className="mb-4">
+          <GlassTabs tabs={SECTION_ORDER} active={activeTab} onChange={(tab) => { setActiveTab(tab); setOffset(0); fetchFavorites(0, false, statusGroupToApi[tab]); }} layoutId="substack-tab" />
+        </div>
+
+        {/* Rating filter — hidden on Todo tab */}
+        {activeTab !== 'Todo' && (
+          <div className="flex gap-1.5 mb-6 flex-wrap items-center">
+            {(['all', 'felt_things', 'enjoyed', 'watched', 'not_my_thing'] as const).map(v => (
+              <button key={v} onClick={() => setRatingFilter(v)}
+                className={`text-[10px] px-2 py-1 rounded-full border transition-all ${
+                  ratingFilter === v ? 'border-[#8b5cf6] bg-[#f5f3ff] text-[#7c3aed]' : 'border-[#e9e4f5] text-[#b0a8c4] hover:text-[#7c7291]'
+                }`}>
+                {v === 'all' ? 'all' : v === 'felt_things' ? '♡ felt things' : v === 'enjoyed' ? '✦ enjoyed' : v === 'watched' ? '◎ okayish' : '✕ not my thing'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-6 h-6 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div>
+            {activeItems.length === 0 ? (
+              <p className="text-center text-[#7c7291] py-16 text-sm">
+                {activeTab === 'Todo' ? 'Nothing in your reading list. Add some articles!' : `No ${activeTab.toLowerCase()} articles.`}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {activeItems.map(fav => (
+                  <ArticleRow key={fav.id} fav={fav} />
+                ))}
+              </div>
+            )}
+
+            {hasMore && (
+              <div className="flex justify-center pt-6">
+                <button
+                  onClick={() => fetchFavorites(offset, true)}
+                  className="px-6 py-2 text-sm border-2 border-[#e9e4f5] text-[#7c7291] hover:border-[#c4b5fd] hover:text-[#2d2640] rounded-lg transition-colors"
+                >
+                  Show more
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* Add form */}
-      <form onSubmit={handleAdd} className="bg-white border-2 border-[#e9e4f5] rounded-xl p-4 mb-8 space-y-3">
-        <h3 className="text-sm font-semibold text-[#2d2640]">Add Article</h3>
-        <div className="space-y-2">
-          <input
-            type="url"
-            value={url}
-            onChange={e => handleUrlChange(e.target.value)}
-            placeholder="Paste article URL..."
-            className={inputClass}
-          />
-          <input
-            type="text"
-            value={title}
-            onChange={e => { setTitle(e.target.value); setAddError(''); }}
-            placeholder="Article title *"
-            className={inputClass}
-          />
-        </div>
-        {addError && <p className="text-xs text-red-500">{addError}</p>}
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={addLoading || !title.trim()}
-            className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors"
-          >
-            {addLoading ? 'Adding...' : 'Add'}
-          </button>
-        </div>
-      </form>
-
-      {/* Content */}
-      {loading ? (
-        <div className="text-center text-[#b8b0c8] py-16">Loading...</div>
-      ) : favorites.length === 0 ? (
-        <div className="text-center text-[#b8b0c8] py-16">
-          <p className="text-lg mb-2">No articles yet</p>
-          <p className="text-sm">Paste a URL above to start your reading list.</p>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {/* Want to Read */}
-          {wantToRead.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-[#7c7291] mb-2 uppercase tracking-wider flex items-center gap-2">
-                Want to Read
-                <span className="text-[10px] text-[#b0a8c4] font-normal">({wantToRead.length})</span>
-              </h3>
-              <div className="bg-white border-2 border-[#e9e4f5] rounded-xl px-4 py-1">
-                {wantToRead.map(fav => (
-                  <ArticleItem key={fav.id} fav={fav} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Have Read */}
-          {haveRead.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-[#7c7291] mb-2 uppercase tracking-wider flex items-center gap-2">
-                Have Read
-                <span className="text-[10px] text-[#b0a8c4] font-normal">({haveRead.length})</span>
-              </h3>
-              <div className="bg-white border-2 border-[#e9e4f5] rounded-xl px-4 py-1">
-                {haveRead.map(fav => (
-                  <ArticleItem key={fav.id} fav={fav} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Show more */}
-      {hasMore && (
-        <div className="text-center mt-8">
-          <button
-            onClick={() => fetchFavorites(true)}
-            className="px-6 py-2 text-xs border-2 border-[#e9e4f5] text-[#7c7291] rounded-xl hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
-          >
-            Show more ({favorites.length}/{total})
-          </button>
-        </div>
-      )}
-    </main>
+    </div>
+    </StatusDragProvider>
   );
 }

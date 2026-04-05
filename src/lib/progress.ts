@@ -30,7 +30,7 @@ export async function getAllProgress(): Promise<ProgressWithFavorite[]> {
 
 export async function updateProgress(
   favoriteId: number,
-  data: { current_season?: number; current_episode?: number; status?: string }
+  data: { current_season?: number; current_episode?: number; status?: string; stopped_at?: string | null }
 ): Promise<WatchProgress> {
   const existing = await getProgressForFavorite(favoriteId);
   if (!existing) {
@@ -44,6 +44,7 @@ export async function updateProgress(
   if (data.current_season !== undefined) { fields.push('current_season = ?'); values.push(data.current_season); }
   if (data.current_episode !== undefined) { fields.push('current_episode = ?'); values.push(data.current_episode); }
   if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
+  if (data.stopped_at !== undefined) { fields.push('stopped_at = ?'); values.push(data.stopped_at); }
   fields.push('updated_at = CURRENT_TIMESTAMP');
   values.push(favoriteId);
 

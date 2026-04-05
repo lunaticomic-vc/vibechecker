@@ -20,11 +20,11 @@ async function autoAddToProgress(rec: Recommendation) {
         type: rec.type,
         title: rec.title,
         image_url: rec.thumbnailUrl ?? rec.imageUrls?.[0],
-        metadata: JSON.stringify({ year: rec.year, source: 'recommendation' }),
+        metadata: JSON.stringify({ year: rec.year, source: 'recommendation', description: rec.description, reasoning: rec.reasoning, interests: rec.interests, actors: rec.actors }),
       }),
     });
     const fav = await favRes.json();
-    if (fav.id && rec.type !== 'youtube' && rec.type !== 'substack') {
+    if (fav.id && rec.type !== 'youtube') {
       await fetch('/api/progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

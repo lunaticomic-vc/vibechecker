@@ -78,6 +78,31 @@ export async function initDb(): Promise<Client> {
     )`,
   ]);
 
+  // Migration: ensure 'substack' is in the favorites type CHECK constraint
+  // SQLite can't ALTER CHECK constraints, so recreate the table if needed
+  try {
+    await db.execute("INSERT INTO favorites (type, title) VALUES ('substack', '__migration_test__')");
+    await db.execute("DELETE FROM favorites WHERE title = '__migration_test__'");
+  } catch {
+    // CHECK constraint failed — need to recreate table
+    dbLog('Migrating favorites table to add substack type...');
+    await db.batch([
+      `CREATE TABLE favorites_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack')),
+        title TEXT NOT NULL,
+        external_id TEXT,
+        metadata TEXT,
+        image_url TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `INSERT INTO favorites_new SELECT * FROM favorites`,
+      `DROP TABLE favorites`,
+      `ALTER TABLE favorites_new RENAME TO favorites`,
+    ]);
+    dbLog('Favorites table migrated ✓');
+  }
+
   _initialized = true;
   dbLog('Tables initialized ✓');
   return db;
