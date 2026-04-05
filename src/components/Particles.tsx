@@ -21,7 +21,7 @@ export default function Particles() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
+    const isMobile = window.innerWidth < 768;
     let animationId: number;
     let time = 0;
     let dots: Dot[] = [];

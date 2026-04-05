@@ -17,7 +17,7 @@ export default function LoadingMouse({ size = 'md' }: { size?: 'sm' | 'md' }) {
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const animRef = useRef<number>(0);
   const sparkleTimer = useRef(0);
-  const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   useEffect(() => {
     const speed = 0.03;

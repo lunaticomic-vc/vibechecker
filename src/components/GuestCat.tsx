@@ -161,7 +161,7 @@ export default function GuestCat() {
   const prevPath = useRef(pathname);
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    setIsMobile(window.innerWidth < 768);
   }, []);
 
   // Eye tracking — follows real cursor or orbiting mouse (skip on mobile)
@@ -376,9 +376,9 @@ export default function GuestCat() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.85 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[240px] text-center bg-white/85 backdrop-blur-md border border-[#e9e4f5]/60 rounded-xl px-3 py-1 shadow-[0_2px_12px_rgba(196,181,253,0.15)]"
+              className="absolute bottom-full left-[60%] -translate-x-1/2 mb-1 whitespace-nowrap text-center bg-white/85 backdrop-blur-md border border-[#e9e4f5]/60 rounded-xl px-3 py-1 shadow-[0_2px_12px_rgba(196,181,253,0.15)]"
             >
-              <span className="text-[#7c7291]" style={{ fontSize: '11px', lineHeight: 1.2 }}>{bubble}</span>
+              <span className="text-[11px] text-[#7c7291]">{bubble}</span>
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white/85 border-r border-b border-[#e9e4f5]/60 rotate-45" />
             </motion.div>
           )}

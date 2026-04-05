@@ -184,7 +184,7 @@ function ScreencapCard({ src, alt, width, delay }: { src: string; alt: string; w
 
 export default function RecommendationCard({ recommendation, onAccept }: Props) {
   const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights, interests, tropes, channelName } = recommendation;
-  const isMobileInit = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window);
+  const isMobileInit = typeof window !== 'undefined' && window.innerWidth < 768;
   const [openSection, setOpenSection] = useState<AccordionSection>(isMobileInit ? null : 'description');
 
   const isYouTube = type === 'youtube';
@@ -256,7 +256,7 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
   }
 
   // Movie/TV/Anime: poster + screencap circles + card
-  const isMobileView = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window);
+  const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
     <>

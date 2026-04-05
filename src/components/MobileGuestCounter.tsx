@@ -10,7 +10,7 @@ export default function MobileGuestCounter() {
   const pathname = usePathname();
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    setIsMobile(window.innerWidth < 768);
   }, []);
 
   if (!isMobile || isLoading || isOwner || remaining === null || pathname === '/login') return null;

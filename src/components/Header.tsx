@@ -12,7 +12,7 @@ export default function Header() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    setIsMobile(window.innerWidth < 768);
   }, []);
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export default function Header() {
     setContentOpen(false);
   }
 
-  const linkClass = "px-3 py-2 rounded-lg text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors whitespace-nowrap";
+  const linkClass = "px-3 py-1.5 rounded-lg text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors whitespace-nowrap";
   const mobileLinkClass = "px-3 py-2.5 rounded-xl text-sm text-[#2d2640] active:bg-[#f5f3ff] active:text-[#7c3aed] transition-colors";
 
   const moonSize = isMobile ? 44 : 52;
