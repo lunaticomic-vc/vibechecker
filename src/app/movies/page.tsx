@@ -18,6 +18,8 @@ const PROGRESS_STATUS_MAP: Record<WatchProgress['status'], StatusGroup> = {
 
 const SECTION_ORDER: StatusGroup[] = ['Todo', 'In Progress', 'On Hold', 'Completed'];
 
+const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
+
 export default function MoviesPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [ratingsMap, setRatingsMap] = useState<Record<number, { rating: RatingValue; reasoning?: string }>>({});
@@ -30,8 +32,9 @@ export default function MoviesPage() {
   const [activeTab, setActiveTab] = useState<StatusGroup>('Todo');
   const [ratingFilter, setRatingFilter] = useState<RatingValue | 'all'>('all');
 
-  async function fetchFavorites(currentOffset: number, append = false) {
-    const res = await fetch(`/api/favorites?type=movie&limit=25&offset=${currentOffset}`);
+  async function fetchFavorites(currentOffset: number, append = false, status?: string) {
+    const apiStatus = status ?? statusGroupToApi[activeTab];
+    const res = await fetch(`/api/favorites?type=movie&status=${apiStatus}&limit=25&offset=${currentOffset}`);
     if (!res.ok) return;
     const data = await res.json();
     setFavorites(prev => append ? [...prev, ...data.favorites] : data.favorites);
@@ -128,8 +131,6 @@ export default function MoviesPage() {
   }
 
   // Apply rating filter and sort
-  const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
-  const apiToStatusGroup: Record<string, StatusGroup> = { todo: 'Todo', watching: 'In Progress', on_hold: 'On Hold', completed: 'Completed' };
 
   function getCurrentStatus(fav: Favorite): string {
     return statusGroupToApi[getGroup(fav)];
@@ -189,7 +190,7 @@ export default function MoviesPage() {
           {SECTION_ORDER.map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => { setActiveTab(tab); setOffset(0); fetchFavorites(0, false, statusGroupToApi[tab]); }}
               className={`px-4 py-2 text-xs font-medium rounded-t-lg transition-colors -mb-px border-b-2 ${
                 activeTab === tab
                   ? 'border-[#8b5cf6] text-[#7c3aed]'

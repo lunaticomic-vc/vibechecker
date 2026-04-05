@@ -13,6 +13,50 @@ export async function getAllFavorites(type?: ContentType, limit?: number, offset
   return result.rows as unknown as Favorite[];
 }
 
+// Status-aware queries: join with watch_progress to filter by status
+export async function getFavoritesByStatus(type: ContentType, status: string, limit: number, offset: number): Promise<Favorite[]> {
+  const client = await db();
+  if (status === 'todo') {
+    // Todo = no progress entry OR progress.status = 'todo', AND metadata.status not completed/watching
+    const result = await client.execute({
+      sql: `SELECT f.* FROM favorites f
+            LEFT JOIN watch_progress wp ON wp.favorite_id = f.id
+            WHERE f.type = ? AND (wp.id IS NULL OR wp.status = 'todo')
+            ORDER BY f.created_at DESC LIMIT ? OFFSET ?`,
+      args: [type, limit, offset],
+    });
+    return result.rows as unknown as Favorite[];
+  }
+  const result = await client.execute({
+    sql: `SELECT f.* FROM favorites f
+          INNER JOIN watch_progress wp ON wp.favorite_id = f.id
+          WHERE f.type = ? AND wp.status = ?
+          ORDER BY wp.updated_at DESC LIMIT ? OFFSET ?`,
+    args: [type, status, limit, offset],
+  });
+  return result.rows as unknown as Favorite[];
+}
+
+export async function countFavoritesByStatus(type: ContentType, status: string): Promise<number> {
+  const client = await db();
+  if (status === 'todo') {
+    const result = await client.execute({
+      sql: `SELECT count(*) as cnt FROM favorites f
+            LEFT JOIN watch_progress wp ON wp.favorite_id = f.id
+            WHERE f.type = ? AND (wp.id IS NULL OR wp.status = 'todo')`,
+      args: [type],
+    });
+    return Number((result.rows[0] as unknown as { cnt: number }).cnt);
+  }
+  const result = await client.execute({
+    sql: `SELECT count(*) as cnt FROM favorites f
+          INNER JOIN watch_progress wp ON wp.favorite_id = f.id
+          WHERE f.type = ? AND wp.status = ?`,
+    args: [type, status],
+  });
+  return Number((result.rows[0] as unknown as { cnt: number }).cnt);
+}
+
 export async function countFavorites(type?: ContentType): Promise<number> {
   const client = await db();
   if (type) {
