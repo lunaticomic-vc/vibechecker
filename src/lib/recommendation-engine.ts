@@ -127,7 +127,7 @@ NEVER recommend any of these rejected titles: ${[...favorites.map(f => f.title)]
     `Your task: ${instructions[contentType]}`,
     '',
     'CRITICAL: The user\'s vibe/prompt is your #1 priority. NEVER ignore what they asked for. The vibe IS the assignment — everything else (interests, taste profile, library) exists to ENHANCE your understanding of what they want, not to override it.',
-    'CONTEXT vs TOPIC: If the user mentions an activity (eating, cooking, commuting, working out, in bed, etc.), that describes their SITUATION — not what they want content about. "I\'m eating" means suggest something light and engaging to watch while eating, NOT recipes or food content. Treat activities as format hints (easy to follow, not too intense) and use the rest of the vibe for topic.',
+    'CONTEXT vs TOPIC: If the user mentions an activity or situation (eating, having lunch, having dinner, breakfast, cooking, commuting, on the bus, working out, in bed, etc.), that describes their SITUATION — not what they want content about. "I\'m having lunch" means suggest something light and engaging to watch while eating, NOT recipes or food content. Treat activities as format hints (easy to follow, not too intense) and use the rest of the vibe for topic.',
     'If the vibe is specific (e.g. "feminist mythology"), recommend something that is DIRECTLY about that topic. Use their interests to pick the BEST match within that topic, not to change the topic.',
     'IMPORTANT: Prioritize content similar to what the user LOVED. AVOID anything similar to what they DISLIKED, paying attention to their stated reasons.',
     'Always explain WHY this specific recommendation fits the vibe.',
@@ -165,7 +165,7 @@ Rules:
 - First, unpack what the prompt means: themes, emotions, aesthetics, ideas
 - ONLY include user interests that DIRECTLY relate to the prompt topic. If an interest doesn't connect, drop it completely.
 - If the prompt is specific (e.g. "feminist mythology"), every word of your expansion must be about that exact topic
-- Activity words like "eating", "cooking", "commuting", "working out", "in bed" describe what the user is DOING right now — they are NOT requesting content about that activity. Treat them as context for the FORMAT (light, engaging, easy background watch) not the TOPIC. Never recommend recipes, workout videos, etc. just because they mentioned an activity.
+- Activity words like "eating", "having lunch", "having dinner", "breakfast", "cooking", "commuting", "on the bus", "working out", "in bed" describe what the user is DOING right now — they are NOT requesting content about that activity. Treat them as context for the FORMAT (light, engaging, easy background watch) not the TOPIC. Never recommend recipes, food content, workout videos, etc. just because they mentioned an activity.
 - Return 2-3 sentences, no JSON`,
       },
       {
@@ -194,7 +194,8 @@ async function decomposeVibe(openai: ReturnType<typeof getOpenAI>, vibe: string)
         {
           role: 'system',
           content: `Decompose a user's vibe into structured facets. Return ONLY JSON:
-{"mood": "emotional tone (e.g. melancholic, cozy, intense)", "genres": ["genre1", "genre2"], "themes": ["theme1", "theme2"], "aesthetic": "visual/tonal style", "intensity": "low/medium/high"}`,
+{"mood": "emotional tone (e.g. melancholic, cozy, intense)", "genres": ["genre1", "genre2"], "themes": ["theme1", "theme2"], "aesthetic": "visual/tonal style", "intensity": "low/medium/high"}
+IMPORTANT: Activity/situation words like "eating", "having lunch", "having dinner", "breakfast", "cooking", "commuting", "working out", "in bed", "on the bus" describe what the user is DOING — they are NOT the topic. Do NOT include food, meal, or cooking themes just because they mentioned a meal. Extract the mood and themes from the REST of the vibe.`,
         },
         { role: 'user', content: `Vibe: "${vibe}"` },
       ],
@@ -659,7 +660,7 @@ REQUIRED FIELDS — you MUST fill ALL of these with real, detailed content:
 - "description": Write a compelling 2-3 sentence plot summary from YOUR knowledge (do NOT copy the truncated text from the list). Describe what the story is actually about.
 - "reasoning": Explain in 2-3 sentences exactly WHY this pick matches the vibe "${vibe}". Be specific about what makes it fit.
 - "actors": List 2-4 real actors/voice actors who star in this. REQUIRED for movies/tv/anime/kdrama.
-- "tropes": List 2-4 narrative tropes central to the story (e.g. "found family", "enemies to lovers", "slow burn"). REQUIRED.
+- "tropes": List 2-4 NARRATIVE tropes central to the story (e.g. "found family", "enemies to lovers", "slow burn", "redemption arc"). These are NOT genres — tropes describe story patterns and character dynamics. REQUIRED.
 - "interests": List 3-5 interest tags that describe why this matches (e.g. "dark humor", "coming of age").
 
 Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact title", "description": "...", "reasoning": "...", "year": "YYYY", "episodeInfo": "optional", "actors": ["actor1", "actor2"], "tropes": ["trope1", "trope2"], "interests": ["tag1", "tag2"]}`,
@@ -721,7 +722,8 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
         messages: [
           {
             role: 'system',
-            content: `Recommend a single ${contentLabel.slice(0, -1)} that matches the user's vibe. Return ONLY JSON: {"title": "exact title", "year": "YYYY", "description": "brief plot summary", "reasoning": "why this fits", "actors": ["actor1", "actor2"], "interests": ["tag1", "tag2"]}`,
+            content: `Recommend a single ${contentLabel.slice(0, -1)} that matches the user's vibe. Return ONLY JSON: {"title": "exact title", "year": "YYYY", "description": "brief plot summary", "reasoning": "why this fits", "actors": ["actor1", "actor2"], "tropes": ["trope1", "trope2"], "interests": ["tag1", "tag2"]}
+"tropes" means NARRATIVE tropes (e.g. "found family", "enemies to lovers", "reluctant hero", "slow burn"), NOT genres. REQUIRED.`,
           },
           {
             role: 'user',
@@ -736,6 +738,7 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
         description = parsed.description ?? '';
         reasoning = parsed.reasoning ?? '';
         pickedActors = parsed.actors;
+        pickedTropes = parsed.tropes;
         pickedInterests = parsed.interests;
       }
     } catch (error) { log.warn('Direct GPT title suggestion failed', String(error)); }
@@ -748,8 +751,10 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
   // Build action URL
   const actionUrl = contentType === 'kdrama'
     ? `https://kissasian.cam/series/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}/`
+    : contentType === 'anime'
+    ? `https://kissanime.ba/series/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}/`
     : `https://sflix.ps/search/${encodeURIComponent(title)}`;
-  const actionLabel = contentType === 'kdrama' ? 'Watch on KissAsian' : 'Watch on sflix';
+  const actionLabel = contentType === 'kdrama' ? 'Watch on KissAsian' : contentType === 'anime' ? 'Watch on KissAnime' : 'Watch on sflix';
 
   // Fetch poster and stills
   let imageUrls: string[] = [];
