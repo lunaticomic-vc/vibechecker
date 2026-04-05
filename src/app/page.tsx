@@ -4,7 +4,6 @@ import { useState } from 'react';
 import ContentTypeSelector from '@/components/ContentTypeSelector';
 import VibeInput from '@/components/VibeInput';
 import RecommendationCard from '@/components/RecommendationCard';
-import Particles from '@/components/Particles';
 import { ContentType, DiscoveryMode, Recommendation } from '@/types/index';
 
 type Screen = 'pick' | 'discover' | 'vibe' | 'result';
@@ -136,7 +135,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen h-screen relative overflow-hidden">
-      <Particles />
 
       <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen">
 

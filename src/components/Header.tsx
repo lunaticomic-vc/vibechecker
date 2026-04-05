@@ -104,9 +104,9 @@ export default function Header() {
   const linkClass = "px-3 py-1.5 rounded-lg text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors whitespace-nowrap";
 
   return (
-    <div ref={menuRef} className="fixed top-0 left-0 right-0 z-[60] flex flex-col items-center pointer-events-none">
-      {/* Moon — always at top */}
-      <div className={`transition-all duration-500 ease-out ${open ? 'pt-3' : 'pt-5'}`}>
+    <div ref={menuRef} className="fixed top-0 left-0 right-0 z-[60] pointer-events-none">
+      {/* Moon — top left */}
+      <div className={`transition-all duration-500 ease-out absolute left-5 ${open ? 'top-3' : 'top-5'}`}>
         <button
           onClick={() => { setOpen(v => !v); setContentOpen(false); }}
           onMouseEnter={() => setHovering(true)}
@@ -124,8 +124,8 @@ export default function Header() {
 
       {/* Floating glass nav pill */}
       <div
-        className={`transition-all duration-500 ease-out ${
-          open ? 'mt-2 opacity-100 pointer-events-auto translate-y-0' : 'mt-0 opacity-0 pointer-events-none -translate-y-4'
+        className={`transition-all duration-500 ease-out absolute left-[75px] top-5 ${
+          open ? 'opacity-100 pointer-events-auto translate-x-0' : 'opacity-0 pointer-events-none -translate-x-4'
         }`}
       >
         <div className="bg-white/50 backdrop-blur-2xl backdrop-saturate-150 border border-white/40 rounded-2xl shadow-lg shadow-purple-200/10 mx-auto" style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}>

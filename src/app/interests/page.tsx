@@ -30,7 +30,7 @@ export default function InterestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf8ff] overflow-y-auto">
+    <div className="min-h-screen overflow-y-auto relative z-10">
       <div className="max-w-5xl mx-auto px-4 pt-20 pb-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-[#2d2640]">Interests</h1>
