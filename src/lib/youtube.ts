@@ -64,3 +64,40 @@ async function searchYouTubeBrave(query: string): Promise<YouTubeResult[]> {
 export function buildYouTubeWatchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
+
+export interface YouTubeVideoDetails {
+  videoId: string;
+  durationSeconds: number;
+  viewCount: number;
+}
+
+function parseISO8601Duration(duration: string): number {
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  return parseInt(match[1] ?? '0') * 3600 + parseInt(match[2] ?? '0') * 60 + parseInt(match[3] ?? '0');
+}
+
+export async function getVideoDetails(videoIds: string[]): Promise<YouTubeVideoDetails[]> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey || videoIds.length === 0) return [];
+  try {
+    const ids = videoIds.slice(0, 50).join(',');
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${ids}&key=${apiKey}`
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.items ?? []).map((item: { id: string; contentDetails?: { duration?: string }; statistics?: { viewCount?: string } }) => ({
+      videoId: item.id,
+      durationSeconds: parseISO8601Duration(item.contentDetails?.duration ?? ''),
+      viewCount: parseInt(item.statistics?.viewCount ?? '0'),
+    }));
+  } catch { return []; }
+}
+
+export function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}

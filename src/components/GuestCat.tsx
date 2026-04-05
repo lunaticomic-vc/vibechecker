@@ -8,8 +8,10 @@ export default function GuestCat() {
   const [isOwner, setIsOwner] = useState(false);
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [attacking, setAttacking] = useState(false);
+  const [pawTarget, setPawTarget] = useState({ x: 0, y: 0 });
   const [bubble, setBubble] = useState<string | null>(null);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mousePos = useRef({ x: 0, y: 0 });
   const catRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,10 +23,11 @@ export default function GuestCat() {
 
   useEffect(() => {
     function handleMouse(e: MouseEvent) {
+      mousePos.current = { x: e.clientX, y: e.clientY };
       if (!catRef.current) return;
       const rect = catRef.current.getBoundingClientRect();
       const catX = rect.left + rect.width / 2;
-      const catY = rect.top + 30;
+      const catY = rect.top + rect.height * 0.3;
       const dx = e.clientX - catX;
       const dy = e.clientY - catY;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -44,21 +47,17 @@ export default function GuestCat() {
     bubbleTimer.current = setTimeout(() => setBubble(null), duration);
   }
 
-  // Show rec count on first load for guests (only on non-login pages)
   useEffect(() => {
     if (!isOwner && remaining !== null && window.location.pathname !== '/login') {
       const msgs = remaining === 0
-        ? ["no recs left... sorry!"]
-        : [`${remaining} rec${remaining !== 1 ? 's' : ''} left`, "click wisely~"];
+        ? ['no recs left... sorry!']
+        : [`${remaining} rec${remaining !== 1 ? 's' : ''} left`, 'click wisely~'];
       showBubble(msgs[0]);
-      if (msgs[1]) {
-        setTimeout(() => showBubble(msgs[1]), 3500);
-      }
+      if (msgs[1]) setTimeout(() => showBubble(msgs[1]), 3500);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, isOwner]);
 
-  // Listen for login page events
   useEffect(() => {
     function handleCatSpeak(e: Event) {
       const msg = (e as CustomEvent).detail;
@@ -69,16 +68,27 @@ export default function GuestCat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const ATTACK_MESSAGES = ['ow!', 'hey!', 'mrrow!', 'hiss!', '*chomp*', 'rude.', '>:3'];
-
   function handleClick() {
     if (attacking) return;
+    // Calculate paw direction toward mouse
+    if (catRef.current) {
+      const rect = catRef.current.getBoundingClientRect();
+      const catX = rect.left + rect.width / 2;
+      const catY = rect.top + rect.height * 0.5;
+      const dx = mousePos.current.x - catX;
+      const dy = mousePos.current.y - catY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const reach = 40;
+      setPawTarget({
+        x: dist > 0 ? (dx / dist) * reach : -reach,
+        y: dist > 0 ? (dy / dist) * reach : -reach,
+      });
+    }
     setAttacking(true);
-    showBubble(ATTACK_MESSAGES[Math.floor(Math.random() * ATTACK_MESSAGES.length)], 2000);
-    setTimeout(() => setAttacking(false), 700);
+    showBubble('meow!', 1500);
+    setTimeout(() => setAttacking(false), 600);
   }
 
-  // Don't show until loaded
   if (remaining === null && !isOwner) return null;
 
   return (
@@ -87,90 +97,117 @@ export default function GuestCat() {
       onClick={handleClick}
       className="fixed bottom-3 left-3 z-50 cursor-pointer select-none"
     >
-      <div className="flex flex-col items-center gap-0.5">
-        <svg width="280" height="340" viewBox="0 0 120 150" fill="none" stroke="#c0b8d0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <div className="flex flex-col items-center gap-0.5 relative">
+        <svg width="140" height="170" viewBox="0 0 100 130" fill="none" stroke="#c0b8d0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
 
-          {/* Tail — smooth Framer Motion swing */}
+          {/* Tail — smooth S-curve swing */}
           <motion.path
-            d="M95 120 Q115 100 118 80 Q120 65 112 55"
             animate={{ d: [
-              'M95 120 Q115 100 118 80 Q120 65 112 55',
-              'M95 120 Q110 95 105 75 Q100 60 90 52',
-              'M95 120 Q115 100 118 80 Q120 65 112 55',
+              'M78 95 C90 85, 95 70, 88 58 C84 52, 78 50, 74 48',
+              'M78 95 C85 80, 82 65, 72 55 C66 50, 60 48, 56 50',
+              'M78 95 C90 85, 95 70, 88 58 C84 52, 78 50, 74 48',
             ]}}
-            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           />
 
-          {/* Body — sitting cat silhouette */}
-          <path d="M40 130 Q30 115 32 100 Q34 85 45 78" />
-          <path d="M80 130 Q90 115 88 100 Q86 85 75 78" />
-          <path d="M45 78 Q60 72 75 78" />
+          {/* Body — smooth sitting silhouette */}
+          <path d="M32 108 C28 98, 28 85, 35 75 C38 70, 42 67, 48 65" />
+          <path d="M68 108 C72 98, 72 85, 65 75 C62 70, 58 67, 52 65" />
+          <path d="M48 65 C50 63, 52 63, 52 65" />
 
-          {/* Front legs */}
-          <path d="M42 130 L42 142 Q42 146 46 146" />
-          <path d="M78 130 L78 142 Q78 146 74 146" />
+          {/* Chest curve */}
+          <path d="M38 90 C42 85, 50 82, 50 82 C50 82, 58 85, 62 90" strokeWidth="1.2" opacity="0.3" />
 
-          {/* Back legs tucked */}
-          <path d="M36 128 Q28 135 30 142 Q30 146 35 146 L42 146" />
-          <path d="M84 128 Q92 135 90 142 Q90 146 85 146 L78 146" />
+          {/* Front paws — soft rounded */}
+          <path d="M35 108 C35 112, 35 116, 38 118 C40 119, 43 119, 44 118" />
+          <path d="M65 108 C65 112, 65 116, 62 118 C60 119, 57 119, 56 118" />
 
-          {/* Head */}
-          <ellipse cx="60" cy="52" rx="22" ry="18" />
+          {/* Back haunches */}
+          <path d="M30 105 C24 110, 22 115, 25 118 C27 120, 32 120, 35 118" />
+          <path d="M70 105 C76 110, 78 115, 75 118 C73 120, 68 120, 65 118" />
 
-          {/* Ears — pointed triangles */}
-          <path d="M42 42 L35 18 L52 36" />
-          <path d="M78 42 L85 18 L68 36" />
-          {/* Inner ear lines */}
-          <path d="M43 38 L38 24 L49 35" strokeWidth="1" opacity="0.4" />
-          <path d="M77 38 L82 24 L71 35" strokeWidth="1" opacity="0.4" />
+          {/* Head — smooth oval */}
+          <ellipse cx="50" cy="42" rx="20" ry="17" />
 
-          {/* Eyes — just dots that follow mouse */}
+          {/* Ears — smooth curved triangles */}
+          <path d="M34 34 C32 24, 30 16, 32 12 C34 10, 38 14, 42 28" />
+          <path d="M66 34 C68 24, 70 16, 68 12 C66 10, 62 14, 58 28" />
+          {/* Inner ears */}
+          <path d="M35 30 C34 24, 33 18, 34 15 C35 14, 37 16, 40 26" strokeWidth="1" opacity="0.3" />
+          <path d="M65 30 C66 24, 67 18, 66 15 C65 14, 63 16, 60 26" strokeWidth="1" opacity="0.3" />
+
+          {/* Eyes — dot pupils that follow mouse */}
           <motion.circle
-            cx={52 + eyeOffset.x}
-            cy={50 + eyeOffset.y}
-            r={attacking ? 4 : 3}
-            fill="#8a7fa0"
+            cx={44 + eyeOffset.x}
+            cy={41 + eyeOffset.y}
+            r={attacking ? 3.5 : 2.5}
+            fill="#7c6f94"
             stroke="none"
-            animate={{ r: attacking ? 4 : 3 }}
-            transition={{ duration: 0.15 }}
+            animate={{ r: attacking ? 3.5 : 2.5 }}
+            transition={{ duration: 0.12 }}
           />
           <motion.circle
-            cx={68 + eyeOffset.x}
-            cy={50 + eyeOffset.y}
-            r={attacking ? 4 : 3}
-            fill="#8a7fa0"
+            cx={56 + eyeOffset.x}
+            cy={41 + eyeOffset.y}
+            r={attacking ? 3.5 : 2.5}
+            fill="#7c6f94"
             stroke="none"
-            animate={{ r: attacking ? 4 : 3 }}
-            transition={{ duration: 0.15 }}
+            animate={{ r: attacking ? 3.5 : 2.5 }}
+            transition={{ duration: 0.12 }}
           />
 
-          {/* Paw attack */}
+          {/* Paw swipe toward mouse */}
           <AnimatePresence>
             {attacking && (
               <motion.g
-                initial={{ x: 15, y: 10, opacity: 0, rotate: 30 }}
-                animate={{ x: -5, y: -5, opacity: 1, rotate: -10 }}
-                exit={{ opacity: 0, x: -10, y: -10 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
               >
-                <path d="M30 100 L10 85 L15 90" strokeWidth="2" />
-                <line x1="10" y1="85" x2="4" y2="78" strokeWidth="1.5" />
-                <line x1="10" y1="85" x2="2" y2="83" strokeWidth="1.5" />
-                <line x1="10" y1="85" x2="6" y2="88" strokeWidth="1.5" />
+                {/* Paw arm extending toward mouse */}
+                <motion.path
+                  initial={{ d: 'M38 95 C36 90, 35 88, 35 85' }}
+                  animate={{ d: `M38 95 C${30 + pawTarget.x * 0.3} ${85 + pawTarget.y * 0.3}, ${25 + pawTarget.x * 0.5} ${80 + pawTarget.y * 0.5}, ${20 + pawTarget.x * 0.7} ${75 + pawTarget.y * 0.7}` }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  strokeWidth="2"
+                />
+                {/* Paw pad */}
+                <motion.circle
+                  initial={{ cx: 35, cy: 85, r: 0 }}
+                  animate={{ cx: 20 + pawTarget.x * 0.7, cy: 75 + pawTarget.y * 0.7, r: 4 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  fill="none"
+                  strokeWidth="1.5"
+                />
+                {/* Claws */}
                 <motion.g
                   initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 1, 0.6] }}
-                  transition={{ delay: 0.15, duration: 0.4 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.1 }}
                 >
-                  <line x1="0" y1="74" x2="8" y2="82" strokeWidth="1" stroke="#d4b5fd" />
-                  <line x1="3" y1="72" x2="10" y2="79" strokeWidth="1" stroke="#d4b5fd" />
-                  <line x1="6" y1="71" x2="12" y2="77" strokeWidth="1" stroke="#d4b5fd" />
+                  {[[-3, -5], [-5, -2], [-5, 2]].map(([dx, dy], i) => (
+                    <motion.line
+                      key={i}
+                      initial={{ x1: 35, y1: 85, x2: 35, y2: 85 }}
+                      animate={{
+                        x1: 20 + pawTarget.x * 0.7,
+                        y1: 75 + pawTarget.y * 0.7,
+                        x2: 20 + pawTarget.x * 0.7 + dx * 2,
+                        y2: 75 + pawTarget.y * 0.7 + dy * 2,
+                      }}
+                      transition={{ duration: 0.12, ease: 'easeOut' }}
+                      strokeWidth="1.2"
+                      stroke="#b0a0c8"
+                    />
+                  ))}
                 </motion.g>
               </motion.g>
             )}
           </AnimatePresence>
         </svg>
 
+        {/* Speech bubble */}
         <AnimatePresence>
           {bubble && (
             <motion.div

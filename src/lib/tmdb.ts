@@ -170,3 +170,53 @@ export async function searchTMDBDetailed(
     return null;
   }
 }
+
+export interface TMDBSearchResult {
+  id: number;
+  title: string;
+  year: string | null;
+  description: string;
+  posterPath: string | null;
+  popularity: number;
+  voteAverage: number;
+}
+
+export async function searchTMDBMulti(
+  queries: string[],
+  type: 'movie' | 'tv'
+): Promise<TMDBSearchResult[]> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) return [];
+
+  const seen = new Set<number>();
+  const results: TMDBSearchResult[] = [];
+  const searchType = type === 'tv' ? 'tv' : 'movie';
+
+  for (const query of queries) {
+    try {
+      const res = await fetch(
+        `${TMDB_BASE}/search/${searchType}?query=${encodeURIComponent(query)}&include_adult=false&language=en-US&page=1&api_key=${apiKey}`
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      for (const item of (data.results ?? []).slice(0, 5)) {
+        if (seen.has(item.id)) continue;
+        seen.add(item.id);
+        const titleField = type === 'movie' ? item.title : item.name;
+        const dateField = type === 'movie' ? item.release_date : item.first_air_date;
+        results.push({
+          id: item.id,
+          title: titleField ?? '',
+          year: dateField ? dateField.slice(0, 4) : null,
+          description: item.overview ?? '',
+          posterPath: item.poster_path,
+          popularity: item.popularity ?? 0,
+          voteAverage: item.vote_average ?? 0,
+        });
+      }
+    } catch { continue; }
+  }
+
+  return results;
+}

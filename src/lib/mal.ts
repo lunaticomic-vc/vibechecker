@@ -188,3 +188,46 @@ async function fetchViaJikan(
 
   return results;
 }
+
+export interface JikanSearchResult {
+  malId: number;
+  title: string;
+  year: string | null;
+  description: string;
+  posterUrl: string | null;
+  score: number;
+  episodes: number | null;
+  genres: string[];
+}
+
+export async function searchAnimeJikanMulti(queries: string[]): Promise<JikanSearchResult[]> {
+  const JIKAN_BASE = 'https://api.jikan.moe/v4';
+  const seen = new Set<number>();
+  const results: JikanSearchResult[] = [];
+
+  for (const query of queries) {
+    try {
+      await delay(350);
+      const res = await fetch(`${JIKAN_BASE}/anime?q=${encodeURIComponent(query)}&limit=5&sfw=true`);
+      if (!res.ok) continue;
+      const json = await res.json();
+
+      for (const item of (json.data ?? []).slice(0, 5)) {
+        if (seen.has(item.mal_id)) continue;
+        seen.add(item.mal_id);
+        results.push({
+          malId: item.mal_id,
+          title: item.title,
+          year: item.aired?.from ? item.aired.from.slice(0, 4) : (item.year ? String(item.year) : null),
+          description: item.synopsis ?? '',
+          posterUrl: item.images?.jpg?.large_image_url ?? item.images?.jpg?.image_url ?? null,
+          score: item.score ?? 0,
+          episodes: item.episodes ?? null,
+          genres: (item.genres ?? []).map((g: { name: string }) => g.name),
+        });
+      }
+    } catch { continue; }
+  }
+
+  return results;
+}
