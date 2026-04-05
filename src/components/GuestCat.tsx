@@ -80,6 +80,7 @@ export default function GuestCat() {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [attacking, setAttacking] = useState(false);
+  const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [bubble, setBubble] = useState<string | null>(null);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const catRef = useRef<HTMLDivElement>(null);
@@ -91,6 +92,25 @@ export default function GuestCat() {
       if (data.role === 'owner') setIsOwner(true);
       else setRemaining(data.remaining ?? 0);
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function handleMouse(e: MouseEvent) {
+      if (!catRef.current) return;
+      const rect = catRef.current.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height * 0.3;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const max = 4;
+      setEyeOffset({
+        x: dist > 0 ? (dx / dist) * max : 0,
+        y: dist > 0 ? Math.min((dy / dist) * max, max * 0.6) : 0,
+      });
+    }
+    window.addEventListener('mousemove', handleMouse);
+    return () => window.removeEventListener('mousemove', handleMouse);
   }, []);
 
   function showBubble(msg: string, duration = 3000) {
@@ -160,42 +180,115 @@ export default function GuestCat() {
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         />
 
-        {/* Cat icon — clean professional silhouette */}
+        {/* Cat icon + animated overlays */}
         <motion.div
-          className="relative z-10 drop-shadow-[0_0_12px_rgba(196,181,253,0.3)]"
-          animate={{
-            y: [0, -3, 0],
-            rotate: attacking ? [0, -8, 5, 0] : 0,
-          }}
-          transition={attacking
-            ? { duration: 0.4, ease: 'easeInOut' }
-            : { duration: 4, repeat: Infinity, ease: 'easeInOut' }
-          }
+          className="relative z-10"
+          animate={{ y: [0, -3, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <FaCat
-            size={80}
-            className="transition-colors duration-300"
-            style={{
-              color: attacking ? 'rgba(180,140,220,0.6)' : 'rgba(176,168,196,0.35)',
-              filter: 'drop-shadow(0 0 6px rgba(196,181,253,0.2))',
-            }}
-          />
-        </motion.div>
+          {/* Base silhouette */}
+          <motion.div
+            animate={{ rotate: attacking ? [0, -10, 6, 0] : 0 }}
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+          >
+            <FaCat
+              size={80}
+              className="transition-colors duration-300"
+              style={{
+                color: attacking ? 'rgba(180,140,220,0.5)' : 'rgba(176,168,196,0.3)',
+                filter: 'drop-shadow(0 0 8px rgba(196,181,253,0.25))',
+              }}
+            />
+          </motion.div>
 
-        {/* Scratch marks on attack */}
-        <AnimatePresence>
-          {attacking && (
+          {/* Eyes — glowing dots that follow mouse */}
+          <motion.div
+            className="absolute pointer-events-none"
+            style={{ top: '18%', left: '30%', width: '40%', height: '15%' }}
+          >
+            {/* Left eye */}
             <motion.div
-              className="absolute -top-2 -right-4 z-20 text-[#c4b5fd] text-lg pointer-events-none"
-              initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              transition={{ duration: 0.2 }}
-            >
-              ✧
-            </motion.div>
-          )}
-        </AnimatePresence>
+              className="absolute rounded-full"
+              style={{
+                width: attacking ? 7 : 5,
+                height: attacking ? 7 : 5,
+                left: `calc(28% + ${eyeOffset.x}px)`,
+                top: `calc(50% + ${eyeOffset.y}px)`,
+                background: attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.7)',
+                boxShadow: `0 0 ${attacking ? '8' : '4'}px rgba(196,181,253,${attacking ? '0.6' : '0.3'})`,
+              }}
+              animate={{
+                boxShadow: attacking
+                  ? '0 0 10px rgba(200,160,240,0.7)'
+                  : ['0 0 4px rgba(196,181,253,0.2)', '0 0 8px rgba(196,181,253,0.4)', '0 0 4px rgba(196,181,253,0.2)'],
+              }}
+              transition={attacking ? { duration: 0.15 } : { duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            {/* Right eye */}
+            <motion.div
+              className="absolute rounded-full"
+              style={{
+                width: attacking ? 7 : 5,
+                height: attacking ? 7 : 5,
+                left: `calc(68% + ${eyeOffset.x}px)`,
+                top: `calc(50% + ${eyeOffset.y}px)`,
+                background: attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.7)',
+                boxShadow: `0 0 ${attacking ? '8' : '4'}px rgba(196,181,253,${attacking ? '0.6' : '0.3'})`,
+              }}
+              animate={{
+                boxShadow: attacking
+                  ? '0 0 10px rgba(200,160,240,0.7)'
+                  : ['0 0 4px rgba(196,181,253,0.2)', '0 0 8px rgba(196,181,253,0.4)', '0 0 4px rgba(196,181,253,0.2)'],
+              }}
+              transition={attacking ? { duration: 0.15 } : { duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+            />
+          </motion.div>
+
+          {/* Tail — swinging curve behind the cat */}
+          <svg className="absolute -right-3 bottom-1 pointer-events-none" width="30" height="40" viewBox="0 0 30 40" fill="none">
+            <motion.path
+              stroke={attacking ? 'rgba(180,140,220,0.5)' : 'rgba(176,168,196,0.35)'}
+              strokeWidth="3"
+              strokeLinecap="round"
+              fill="none"
+              animate={{ d: [
+                'M4 38 C8 28, 16 18, 22 10 C25 6, 28 4, 28 6',
+                'M4 38 C6 26, 10 16, 12 10 C13 6, 14 4, 16 6',
+                'M4 38 C8 28, 16 18, 22 10 C25 6, 28 4, 28 6',
+              ]}}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ filter: 'drop-shadow(0 0 3px rgba(196,181,253,0.2))' }}
+            />
+          </svg>
+
+          {/* Paw swipe on attack */}
+          <AnimatePresence>
+            {attacking && (
+              <>
+                <motion.div
+                  className="absolute -left-3 bottom-3 pointer-events-none text-xl"
+                  initial={{ opacity: 0, x: 5, rotate: 20 }}
+                  animate={{ opacity: 1, x: -8, rotate: -15 }}
+                  exit={{ opacity: 0, x: -12 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  style={{ color: 'rgba(176,168,196,0.5)' }}
+                >
+                  ✦
+                </motion.div>
+                <motion.div
+                  className="absolute -top-1 -right-2 pointer-events-none text-sm"
+                  initial={{ opacity: 0, scale: 0.3 }}
+                  animate={{ opacity: [0, 0.8, 0.3], scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                  style={{ color: 'rgba(196,181,253,0.5)' }}
+                >
+                  ✧
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* Speech bubble */}
         <AnimatePresence>
