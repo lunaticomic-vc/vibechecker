@@ -77,7 +77,7 @@ export default function PeoplePage() {
             placeholder="Add a person..."
             className="flex-1 bg-transparent rounded-xl px-4 py-2.5 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none"
           />
-          <button onClick={addPerson} disabled={!input.trim() || adding} className="px-5 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white text-sm rounded-xl transition-colors">
+          <button onClick={addPerson} disabled={!input.trim() || adding} className="px-5 py-2.5 text-[#7c3aed] text-sm rounded-xl transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40">
             {adding ? 'Adding...' : 'Add'}
           </button>
         </div>

@@ -29,11 +29,11 @@ const ALL_STATUSES: StatusOption[] = [
   { label: 'Completed', value: 'completed' },
 ];
 
-const STATUS_COLORS: Record<string, { bg: string; border: string; text: string; activeBg: string }> = {
-  todo: { bg: 'bg-[#f0f4ff]', border: 'border-[#bfdbfe]', text: 'text-[#4a6fa5]', activeBg: 'bg-[#dbeafe]' },
-  watching: { bg: 'bg-[#f0f7ef]', border: 'border-[#a7c4a0]', text: 'text-[#6b9a65]', activeBg: 'bg-[#d4e6d1]' },
-  on_hold: { bg: 'bg-[#fefce8]', border: 'border-[#fde68a]', text: 'text-[#a16207]', activeBg: 'bg-[#fef08a]' },
-  completed: { bg: 'bg-[#f3f0ff]', border: 'border-[#c4b5fd]', text: 'text-[#7c3aed]', activeBg: 'bg-[#e9e4f5]' },
+const STATUS_COLORS: Record<string, { text: string; hoverText: string }> = {
+  todo: { text: 'text-[#4a6fa5]', hoverText: 'text-[#2d5a8e]' },
+  watching: { text: 'text-[#6b9a65]', hoverText: 'text-[#4a7d44]' },
+  on_hold: { text: 'text-[#a16207]', hoverText: 'text-[#854d0e]' },
+  completed: { text: 'text-[#7c3aed]', hoverText: 'text-[#6d28d9]' },
 };
 
 interface Props {
@@ -124,8 +124,16 @@ export default function StatusDragProvider({ children, onStatusChange }: Props) 
 
           {/* Dragged item indicator */}
           <div
-            className="fixed z-[102] px-4 py-2 bg-white/90 backdrop-blur rounded-xl shadow-xl border-2 border-[#c4b5fd] text-sm text-[#2d2640] font-medium pointer-events-none max-w-[200px] truncate"
-            style={{ left: drag.position.x - 100, top: drag.position.y - 20 }}
+            className="fixed z-[102] px-4 py-2 rounded-xl text-sm text-[#2d2640] font-medium pointer-events-none max-w-[200px] truncate"
+            style={{
+              left: drag.position.x - 100,
+              top: drag.position.y - 20,
+              background: 'rgba(255,255,255,0.7)',
+              backdropFilter: 'blur(20px) saturate(1.8)',
+              WebkitBackdropFilter: 'blur(20px) saturate(1.8)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.6)',
+              border: '1px solid rgba(255,255,255,0.5)',
+            }}
           >
             {drag.favoriteTitle}
           </div>
@@ -139,14 +147,20 @@ export default function StatusDragProvider({ children, onStatusChange }: Props) 
                 <div
                   key={zone.value}
                   ref={el => registerZone(zone.value, el)}
-                  className={`w-[140px] h-[140px] sm:w-[160px] sm:h-[160px] rounded-2xl border-3 flex flex-col items-center justify-center gap-2 transition-all duration-200 ${
-                    isHovered
-                      ? `${colors.activeBg} border-4 ${colors.border} scale-110 shadow-lg`
-                      : `${colors.bg} border-2 ${colors.border}`
-                  }`}
+                  className={`w-[140px] h-[140px] sm:w-[160px] sm:h-[160px] rounded-2xl flex flex-col items-center justify-center gap-2 transition-all duration-300`}
+                  style={{
+                    background: isHovered ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.4)',
+                    backdropFilter: 'blur(20px) saturate(1.8)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(1.8)',
+                    boxShadow: isHovered
+                      ? '0 8px 30px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.7)'
+                      : '0 2px 10px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.5)',
+                    border: isHovered ? '1px solid rgba(255,255,255,0.7)' : '1px solid rgba(255,255,255,0.4)',
+                    transform: isHovered ? 'scale(1.08)' : 'scale(1)',
+                  }}
                 >
-                  <span className={`text-sm font-semibold ${colors.text}`}>{zone.label}</span>
-                  <span className={`text-[10px] ${colors.text} opacity-60`}>Drop here</span>
+                  <span className={`text-sm font-semibold ${isHovered ? colors.hoverText : colors.text}`}>{zone.label}</span>
+                  <span className={`text-[10px] ${colors.text} opacity-50`}>Drop here</span>
                 </div>
               );
             })}

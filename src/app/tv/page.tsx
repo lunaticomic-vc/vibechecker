@@ -159,7 +159,7 @@ export default function TVPage() {
           <div>
             <h1 className="text-2xl font-semibold text-[#2d2640]">TV Shows</h1>
           </div>
-          <button onClick={() => setShowAddForm(v => !v)} className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg transition-colors">
+          <button onClick={() => setShowAddForm(v => !v)} className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm">
             {showAddForm ? 'Cancel' : '+ Add'}
           </button>
         </div>

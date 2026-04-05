@@ -127,7 +127,7 @@ export default function AnimePage() {
           <div>
             <h1 className="text-2xl font-semibold text-[#2d2640]">Anime</h1>
           </div>
-          <button onClick={() => setShowAdd(v => !v)} className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg transition-colors">
+          <button onClick={() => setShowAdd(v => !v)} className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm">
             {showAdd ? 'Cancel' : '+ Add'}
           </button>
         </div>
@@ -135,7 +135,7 @@ export default function AnimePage() {
         {showAdd && (
           <form onSubmit={handleAdd} className="mb-8 bg-white border-2 border-[#e9e4f5] rounded-xl p-4 flex gap-3 items-center">
             <input type="text" value={addTitle} onChange={e => setAddTitle(e.target.value)} placeholder="Anime title..." className="flex-1 bg-white border-2 border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd]" autoFocus />
-            <button type="submit" disabled={!addTitle.trim()} className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors">Add</button>
+            <button type="submit" disabled={!addTitle.trim()} className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40">Add</button>
           </form>
         )}
 

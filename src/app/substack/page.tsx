@@ -263,7 +263,7 @@ export default function SubstackPage() {
           </div>
           <button
             onClick={() => setShowAddForm(v => !v)}
-            className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg transition-colors"
+            className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm"
           >
             {showAddForm ? 'Cancel' : '+ Add'}
           </button>
@@ -295,7 +295,7 @@ export default function SubstackPage() {
               <button
                 type="submit"
                 disabled={addLoading || !url.trim()}
-                className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors"
+                className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40"
               >
                 {addLoading ? 'Adding...' : 'Add'}
               </button>

@@ -135,7 +135,7 @@ function ScreencapCircle({ src, alt, size, delay }: { src: string; alt: string; 
 
 export default function RecommendationCard({ recommendation, onAccept }: Props) {
   const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights, interests } = recommendation;
-  const [openSection, setOpenSection] = useState<AccordionSection>(null);
+  const [openSection, setOpenSection] = useState<AccordionSection>('description');
 
   const isYouTube = type === 'youtube';
   const isSubstack = type === 'substack';

@@ -152,7 +152,7 @@ export default function SettingsPage() {
                 </p>
                 <div className="flex gap-2">
                   <button onClick={handleMALSync} disabled={malLoading}
-                    className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors">
+                    className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40">
                     {malLoading ? 'Syncing...' : 'Sync'}
                   </button>
                   <button onClick={async () => {
@@ -171,7 +171,7 @@ export default function SettingsPage() {
                 <p className="text-xs text-[#7c7291] mb-3">Import your full anime list. List must be public.</p>
                 <div className="flex gap-3 items-center">
                   <input type="text" value={malUsername} onChange={e => setMalUsername(e.target.value)} placeholder="MAL username" className={`flex-1 ${inputClass}`} onKeyDown={e => e.key === 'Enter' && handleMALImport()} />
-                  <button onClick={handleMALImport} disabled={malLoading || !malUsername.trim()} className="px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors whitespace-nowrap">
+                  <button onClick={handleMALImport} disabled={malLoading || !malUsername.trim()} className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40 whitespace-nowrap">
                     {malLoading ? 'Importing...' : 'Import'}
                   </button>
                 </div>
@@ -194,12 +194,12 @@ export default function SettingsPage() {
             </div>
             <p className="text-xs text-[#7c7291] mb-3">Connect Google to import liked videos and subscriptions.</p>
             {!ytConnected ? (
-              <a href="/api/auth/google" className="inline-block px-4 py-2 text-sm bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg transition-colors">Connect YouTube</a>
+              <a href="/api/auth/google" className="inline-block px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm">Connect YouTube</a>
             ) : (
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => handleYouTubeImport('liked')} disabled={ytLoading} className="px-3 py-1.5 text-xs bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors">Liked Videos</button>
-                <button onClick={() => handleYouTubeImport('subscriptions')} disabled={ytLoading} className="px-3 py-1.5 text-xs bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors">Subscriptions</button>
-                <button onClick={() => handleYouTubeImport('both')} disabled={ytLoading} className="px-3 py-1.5 text-xs bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 text-white rounded-lg transition-colors">Both</button>
+                <button onClick={() => handleYouTubeImport('liked')} disabled={ytLoading} className="px-3 py-1.5 text-xs text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40">Liked Videos</button>
+                <button onClick={() => handleYouTubeImport('subscriptions')} disabled={ytLoading} className="px-3 py-1.5 text-xs text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40">Subscriptions</button>
+                <button onClick={() => handleYouTubeImport('both')} disabled={ytLoading} className="px-3 py-1.5 text-xs text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40">Both</button>
                 <button onClick={handleYouTubeDisconnect} className="px-3 py-1.5 text-xs bg-[#e9e4f5] hover:bg-[#ddd8ee] text-[#7c7291] rounded-lg transition-colors">Disconnect</button>
               </div>
             )}
