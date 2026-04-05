@@ -134,8 +134,8 @@ export default function Header() {
 
       {/* Nav dropdown */}
       <div
-        className={`pointer-events-auto mt-4 flex flex-col items-center transition-all duration-500 ease-out overflow-hidden ${
-          open ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+        className={`mt-4 flex flex-col items-center transition-all duration-500 ease-out overflow-hidden ${
+          open ? 'max-h-48 opacity-100 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'
         }`}
       >
         <div className="bg-white/85 backdrop-blur-xl border border-[#e9e4f5] rounded-2xl px-6 py-3 shadow-lg shadow-purple-100/20 flex flex-col gap-0.5">

@@ -17,26 +17,28 @@ interface Props {
 
 type AccordionSection = 'description' | 'vibe' | 'reddit' | null;
 
-function getCirclePositions(count: number): { y: number; side: 'left' | 'right' }[] {
-  const positions: { y: number; side: 'left' | 'right' }[] = [
-    { y: 5, side: 'left' },
-    { y: 0, side: 'right' },
-    { y: 50, side: 'left' },
-    { y: 45, side: 'right' },
-  ];
-  return positions.slice(0, count);
-}
+// Positions for floating circles — spread around the page, not overlapping center card
+// Using viewport-relative positioning
+const CIRCLE_LAYOUT = [
+  // Poster — top left, big
+  { top: '3%', left: '3%', size: 160 },
+  // Screencaps — scattered around edges
+  { top: '5%', right: '5%', size: 140 },
+  { bottom: '15%', left: '5%', size: 130 },
+  { bottom: '10%', right: '3%', size: 145 },
+  { top: '40%', left: '2%', size: 120 },
+  { top: '35%', right: '2%', size: 125 },
+];
 
 export default function RecommendationCard({ recommendation }: Props) {
   const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights } = recommendation;
   const [openSection, setOpenSection] = useState<AccordionSection>(null);
 
+  // First image is poster, rest are screencaps
   const allImages = [
     ...(thumbnailUrl ? [thumbnailUrl] : []),
     ...(imageUrls ?? []),
   ];
-
-  const circlePositions = getCirclePositions(allImages.length);
 
   function toggleSection(section: AccordionSection) {
     setOpenSection(prev => prev === section ? null : section);
@@ -49,38 +51,36 @@ export default function RecommendationCard({ recommendation }: Props) {
   );
 
   return (
-    <div className="relative w-full">
-      {/* Floating circles — outside the card */}
+    <>
+      {/* Floating image circles — fixed positioned to fill the page, below nav z-index */}
       {allImages.map((src, i) => {
-        const pos = circlePositions[i];
-        if (!pos) return null;
-        const sz = 130 + (i === 0 ? 20 : 0);
+        const layout = CIRCLE_LAYOUT[i];
+        if (!layout) return null;
         return (
           <div
             key={i}
-            className="absolute hidden sm:block"
+            className="fixed z-[3]"
             style={{
-              left: pos.side === 'left' ? `-${sz / 2 + 30}px` : 'auto',
-              right: pos.side === 'right' ? `-${sz / 2 + 30}px` : 'auto',
-              top: `${pos.y}%`,
-              zIndex: 5,
+              top: layout.top,
+              left: layout.left,
+              right: layout.right,
+              bottom: layout.bottom,
             }}
           >
             <FloatingCircle
               src={src}
-              alt={`${title} ${i + 1}`}
-              size={sz}
+              alt={i === 0 ? `${title} poster` : `${title} scene ${i}`}
+              size={layout.size}
               initialX={0}
               initialY={0}
-              delay={i * 0.8}
+              delay={i * 0.6}
             />
           </div>
         );
       })}
 
-      {/* Card */}
-      <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/90 backdrop-blur-sm p-5 flex flex-col gap-3">
-        {/* Title + meta */}
+      {/* Card — centered, narrow, doesn't overlap circles */}
+      <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/92 backdrop-blur-sm p-5 flex flex-col gap-3 max-w-[320px] mx-auto">
         <div>
           <h2 className="text-lg font-bold text-[#2d2640] leading-tight">{title}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -96,7 +96,6 @@ export default function RecommendationCard({ recommendation }: Props) {
           </div>
         </div>
 
-        {/* Actors */}
         {actors && actors.length > 0 && (
           <div className="flex flex-wrap gap-1 items-center">
             <span className="text-[9px] tracking-widest uppercase text-[#c8c2d6]">starring</span>
@@ -108,15 +107,11 @@ export default function RecommendationCard({ recommendation }: Props) {
           </div>
         )}
 
-        {/* Accordion sections */}
+        {/* Accordion */}
         <div className="flex flex-col gap-1">
-          {/* Description */}
           {description && (
             <div className="rounded-lg border border-[#e9e4f5] overflow-hidden">
-              <button
-                onClick={() => toggleSection('description')}
-                className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#7c7291] hover:bg-[#faf8ff] transition-colors"
-              >
+              <button onClick={() => toggleSection('description')} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#7c7291] hover:bg-[#faf8ff] transition-colors">
                 About {chevron(openSection === 'description')}
               </button>
               <div className={`overflow-hidden transition-all duration-300 ${openSection === 'description' ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -125,12 +120,8 @@ export default function RecommendationCard({ recommendation }: Props) {
             </div>
           )}
 
-          {/* Why it fits */}
           <div className="rounded-lg border border-[#d4e6d1] overflow-hidden">
-            <button
-              onClick={() => toggleSection('vibe')}
-              className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65] hover:bg-[#f6faf5] transition-colors"
-            >
+            <button onClick={() => toggleSection('vibe')} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65] hover:bg-[#f6faf5] transition-colors">
               Why this fits {chevron(openSection === 'vibe')}
             </button>
             <div className={`overflow-hidden transition-all duration-300 ${openSection === 'vibe' ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -138,13 +129,9 @@ export default function RecommendationCard({ recommendation }: Props) {
             </div>
           </div>
 
-          {/* Reddit */}
           {redditInsights && redditInsights.length > 0 && (
             <div className="rounded-lg border border-[#e9e4f5] overflow-hidden">
-              <button
-                onClick={() => toggleSection('reddit')}
-                className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] hover:bg-[#faf8ff] transition-colors"
-              >
+              <button onClick={() => toggleSection('reddit')} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] hover:bg-[#faf8ff] transition-colors">
                 What people say {chevron(openSection === 'reddit')}
               </button>
               <div className={`overflow-hidden transition-all duration-300 ${openSection === 'reddit' ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -161,19 +148,14 @@ export default function RecommendationCard({ recommendation }: Props) {
           )}
         </div>
 
-        {/* Action button */}
-        <a
-          href={actionUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-5 py-2.5 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] text-xs"
-        >
+        <a href={actionUrl} target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-5 py-2.5 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] text-xs">
           {actionLabel}
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </a>
       </div>
-    </div>
+    </>
   );
 }
