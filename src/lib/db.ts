@@ -131,11 +131,18 @@ export async function initDb(): Promise<Client> {
     'CREATE INDEX IF NOT EXISTS idx_accounts_platform ON accounts(platform)',
   ]);
 
-  // Migration: add window_start column to ip_usage if missing (table may predate the column)
-  try {
-    await db.execute(`ALTER TABLE ip_usage ADD COLUMN window_start TEXT DEFAULT (datetime('now'))`);
-  } catch {
-    // Column already exists — ignore
+  // Migration: recreate ip_usage if window_start column is missing (table may predate the column)
+  const ipCols = await db.execute(`PRAGMA table_info(ip_usage)`);
+  const hasWindowStart = ipCols.rows.some((r: any) => r.name === 'window_start');
+  if (!hasWindowStart) {
+    await db.execute(`DROP TABLE IF EXISTS ip_usage`);
+    await db.execute(`CREATE TABLE IF NOT EXISTS ip_usage (
+      ip TEXT PRIMARY KEY,
+      count INTEGER DEFAULT 0,
+      window_start TEXT DEFAULT (datetime('now')),
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_ip_usage_ip ON ip_usage(ip)`);
   }
 
   // Migration: ensure favorites type CHECK constraint includes 'substack' and 'kdrama'

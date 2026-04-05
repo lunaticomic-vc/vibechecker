@@ -117,6 +117,7 @@ export default function Header() {
   }
 
   const linkClass = "px-3 py-2 rounded-lg text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors whitespace-nowrap";
+  const mobileLinkClass = "px-3 py-2.5 rounded-xl text-sm text-[#2d2640] active:bg-[#f5f3ff] active:text-[#7c3aed] transition-colors";
 
   const moonSize = isMobile ? 44 : 52;
 
@@ -154,36 +155,30 @@ export default function Header() {
           style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}
         >
           {isMobile ? (
-            /* Mobile: vertical stacked nav, full width */
-            <div className="flex flex-col gap-0.5 px-4 py-3">
-              <Link href="/" onClick={navClick} className={linkClass}>Home</Link>
+            /* Mobile: full-width vertical nav with large touch targets */
+            <div className="flex flex-col py-2">
+              <Link href="/" onClick={navClick} className={mobileLinkClass}>Home</Link>
 
-              {/* Content section */}
-              <button
-                onClick={() => setContentOpen(v => !v)}
-                className={`${linkClass} flex items-center justify-between gap-1 w-full text-left`}
-              >
-                Content
-                <svg className={`w-3 h-3 transition-transform duration-200 ${contentOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {contentOpen && (
-                <div className="grid grid-cols-2 gap-0.5 pl-2">
-                  <Link href="/movies" onClick={navClick} className={linkClass}>Movies</Link>
-                  <Link href="/tv" onClick={navClick} className={linkClass}>TV Shows</Link>
-                  <Link href="/anime" onClick={navClick} className={linkClass}>Anime</Link>
-                  <Link href="/youtube" onClick={navClick} className={linkClass}>YouTube</Link>
-                  <Link href="/substack" onClick={navClick} className={linkClass}>Substack</Link>
-                  <Link href="/kdrama" onClick={navClick} className={linkClass}>K-Drama</Link>
-                </div>
-              )}
+              <div className="mx-3 my-1 border-t border-[#e9e4f5]/40" />
 
-              <div className="grid grid-cols-2 gap-0.5">
-                <Link href="/progress" onClick={navClick} className={linkClass}>Current</Link>
-                <Link href="/interests" onClick={navClick} className={linkClass}>Interests</Link>
-                <Link href="/people" onClick={navClick} className={linkClass}>People</Link>
-                <Link href="/settings" onClick={navClick} className={linkClass}>Settings</Link>
+              {/* Content types — always visible as 2-col grid */}
+              <p className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-widest text-[#b0a8c4]">Content</p>
+              <div className="grid grid-cols-2">
+                <Link href="/movies" onClick={navClick} className={mobileLinkClass}>Movies</Link>
+                <Link href="/tv" onClick={navClick} className={mobileLinkClass}>TV Shows</Link>
+                <Link href="/anime" onClick={navClick} className={mobileLinkClass}>Anime</Link>
+                <Link href="/youtube" onClick={navClick} className={mobileLinkClass}>YouTube</Link>
+                <Link href="/substack" onClick={navClick} className={mobileLinkClass}>Substack</Link>
+                <Link href="/kdrama" onClick={navClick} className={mobileLinkClass}>K-Drama</Link>
+              </div>
+
+              <div className="mx-3 my-1 border-t border-[#e9e4f5]/40" />
+
+              <div className="grid grid-cols-2">
+                <Link href="/progress" onClick={navClick} className={mobileLinkClass}>Current</Link>
+                <Link href="/interests" onClick={navClick} className={mobileLinkClass}>Interests</Link>
+                <Link href="/people" onClick={navClick} className={mobileLinkClass}>People</Link>
+                <Link href="/settings" onClick={navClick} className={mobileLinkClass}>Settings</Link>
               </div>
             </div>
           ) : (

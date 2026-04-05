@@ -4,6 +4,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import Particles from '@/components/Particles';
 import GuestCat from '@/components/GuestCat';
+import MobileGuestCounter from '@/components/MobileGuestCounter';
 import { AuthProvider } from '@/components/AuthProvider';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -34,6 +35,7 @@ export default function RootLayout({
           <Header />
           {children}
           <GuestCat />
+          <MobileGuestCounter />
         </AuthProvider>
       </body>
     </html>
