@@ -60,9 +60,31 @@ export function middleware(req: NextRequest) {
   }
 
   const owner = isOwnerCookie(req.cookies.get('cc_auth')?.value);
+  const hasGuestCookie = req.cookies.has('cc_guest');
+  const isAuthed = owner || hasGuestCookie;
 
-  // Everyone can view all pages and read data (GET requests)
-  // Only block write operations (POST/PUT/PATCH/DELETE) for non-owners
+  // Skip auth for login page, auth APIs, and static assets
+  if (
+    path === '/login' ||
+    path.startsWith('/api/auth/') ||
+    path.startsWith('/_next') ||
+    path.startsWith('/favicon') ||
+    path.endsWith('.ico') ||
+    path.endsWith('.svg') ||
+    path.endsWith('.png')
+  ) {
+    return NextResponse.next();
+  }
+
+  // First visit — redirect to login flow
+  if (!isAuthed) {
+    if (path.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
+
+  // Guests can browse but not modify data
   if (!owner && method !== 'GET') {
     const isWriteApi = WRITE_APIS.some(api => path.startsWith(api));
     if (isWriteApi) {
