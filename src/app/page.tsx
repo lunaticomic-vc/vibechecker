@@ -34,6 +34,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setShowRejectReasons(false);
+    window.dispatchEvent(new CustomEvent('cat-chase', { detail: true }));
 
     try {
       const res = await fetch('/api/recommend', {
@@ -54,6 +55,7 @@ export default function Home() {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
+      window.dispatchEvent(new CustomEvent('cat-chase', { detail: false }));
     }
   };
 

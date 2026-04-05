@@ -82,16 +82,22 @@ export default function GuestCat() {
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [pawPrint, setPawPrint] = useState<{ x: number; y: number } | null>(null);
   const [bubble, setBubble] = useState<string | null>(null);
+  const [chasing, setChasing] = useState(false);
+  const [mouseIconPos, setMouseIconPos] = useState({ x: 0, y: 0 });
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mousePos = useRef({ x: 0, y: 0 });
   const catRef = useRef<HTMLDivElement>(null);
+  const chaseAngle = useRef(0);
+  const chaseAnim = useRef<number>(0);
   const pathname = usePathname();
   const prevPath = useRef(pathname);
 
 
+  // Eye tracking — follows real cursor or orbiting mouse
   useEffect(() => {
     function handleMouse(e: MouseEvent) {
       mousePos.current = { x: e.clientX, y: e.clientY };
+      if (chasing) return; // eyes follow the orbiting mouse instead
       if (!catRef.current) return;
       const rect = catRef.current.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
@@ -107,7 +113,45 @@ export default function GuestCat() {
     }
     window.addEventListener('mousemove', handleMouse);
     return () => window.removeEventListener('mousemove', handleMouse);
+  }, [chasing]);
+
+  // Listen for loading chase events
+  useEffect(() => {
+    function handleChase(e: Event) {
+      const active = (e as CustomEvent).detail;
+      setChasing(active);
+      if (active) showBubble('ooh a mouse...', 2000);
+    }
+    window.addEventListener('cat-chase', handleChase);
+    return () => window.removeEventListener('cat-chase', handleChase);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Orbiting mouse animation
+  useEffect(() => {
+    if (!chasing) {
+      cancelAnimationFrame(chaseAnim.current);
+      return;
+    }
+    const radius = 120;
+    const speed = 0.03;
+    function animate() {
+      chaseAngle.current += speed;
+      const x = Math.cos(chaseAngle.current) * radius;
+      const y = Math.sin(chaseAngle.current) * radius;
+      setMouseIconPos({ x, y });
+      // Update eye offset to follow the orbiting mouse
+      const max = 4;
+      const dist = Math.sqrt(x * x + y * y);
+      setEyeOffset({
+        x: dist > 0 ? (x / dist) * max : 0,
+        y: dist > 0 ? Math.min((y / dist) * max, max * 0.6) : 0,
+      });
+      chaseAnim.current = requestAnimationFrame(animate);
+    }
+    chaseAnim.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(chaseAnim.current);
+  }, [chasing]);
 
   function showBubble(msg: string, duration = 3000) {
     if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
@@ -258,6 +302,48 @@ export default function GuestCat() {
 
           </motion.svg>
         </motion.div>
+
+        {/* Orbiting mouse during loading */}
+        <AnimatePresence>
+          {chasing && (
+            <motion.div
+              className="absolute pointer-events-none z-0"
+              style={{
+                left: '50%',
+                top: '40%',
+                marginLeft: -8,
+                marginTop: -8,
+              }}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                x: mouseIconPos.x,
+                y: mouseIconPos.y,
+              }}
+              exit={{ opacity: 0, scale: 0 }}
+              transition={{ x: { duration: 0 }, y: { duration: 0 }, opacity: { duration: 0.3 }, scale: { duration: 0.3 } }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="drop-shadow-[0_0_4px_rgba(196,181,253,0.4)]">
+                {/* Mouse body */}
+                <ellipse cx="12" cy="13" rx="6" ry="7" fill="#d4cce6" stroke="#b0a8c4" strokeWidth="1"/>
+                {/* Ears */}
+                <circle cx="8" cy="7" r="3" fill="#e8e0f4" stroke="#b0a8c4" strokeWidth="0.8"/>
+                <circle cx="16" cy="7" r="3" fill="#e8e0f4" stroke="#b0a8c4" strokeWidth="0.8"/>
+                {/* Inner ears */}
+                <circle cx="8" cy="7" r="1.5" fill="#d4b8e8"/>
+                <circle cx="16" cy="7" r="1.5" fill="#d4b8e8"/>
+                {/* Eyes */}
+                <circle cx="10" cy="12" r="1" fill="#2d2640"/>
+                <circle cx="14" cy="12" r="1" fill="#2d2640"/>
+                {/* Nose */}
+                <circle cx="12" cy="14" r="0.8" fill="#c4a0d0"/>
+                {/* Tail */}
+                <path d="M12 20 Q8 24 5 22" stroke="#b0a8c4" strokeWidth="1" fill="none" strokeLinecap="round"/>
+              </svg>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Speech bubble */}
         <AnimatePresence>
