@@ -80,8 +80,10 @@ export default function GuestCat() {
   const [isOwner, setIsOwner] = useState(false);
   const [attacking, setAttacking] = useState(false);
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
+  const [pawPrint, setPawPrint] = useState<{ x: number; y: number } | null>(null);
   const [bubble, setBubble] = useState<string | null>(null);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mousePos = useRef({ x: 0, y: 0 });
   const catRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const prevPath = useRef(pathname);
@@ -95,6 +97,7 @@ export default function GuestCat() {
 
   useEffect(() => {
     function handleMouse(e: MouseEvent) {
+      mousePos.current = { x: e.clientX, y: e.clientY };
       if (!catRef.current) return;
       const rect = catRef.current.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
@@ -158,8 +161,12 @@ export default function GuestCat() {
   function handleClick() {
     if (attacking) return;
     setAttacking(true);
+    setPawPrint({ x: mousePos.current.x, y: mousePos.current.y });
     showBubble('meow!', 1500);
-    setTimeout(() => setAttacking(false), 600);
+    setTimeout(() => {
+      setAttacking(false);
+      setPawPrint(null);
+    }, 800);
   }
 
   if (remaining === null && !isOwner) return null;
@@ -290,38 +297,6 @@ export default function GuestCat() {
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
             />
 
-            {/* Paw swipe on attack */}
-            <AnimatePresence>
-              {attacking && (
-                <motion.g>
-                  {/* Paw extending left */}
-                  <motion.line
-                    x1={8} y1={22}
-                    initial={{ x2: 8, y2: 22 }}
-                    animate={{ x2: 1, y2: 18 }}
-                    exit={{ x2: 8, y2: 22 }}
-                    stroke="rgba(176,168,196,0.5)"
-                    strokeWidth="1"
-                    strokeLinecap="round"
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                  />
-                  {/* Scratch marks */}
-                  {[[-0.5, -1.5], [-1.5, -0.5], [-1.5, 0.8]].map(([dx, dy], i) => (
-                    <motion.line
-                      key={i}
-                      x1={1} y1={18}
-                      initial={{ x2: 1, y2: 18, opacity: 0 }}
-                      animate={{ x2: 1 + (dx ?? 0) * 2, y2: 18 + (dy ?? 0) * 2, opacity: [0, 0.7, 0.2] }}
-                      exit={{ opacity: 0 }}
-                      stroke="rgba(196,181,253,0.5)"
-                      strokeWidth="0.5"
-                      strokeLinecap="round"
-                      transition={{ duration: 0.3, delay: 0.08 }}
-                    />
-                  ))}
-                </motion.g>
-              )}
-            </AnimatePresence>
           </motion.svg>
         </motion.div>
 
@@ -341,6 +316,24 @@ export default function GuestCat() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Paw print at click location */}
+      <AnimatePresence>
+        {pawPrint && (
+          <motion.div
+            className="fixed pointer-events-none z-[100]"
+            style={{ left: pawPrint.x - 20, top: pawPrint.y - 20 }}
+            initial={{ opacity: 0, scale: 0.3, rotate: -20 }}
+            animate={{ opacity: [0, 0.7, 0.5], scale: 1, rotate: 0 }}
+            exit={{ opacity: 0, scale: 0.6, y: 10 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+          >
+            <svg width="40" height="40" viewBox="0 0 512 512" fill="rgba(176,168,196,0.5)" style={{ filter: 'drop-shadow(0 0 6px rgba(196,181,253,0.3))' }}>
+              <path d="M256 224c-79.41 0-192 122.76-192 200.25 0 34.9 26.81 55.75 71.74 55.75 48.84 0 81.09-25.08 120.26-25.08 39.51 0 71.85 25.08 120.26 25.08 44.93 0 71.74-20.85 71.74-55.75C448 346.76 335.41 224 256 224zm-147.28-12.61c-10.4-34.65-42.44-57.09-71.56-50.13-29.12 6.96-44.29 40.69-33.89 75.34 10.4 34.65 42.44 57.09 71.56 50.13 29.12-6.96 44.29-40.69 33.89-75.34zm84.72-20.78c30.94-8.14 46.42-49.94 34.58-93.36s-46.52-72.01-77.46-63.87-46.42 49.94-34.58 93.36c11.84 43.42 46.53 72.02 77.46 63.87zm281.39-29.34c-29.12-6.96-61.15 15.48-71.56 50.13-10.4 34.65 4.77 68.38 33.89 75.34 29.12 6.96 61.15-15.48 71.56-50.13 10.4-34.65-4.77-68.38-33.89-75.34zm-156.27 29.34c30.94 8.14 65.62-20.45 77.46-63.87 11.84-43.42-3.64-85.21-34.58-93.36s-65.62 20.45-77.46 63.87c-11.84 43.42 3.64 85.22 34.58 93.36z"/>
+            </svg>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
