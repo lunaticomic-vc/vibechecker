@@ -93,8 +93,9 @@ export function buildRecommendationPrompt(
       ? `The user's library (with ratings):\n${favoritesSection}`
       : 'The user has no saved favorites yet.',
     '',
-    loved.length > 0 ? `Content that deeply resonated with the user:\n${loved.join('\n')}` : '',
-    disliked.length > 0 ? `Content the user DISLIKED (AVOID recommending similar things):\n${disliked.join('\n')}` : '',
+    loved.length > 0 ? `Content that deeply resonated with the user ("made me feel things"):\n${loved.join('\n')}\n\nANALYZE the above carefully. The reasons they gave reveal their taste — what themes, humor, emotions, storytelling styles they connect with. Your recommendation MUST match this sensibility. If they loved something for dark humor, recommend something with similar wit. If they loved something for emotional depth, match that intensity. Their "felt things" list IS their personality profile.` : '',
+    '',
+    disliked.length > 0 ? `Content the user DISLIKED (AVOID recommending similar things):\n${disliked.join('\n')}\n\nThe reasons above reveal what turns them off. Actively avoid these qualities.` : '',
     '',
     progressSection
       ? `What they're currently watching:\n${progressSection}`
