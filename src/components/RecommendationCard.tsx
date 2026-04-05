@@ -254,22 +254,21 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
   // Movie/TV/Anime: poster + screencap circles + card
   return (
     <>
-      {/* Images: poster top-left, screencaps scattered */}
+      {/* Images: poster left, screencaps stacked right */}
       {poster && (
         <div className="fixed z-[5] top-[12%] left-[4%]">
           <PosterImage src={poster} alt={`${title} poster`} />
         </div>
       )}
-      {screencaps.map((src, i) => {
+      {screencaps.slice(0, 2).map((src, i) => {
         const positions = [
-          { top: '8%', right: '2%' },
-          { bottom: '3%', left: '2%' },
-          { bottom: '3%', right: '2%' },
+          { top: '10%', right: '3%' },
+          { bottom: '5%', right: '3%' },
         ];
         const pos = positions[i];
         if (!pos) return null;
         return (
-          <div key={i} className="fixed z-[3] max-h-[40vh]" style={pos}>
+          <div key={i} className="fixed z-[3] max-h-[38vh]" style={pos}>
             <ScreencapCard src={src} alt={`${title} scene ${i + 1}`} width={380} delay={i} />
           </div>
         );

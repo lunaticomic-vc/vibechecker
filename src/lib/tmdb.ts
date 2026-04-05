@@ -5,15 +5,17 @@ const IMG_BASE = 'https://image.tmdb.org/t/p';
 
 export async function searchTMDB(
   title: string,
-  type: 'movie' | 'tv'
+  type: 'movie' | 'tv',
+  year?: string
 ): Promise<{ posterUrl: string; backdropUrls: string[] } | null> {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) return null;
 
   try {
     const searchType = type === 'tv' ? 'tv' : 'movie';
+    const yearParam = year ? `&${type === 'movie' ? 'year' : 'first_air_date_year'}=${year}` : '';
     const res = await fetch(
-      `${TMDB_BASE}/search/${searchType}?query=${encodeURIComponent(title)}&include_adult=false&language=en-US&page=1&api_key=${apiKey}`
+      `${TMDB_BASE}/search/${searchType}?query=${encodeURIComponent(title)}&include_adult=false&language=en-US&page=1&api_key=${apiKey}${yearParam}`
     );
 
     if (!res.ok) return null;
@@ -112,15 +114,17 @@ export interface TMDBDetail {
 
 export async function searchTMDBDetailed(
   title: string,
-  type: 'movie' | 'tv'
+  type: 'movie' | 'tv',
+  year?: string
 ): Promise<TMDBDetail | null> {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) return null;
 
   try {
     const searchType = type === 'tv' ? 'tv' : 'movie';
+    const yearParam = year ? `&${type === 'movie' ? 'year' : 'first_air_date_year'}=${year}` : '';
     const res = await fetch(
-      `${TMDB_BASE}/search/${searchType}?query=${encodeURIComponent(title)}&include_adult=false&language=en-US&page=1&api_key=${apiKey}`
+      `${TMDB_BASE}/search/${searchType}?query=${encodeURIComponent(title)}&include_adult=false&language=en-US&page=1&api_key=${apiKey}${yearParam}`
     );
     if (!res.ok) return null;
 
@@ -134,7 +138,7 @@ export async function searchTMDBDetailed(
     const posterUrl = posterPath ? `${IMG_BASE}/w500${posterPath}` : null;
     const description = top.overview ?? null;
     const dateStr = type === 'movie' ? top.release_date : top.first_air_date;
-    const year = dateStr ? dateStr.slice(0, 4) : null;
+    const resultYear = dateStr ? dateStr.slice(0, 4) : null;
 
     // Fetch cast
     let actors: string[] = [];
@@ -153,11 +157,11 @@ export async function searchTMDBDetailed(
     // Reuse existing image logic
     const images = await searchTMDB(title, type);
 
-    log.success(`TMDB detail: "${top.title ?? top.name}"`, `year=${year} actors=${actors.length}`);
+    log.success(`TMDB detail: "${top.title ?? top.name}"`, `year=${resultYear} actors=${actors.length}`);
     return {
       posterUrl,
       backdropUrls: images?.backdropUrls ?? [],
-      year,
+      year: resultYear,
       description,
       actors,
     };

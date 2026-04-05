@@ -179,21 +179,21 @@ async function getYouTubeRecommendation(
 ): Promise<Recommendation> {
   const openai = getOpenAI();
 
-  // Step 0: Expand the vibe into a rich concept blended with interests
-  const expandedVibe = await expandVibe(openai, vibe, interests, tasteProfile);
+  // Step 0: Expand the vibe WITHOUT interests — interests only used for picking later
+  const expandedVibe = await expandVibe(openai, vibe, [], tasteProfile);
 
-  // Step 1: GPT generates search queries from the expanded concept
+  // Step 1: GPT generates search queries from VIBE ONLY — no interests pollution
   const queryResponse = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     temperature: 0.9,
     messages: [
       {
         role: 'system',
-        content: 'Generate YouTube search queries to find full-length videos (NOT Shorts). Return ONLY a JSON array of 3-4 specific search strings. No markdown.',
+        content: `Generate YouTube search queries to find full-length videos (NOT Shorts). Focus ONLY on what the user asked for — do not add unrelated topics. Return ONLY a JSON array of 3-4 specific search strings. No markdown.`,
       },
       {
         role: 'user',
-        content: `The user wants: "${vibe}"\n\nExpanded concept: ${expandedVibe}\n\nGenerate 3-4 YouTube search queries that match this expanded concept. ALL queries must be directly about "${vibe}". Think video essays, deep dives, niche creators. Be specific and creative.`,
+        content: `The user wants: "${vibe}"\n\nExpanded concept: ${expandedVibe}\n\nGenerate 3-4 YouTube search queries. ALL queries must be directly and literally about "${vibe}". Do NOT add topics the user didn't ask for. Think video essays, deep dives, niche creators.`,
       },
     ],
   });
@@ -212,8 +212,9 @@ async function getYouTubeRecommendation(
   }
 
   if (allResults.length > 0) {
-    // Step 3: GPT picks the best video
-    const videoList = allResults.slice(0, 12).map((v, i) =>
+    // Step 3: GPT picks the best video with validation
+    const candidates = allResults.slice(0, 12);
+    const videoList = candidates.map((v, i) =>
       `${i + 1}. "${v.title}" by ${v.channelTitle || 'unknown'}`
     ).join('\n');
 
@@ -223,11 +224,20 @@ async function getYouTubeRecommendation(
       messages: [
         {
           role: 'system',
-          content: 'Pick the best YouTube video from a list. Return ONLY JSON: {"pick": <number>, "description": "brief summary", "reasoning": "why this fits", "interests": ["tag1", "tag2"]}',
+          content: `Pick the best YouTube video from a list that GENUINELY matches the user's vibe.
+
+RULES:
+1. The vibe is the #1 priority. The video MUST be actually about what the user asked for.
+2. Rate each candidate 1-10 for vibe relevance. Only pick videos scoring 7+.
+3. If NONE score 7+, set "pick" to 0.
+4. Interests are SECONDARY — use them only to break ties between equally relevant videos.
+5. For the "interests" array, ONLY include tags that genuinely describe this specific video. Do NOT copy the user's interest tags unless they truly apply. Justify each tag.
+
+Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief summary", "reasoning": "why this SPECIFICALLY matches the vibe", "interests": ["tag1", "tag2"], "interest_justifications": ["why tag1 applies", "why tag2 applies"]}`,
         },
         {
           role: 'user',
-          content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\nPick the video that best matches the vibe "${vibe}":\n\n${videoList}`,
+          content: `Vibe: "${vibe}"${interests.length > 0 ? `\nUser interests (for tie-breaking only, do NOT force-fit): ${interests.join(', ')}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\nRate and pick the video that best matches "${vibe}":\n\n${videoList}`,
         },
       ],
     });
@@ -235,13 +245,85 @@ async function getYouTubeRecommendation(
     let pick = 0, description = '', reasoning = '', videoInterests: string[] = [];
     try {
       const parsed = JSON.parse(pickResponse.choices[0]?.message?.content ?? '{}');
-      pick = (parsed.pick ?? 1) - 1;
+      pick = (parsed.pick ?? 0) - 1;
       description = parsed.description ?? '';
       reasoning = parsed.reasoning ?? '';
       videoInterests = parsed.interests ?? [];
-    } catch { pick = 0; }
+    } catch { pick = -1; }
 
-    const chosen = allResults[Math.min(Math.max(pick, 0), allResults.length - 1)];
+    // If GPT said none match (pick=0 → -1 after subtract), retry with more targeted queries
+    if (pick < 0 || pick >= candidates.length) {
+      const retryResponse = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.9,
+        messages: [
+          {
+            role: 'system',
+            content: `The previous YouTube search for "${vibe}" returned irrelevant results. Generate 3 MORE SPECIFIC search queries that will find videos actually about "${vibe}". Be very literal and precise. Return ONLY a JSON array of strings.`,
+          },
+          {
+            role: 'user',
+            content: `Original vibe: "${vibe}"\nThese titles came back but were wrong:\n${candidates.slice(0, 5).map(v => `- "${v.title}"`).join('\n')}\n\nGenerate better, more specific queries.`,
+          },
+        ],
+      });
+
+      let retryQueries: string[];
+      try { retryQueries = JSON.parse(retryResponse.choices[0]?.message?.content ?? '[]'); } catch { retryQueries = [`${vibe} video essay`]; }
+
+      const retryResults: YouTubeResult[] = [];
+      const retrySeen = new Set(seen);
+      for (const q of retryQueries) {
+        const results = await searchYouTube(q, true);
+        for (const r of results) {
+          if (!retrySeen.has(r.videoId)) { retrySeen.add(r.videoId); retryResults.push(r); }
+        }
+      }
+
+      if (retryResults.length > 0) {
+        const retryList = retryResults.slice(0, 10).map((v, i) =>
+          `${i + 1}. "${v.title}" by ${v.channelTitle || 'unknown'}`
+        ).join('\n');
+
+        const retryPick = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          temperature: 0.7,
+          messages: [
+            {
+              role: 'system',
+              content: `Pick the best YouTube video that GENUINELY matches "${vibe}". If none match, pick the closest one. Return ONLY JSON: {"pick": <number>, "description": "brief summary", "reasoning": "why this fits", "interests": ["tag1", "tag2"]}`,
+            },
+            {
+              role: 'user',
+              content: `Vibe: "${vibe}"\n\n${retryList}`,
+            },
+          ],
+        });
+
+        try {
+          const parsed = JSON.parse(retryPick.choices[0]?.message?.content ?? '{}');
+          pick = (parsed.pick ?? 1) - 1;
+          description = parsed.description ?? '';
+          reasoning = parsed.reasoning ?? '';
+          videoInterests = parsed.interests ?? [];
+        } catch { pick = 0; }
+
+        const chosen = retryResults[Math.min(Math.max(pick, 0), retryResults.length - 1)];
+        return {
+          title: chosen.title,
+          type: 'youtube',
+          description: description || `By ${chosen.channelTitle}`,
+          reasoning,
+          actionUrl: buildYouTubeWatchUrl(chosen.videoId),
+          actionLabel: 'Watch on YouTube',
+          thumbnailUrl: chosen.thumbnail,
+          interests: videoInterests,
+          channelName: chosen.channelTitle || undefined,
+        };
+      }
+    }
+
+    const chosen = candidates[Math.min(Math.max(pick, 0), candidates.length - 1)];
     return {
       title: chosen.title,
       type: 'youtube',
@@ -548,13 +630,13 @@ export async function getRecommendation(
     // Jikan for poster, TMDB for episode stills/backdrops, Jikan art as last resort
     const [jikan, tmdb] = await Promise.all([
       searchAnimeJikan(title),
-      searchTMDB(title, 'tv'),
+      searchTMDB(title, 'tv', ai.year),
     ]);
     thumbnailUrl = jikan?.posterUrl ?? tmdb?.posterUrl ?? undefined;
     imageUrls = tmdb?.backdropUrls?.length ? tmdb.backdropUrls : (jikan?.backdropUrls ?? []);
   } else {
     const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
-    const tmdb = await searchTMDB(title, tmdbType);
+    const tmdb = await searchTMDB(title, tmdbType, ai.year);
     if (tmdb?.posterUrl) thumbnailUrl = tmdb.posterUrl;
     imageUrls = tmdb?.backdropUrls ?? [];
   }
