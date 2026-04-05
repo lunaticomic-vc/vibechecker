@@ -140,6 +140,24 @@ export function buildRecommendationPrompt(
   ].join('\n');
 }
 
+async function expandVibe(openai: ReturnType<typeof getOpenAI>, vibe: string, interests: string[], tasteProfile: string | null): Promise<string> {
+  const res = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.8,
+    messages: [
+      {
+        role: 'system',
+        content: `You expand a user's vibe prompt into a rich, detailed concept. First, unpack what "${vibe}" means — the themes, emotions, aesthetics, and ideas it evokes. Then weave in the user's interests to create a nuanced, multi-layered description of what they're looking for. The vibe is ALWAYS the core — interests add depth, never replace it. Return 2-3 sentences, no JSON.`,
+      },
+      {
+        role: 'user',
+        content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${tasteProfile ? `\nTaste profile: ${tasteProfile.slice(0, 300)}` : ''}`,
+      },
+    ],
+  });
+  return res.choices[0]?.message?.content ?? vibe;
+}
+
 async function getYouTubeRecommendation(
   vibe: string,
   userPrompt: string,
@@ -149,7 +167,10 @@ async function getYouTubeRecommendation(
 ): Promise<Recommendation> {
   const openai = getOpenAI();
 
-  // Step 1: GPT generates search queries
+  // Step 0: Expand the vibe into a rich concept blended with interests
+  const expandedVibe = await expandVibe(openai, vibe, interests, tasteProfile);
+
+  // Step 1: GPT generates search queries from the expanded concept
   const queryResponse = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     temperature: 0.9,
@@ -160,7 +181,7 @@ async function getYouTubeRecommendation(
       },
       {
         role: 'user',
-        content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${tasteProfile ? `\nTaste: ${tasteProfile.slice(0, 400)}` : ''}\n\nGenerate 3-4 YouTube search queries. The vibe/prompt is the #1 priority — ALL queries must be directly relevant to "${vibe}". Use interests to refine the search within that topic, not to change it. Think about video essays, deep dives, niche creators. Be specific.`,
+        content: `The user wants: "${vibe}"\n\nExpanded concept: ${expandedVibe}\n\nGenerate 3-4 YouTube search queries that match this expanded concept. ALL queries must be directly about "${vibe}". Think video essays, deep dives, niche creators. Be specific and creative.`,
       },
     ],
   });
@@ -243,20 +264,23 @@ async function getSubstackRecommendation(
 ): Promise<Recommendation> {
   const openai = getOpenAI();
 
-  // Step 1: GPT generates search queries
+  // Step 0: Expand the vibe into a rich concept blended with interests
+  const expandedVibe = await expandVibe(openai, vibe, interests, tasteProfile);
+
+  // Step 1: GPT generates search queries from the expanded concept
   const queryResponse = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     temperature: 0.9,
     messages: [
       {
         role: 'system',
-        content: `You generate creative, diverse search queries to find Substack articles. Think laterally — don't just restate the vibe, explore unexpected angles, adjacent topics, metaphors, and niche intersections. Mix the user's vibe with their interests in surprising ways.
+        content: `You generate creative, diverse search queries to find Substack articles. Think laterally — explore unexpected angles, adjacent topics, and niche intersections, but ALWAYS stay rooted in the user's vibe.
 
 Return ONLY a JSON array of 4-5 search strings. No markdown.`,
       },
       {
         role: 'user',
-        content: `Vibe: "${vibe}"${interests.length > 0 ? `\nTheir interests/passions: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\n--- TASTE PROFILE ---\n${tasteProfile.slice(0, 800)}\n--- END ---` : ''}
+        content: `The user wants: "${vibe}"\n\nExpanded concept: ${expandedVibe}
 
 Generate 4-5 search queries to find Substack articles. The vibe/prompt "${vibe}" is the ABSOLUTE #1 priority — never drift from it. Rules:
 - 3 queries should directly match the vibe (highest priority — the vibe IS the topic)
