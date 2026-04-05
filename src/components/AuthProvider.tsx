@@ -10,9 +10,10 @@ interface AuthState {
   isAuthed: boolean;
   remaining: number | null;
   isLoading: boolean;
+  setRemaining: (n: number) => void;
 }
 
-const AuthContext = createContext<AuthState>({ role: 'anonymous', isOwner: false, isAuthed: false, remaining: null, isLoading: true });
+const AuthContext = createContext<AuthState>({ role: 'anonymous', isOwner: false, isAuthed: false, remaining: null, isLoading: true, setRemaining: () => {} });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>('anonymous');
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthed = role !== 'anonymous';
 
   return (
-    <AuthContext.Provider value={{ role, isOwner, isAuthed, remaining, isLoading }}>
+    <AuthContext.Provider value={{ role, isOwner, isAuthed, remaining, isLoading, setRemaining }}>
       {children}
     </AuthContext.Provider>
   );

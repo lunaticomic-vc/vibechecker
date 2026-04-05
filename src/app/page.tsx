@@ -6,6 +6,7 @@ import VibeInput from '@/components/VibeInput';
 import RecommendationCard from '@/components/RecommendationCard';
 import { ContentType, Recommendation } from '@/types/index';
 import { useIsOwner } from '@/lib/useIsOwner';
+import { useAuth } from '@/components/AuthProvider';
 import LoadingMouse from '@/components/LoadingMouse';
 
 type Screen = 'pick' | 'vibe' | 'result';
@@ -20,6 +21,7 @@ export default function Home() {
 
   const [lastVibe, setLastVibe] = useState('');
   const isOwner = useIsOwner();
+  const { setRemaining } = useAuth();
   const [showRejectReasons, setShowRejectReasons] = useState(false);
 
   const handlePickType = (type: ContentType) => {
@@ -50,6 +52,7 @@ export default function Home() {
       }
 
       const data = await res.json();
+      if (data.remaining !== undefined) setRemaining(data.remaining);
       setRecommendation(data);
       setScreen('result');
     } catch (err) {

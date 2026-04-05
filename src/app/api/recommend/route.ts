@@ -17,9 +17,11 @@ export async function POST(req: NextRequest) {
 
   // Rate limit guests (owner gets unlimited)
   const isOwner = verifyAuthCookie(req.cookies.get('cc_auth')?.value);
+  let guestRemaining: number | null = null;
   if (!isOwner) {
     const ip = req.headers.get('x-real-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const { allowed } = await consumeRateLimit(ip);
+    const { allowed, remaining } = await consumeRateLimit(ip);
+    guestRemaining = remaining;
     if (!allowed) {
       return NextResponse.json({ error: 'You\'ve used all 3 free recommendations. Thanks for trying Consumption Corner!' }, { status: 429 });
     }
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
     // YouTube recommendations already have the correct URL/thumbnail
     // from getYouTubeRecommendation — no second search needed
 
-    return NextResponse.json(recommendation);
+    return NextResponse.json({ ...recommendation, ...(guestRemaining !== null ? { remaining: guestRemaining } : {}) });
   } catch (error) {
     console.error('Recommendation failed:', error);
     log.error('Recommendation failed', error);
