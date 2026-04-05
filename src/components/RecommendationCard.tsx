@@ -17,6 +17,51 @@ interface Props {
 
 type AccordionSection = 'description' | 'vibe' | 'reddit' | null;
 
+function RedditCarousel({ insights, isOpen, onToggle, chevron }: {
+  insights: { subreddit: string; comment: string; score: number }[];
+  isOpen: boolean;
+  onToggle: () => void;
+  chevron: (open: boolean) => React.ReactNode;
+}) {
+  const [idx, setIdx] = useState(0);
+  const current = insights[idx];
+  if (!current) return null;
+
+  return (
+    <div className="rounded-lg border border-[#e9e4f5] overflow-hidden">
+      <button onClick={onToggle} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] hover:bg-[#faf8ff] transition-colors">
+        What people say {chevron(isOpen)}
+      </button>
+      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="px-3 pb-3">
+          <div className="text-[10px] text-[#5a5270] leading-relaxed min-h-[40px]">
+            <span className="text-[9px] text-[#c4b5fd] font-medium">r/{current.subreddit}</span>
+            <span className="text-[9px] text-[#d0cadc] ml-1">+{current.score}</span>
+            <p className="mt-1">&ldquo;{current.comment.length > 200 ? current.comment.substring(0, 200) + '...' : current.comment}&rdquo;</p>
+          </div>
+          {insights.length > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-2">
+              <button
+                onClick={() => setIdx(i => (i - 1 + insights.length) % insights.length)}
+                className="w-6 h-6 flex items-center justify-center rounded-full border border-[#e9e4f5] text-[#b0a8c4] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-colors text-xs"
+              >
+                ‹
+              </button>
+              <span className="text-[9px] text-[#c8c2d6]">{idx + 1}/{insights.length}</span>
+              <button
+                onClick={() => setIdx(i => (i + 1) % insights.length)}
+                className="w-6 h-6 flex items-center justify-center rounded-full border border-[#e9e4f5] text-[#b0a8c4] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-colors text-xs"
+              >
+                ›
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Positions for floating circles — spread around the page, not overlapping center card
 // Using viewport-relative positioning
 // 4 images: 2 on left, 2 on right — big, filling their half
@@ -127,21 +172,7 @@ export default function RecommendationCard({ recommendation }: Props) {
           </div>
 
           {redditInsights && redditInsights.length > 0 && (
-            <div className="rounded-lg border border-[#e9e4f5] overflow-hidden">
-              <button onClick={() => toggleSection('reddit')} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] hover:bg-[#faf8ff] transition-colors">
-                What people say {chevron(openSection === 'reddit')}
-              </button>
-              <div className={`overflow-hidden transition-all duration-300 ${openSection === 'reddit' ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="px-3 pb-3 flex flex-col gap-2">
-                  {redditInsights.slice(0, 3).map((insight, i) => (
-                    <div key={i} className="text-[10px] text-[#5a5270] leading-relaxed">
-                      <span className="text-[9px] text-[#c4b5fd] font-medium">r/{insight.subreddit}</span>
-                      {' '}&ldquo;{insight.comment.length > 150 ? insight.comment.substring(0, 150) + '...' : insight.comment}&rdquo;
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <RedditCarousel insights={redditInsights} isOpen={openSection === 'reddit'} onToggle={() => toggleSection('reddit')} chevron={chevron} />
           )}
         </div>
 

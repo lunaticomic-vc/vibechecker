@@ -46,12 +46,27 @@ export async function searchRedditForTitle(title: string, type: string): Promise
           const commentsData = await commentsRes.json();
           const comments = commentsData?.[1]?.data?.children ?? [];
 
-          for (const c of comments.slice(0, 3)) {
+          for (const c of comments.slice(0, 8)) {
             const body = c.data?.body;
             const score = c.data?.score ?? 0;
-            if (!body || body === '[deleted]' || body === '[removed]' || body.length < 20) continue;
+            if (!body || body === '[deleted]' || body === '[removed]') continue;
+            if (body.length < 30 || score < 3) continue;
 
-            // Trim to reasonable length
+            // Filter for quality: comments about the show's quality, worth watching, etc.
+            const lower = body.toLowerCase();
+            const isRelevant =
+              lower.includes('worth') || lower.includes('recommend') || lower.includes('loved') ||
+              lower.includes('amazing') || lower.includes('great') || lower.includes('best') ||
+              lower.includes('terrible') || lower.includes('boring') || lower.includes('masterpiece') ||
+              lower.includes('underrated') || lower.includes('overrated') || lower.includes('must watch') ||
+              lower.includes('waste') || lower.includes('beautiful') || lower.includes('emotional') ||
+              lower.includes('ending') || lower.includes('season') || lower.includes('episode') ||
+              lower.includes('acting') || lower.includes('story') || lower.includes('plot') ||
+              lower.includes('character') || lower.includes('enjoy') || lower.includes('watch') ||
+              score >= 10; // High-score comments are likely quality
+
+            if (!isRelevant) continue;
+
             const trimmed = body.length > 300 ? body.substring(0, 300) + '...' : body;
 
             insights.push({
