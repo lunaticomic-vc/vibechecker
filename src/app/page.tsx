@@ -136,6 +136,16 @@ export default function Home() {
   return (
     <main className="min-h-screen h-screen relative overflow-hidden">
 
+      {/* Title — right side */}
+      <div className="fixed right-8 top-1/2 -translate-y-1/2 z-10 hidden lg:block">
+        <h1
+          className="text-5xl font-extralight tracking-[0.25em] text-white/30 select-none"
+          style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+        >
+          Consumption Corner
+        </h1>
+      </div>
+
       <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen">
 
         {/* Screen 1: Just the four squares */}
