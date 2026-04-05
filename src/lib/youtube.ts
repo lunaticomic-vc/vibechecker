@@ -1,3 +1,14 @@
+function decodeHtml(html: string): string {
+  return html
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/');
+}
+
 export interface YouTubeResult {
   videoId: string;
   title: string;
@@ -21,7 +32,7 @@ export async function searchYouTube(query: string, excludeShorts = true): Promis
     snippet: { title: string; thumbnails: { medium: { url: string } }; channelTitle: string };
   }) => ({
     videoId: item.id.videoId,
-    title: item.snippet.title,
+    title: decodeHtml(item.snippet.title),
     thumbnail: item.snippet.thumbnails?.medium?.url ?? '',
     channelTitle: item.snippet.channelTitle,
   }));
@@ -44,7 +55,7 @@ async function searchYouTubeBrave(query: string): Promise<YouTubeResult[]> {
       .map((r: Record<string, unknown>) => {
         const url = r.url as string;
         const videoId = new URL(url).searchParams.get('v') ?? '';
-        return { videoId, title: (r.title as string) ?? '', thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`, channelTitle: '' };
+        return { videoId, title: decodeHtml((r.title as string) ?? ''), thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`, channelTitle: '' };
       })
       .filter((r: YouTubeResult) => r.videoId);
   } catch { return []; }
