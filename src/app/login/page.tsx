@@ -121,9 +121,12 @@ export default function LoginPage() {
         )}
 
         {step === 'what-is-explain' && (
-          <div className="flex flex-col items-center gap-5 max-w-[300px] text-center">
+          <div className="flex flex-col items-center gap-5 max-w-[320px] text-center">
+            <p className="text-[13px] text-[#5a5270] leading-relaxed italic">
+              you're on the couch, food's ready, and you open Netflix. then YouTube. then your anime list. then back to Netflix. 20 minutes later you're still scrolling, the food's cold, and you've watched nothing.
+            </p>
             <p className="text-xs text-[#7c7291] leading-relaxed">
-              describe your mood and get a tailored recommendation across movies, tv, anime, youtube, k-drama and more. it learns your taste over time so every pick gets better.
+              this app kills the choice paralysis. tell it how you feel and it picks something perfect — a movie, show, anime, k-drama, youtube video, or article. based on what you actually love, not what's trending.
             </p>
             <button onClick={() => { setStep('wanna-try'); catSay('interested?~'); }} className={btnClass}>cool, got it</button>
           </div>
