@@ -17,6 +17,7 @@ const PROGRESS_STATUS_MAP: Record<WatchProgress['status'], StatusGroup> = {
 };
 
 const SECTION_ORDER: StatusGroup[] = ['Todo', 'In Progress', 'On Hold', 'Completed'];
+const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
 
 export default function TVPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
@@ -30,8 +31,9 @@ export default function TVPage() {
   const [activeTab, setActiveTab] = useState<StatusGroup>('Todo');
   const [ratingFilter, setRatingFilter] = useState<RatingValue | 'all'>('all');
 
-  async function fetchFavorites(currentOffset: number, append = false) {
-    const res = await fetch(`/api/favorites?type=tv&limit=25&offset=${currentOffset}`);
+  async function fetchFavorites(currentOffset: number, append = false, status?: string) {
+    const apiStatus = status ?? statusGroupToApi[activeTab] ?? 'todo';
+    const res = await fetch(`/api/favorites?type=tv&status=${apiStatus}&limit=25&offset=${currentOffset}`);
     if (!res.ok) return;
     const data = await res.json();
     setFavorites(prev => append ? [...prev, ...data.favorites] : data.favorites);
@@ -126,7 +128,6 @@ export default function TVPage() {
     grouped[getGroup(fav)].push(fav);
   }
 
-  const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
   function getCurrentStatus(fav: Favorite): string { return statusGroupToApi[getGroup(fav)]; }
   async function handleStatusChange(favoriteId: number, newStatus: string) {
     await fetch('/api/progress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favorite_id: favoriteId, status: newStatus }) });
@@ -162,7 +163,7 @@ export default function TVPage() {
 
         <div className="flex gap-1 mb-3 border-b border-[#e9e4f5]">
           {SECTION_ORDER.map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
+            <button key={tab} onClick={() => { setActiveTab(tab); setOffset(0); fetchFavorites(0, false, statusGroupToApi[tab]); }}
               className={`px-4 py-2 text-xs font-medium rounded-t-lg transition-colors -mb-px border-b-2 ${activeTab === tab ? 'border-[#8b5cf6] text-[#7c3aed]' : 'border-transparent text-[#7c7291] hover:text-[#2d2640]'}`}>
               {tab}
             </button>
