@@ -30,7 +30,7 @@ export async function initDb(): Promise<Client> {
   await db.batch([
     `CREATE TABLE IF NOT EXISTS favorites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack')),
+      type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama')),
       title TEXT NOT NULL,
       external_id TEXT,
       metadata TEXT,
@@ -103,7 +103,7 @@ export async function initDb(): Promise<Client> {
     await db.batch([
       `CREATE TABLE favorites_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack')),
+        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama')),
         title TEXT NOT NULL,
         external_id TEXT,
         metadata TEXT,
@@ -115,6 +115,29 @@ export async function initDb(): Promise<Client> {
       `ALTER TABLE favorites_new RENAME TO favorites`,
     ]);
     dbLog('Favorites table migrated ✓');
+  }
+
+  // Migration: ensure 'kdrama' is in the favorites type CHECK constraint
+  try {
+    await db.execute("INSERT INTO favorites (type, title) VALUES ('kdrama', '__migration_test__')");
+    await db.execute("DELETE FROM favorites WHERE title = '__migration_test__'");
+  } catch {
+    dbLog('Migrating favorites table to add kdrama type...');
+    await db.batch([
+      `CREATE TABLE favorites_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama')),
+        title TEXT NOT NULL,
+        external_id TEXT,
+        metadata TEXT,
+        image_url TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `INSERT INTO favorites_new SELECT * FROM favorites`,
+      `DROP TABLE favorites`,
+      `ALTER TABLE favorites_new RENAME TO favorites`,
+    ]);
+    dbLog('Favorites table migrated (kdrama) ✓');
   }
 
   _initialized = true;

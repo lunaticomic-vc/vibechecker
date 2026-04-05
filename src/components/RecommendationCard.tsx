@@ -9,6 +9,7 @@ const TYPE_COLORS: Record<string, string> = {
   youtube: 'bg-[#fef2f2] text-[#dc2626] border-[#fca5a5]',
   anime: 'bg-[#f5f3ff] text-[#8b5cf6] border-[#c4b5fd]',
   substack: 'bg-[#fff7ed] text-[#c2410c] border-[#fdba74]',
+  kdrama: 'bg-[#fdf2f8] text-[#db2777] border-[#f9a8d4]',
 };
 
 async function autoAddToProgress(rec: Recommendation) {

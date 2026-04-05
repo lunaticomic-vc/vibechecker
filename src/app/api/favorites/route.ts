@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'type and title are required' }, { status: 400 });
     }
 
-    const validTypes: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'substack'];
+    const validTypes: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama'];
     if (!validTypes.includes(type)) {
       log.warn('Invalid content type', type);
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 });

@@ -91,6 +91,7 @@ export function buildRecommendationPrompt(
     movie: 'Suggest a specific movie with its release year. Include enough detail (title + year) so it can be found on streaming sites.',
     tv: 'Suggest a specific TV show. Include season recommendation if relevant (e.g., "start at Season 2"). Add episodeInfo if applicable.',
     anime: 'Suggest a specific anime. Include episode count or arc recommendation in episodeInfo if helpful.',
+    kdrama: 'Suggest a specific Korean drama (K-drama). Include the year and number of episodes. Focus on emotional depth, romance, character dynamics, and the unique storytelling style of Korean dramas.',
     substack: 'Suggest a SPECIFIC Substack article (NOT a newsletter or publication — a single article). Include the exact article title, the author/publication name, and most importantly a "substackUrl" field with the direct URL to the article (e.g. "https://authorname.substack.com/p/article-slug"). Also include a searchQuery as fallback. Focus on the user\'s interests for topic matching.',
   };
 
@@ -525,9 +526,11 @@ export async function getRecommendation(
 
   const title = ai.title ?? 'Unknown';
 
-  // At this point contentType is movie/tv/anime only
-  const actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
-  const actionLabel = 'Watch on sflix';
+  // At this point contentType is movie/tv/anime/kdrama
+  const actionUrl = contentType === 'kdrama'
+    ? `https://kissasian.cam/series/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}/`
+    : `https://sflix.ps/search/${encodeURIComponent(title)}`;
+  const actionLabel = contentType === 'kdrama' ? 'Watch on KissAsian' : 'Watch on sflix';
 
   // Fetch poster and stills from TMDB
   let imageUrls: string[] = [];

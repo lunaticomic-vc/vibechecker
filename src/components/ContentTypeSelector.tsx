@@ -143,6 +143,24 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
       </svg>
     ),
   },
+  {
+    type: 'kdrama' as ContentType,
+    label: 'k-drama',
+    icon: (
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Heart with Korean-style flourish */}
+        <path d="M36 56 C 20 42, 8 30, 16 20 C 22 14, 30 16, 36 24 C 42 16, 50 14, 56 20 C 64 30, 52 42, 36 56 Z" />
+        {/* Inner detail */}
+        <path d="M36 48 C 26 38, 18 30, 22 24 C 26 20, 30 21, 36 28" strokeWidth="0.8" opacity="0.3" />
+        {/* Sparkle accents */}
+        <path d="M20 12 L20 8 M18 10 L22 10" strokeWidth="0.8" opacity="0.2" />
+        <path d="M54 12 L54 8 M52 10 L56 10" strokeWidth="0.8" opacity="0.2" />
+        {/* Decorative swirl */}
+        <path d="M12 36 Q 8 42, 12 48" strokeWidth="0.7" opacity="0.15" />
+        <path d="M60 36 Q 64 42, 60 48" strokeWidth="0.7" opacity="0.15" />
+      </svg>
+    ),
+  },
 ];
 
 interface Props {
