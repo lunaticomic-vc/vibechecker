@@ -60,31 +60,44 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
           {item.favorite_title}
         </h3>
 
-        <div className="flex gap-3 items-center">
-          <div className="text-center">
-            <div className="text-xl font-bold text-[#2d2640]">{item.current_season}</div>
-            <div className="text-[10px] text-[#7c7291]">Season</div>
-          </div>
-          <div className="text-[#c4b5fd] text-lg font-light">×</div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-[#2d2640]">{item.current_episode}</div>
-            <div className="text-[10px] text-[#7c7291]">Episode</div>
-          </div>
-          {item.total_episodes && (
-            <div className="text-[#7c7291] text-[10px] self-end pb-0.5">/ {item.total_episodes}</div>
-          )}
-        </div>
+        {/* Season/Episode for TV and Anime only */}
+        {(item.favorite_type === 'tv' || item.favorite_type === 'anime') && (
+          <>
+            <div className="flex gap-3 items-center">
+              <div className="text-center">
+                <div className="text-xl font-bold text-[#2d2640]">{item.current_season}</div>
+                <div className="text-[10px] text-[#7c7291]">Season</div>
+              </div>
+              <div className="text-[#c4b5fd] text-lg font-light">×</div>
+              <div className="text-center">
+                <div className="text-xl font-bold text-[#2d2640]">{item.current_episode}</div>
+                <div className="text-[10px] text-[#7c7291]">Episode</div>
+              </div>
+              {item.total_episodes && (
+                <div className="text-[#7c7291] text-[10px] self-end pb-0.5">/ {item.total_episodes}</div>
+              )}
+            </div>
+            {progressPercent !== null && (
+              <div className="w-full bg-[#e9e4f5] rounded-full h-1.5">
+                <div className="bg-[#8b5cf6] h-1.5 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+              </div>
+            )}
+          </>
+        )}
 
-        {progressPercent !== null && (
-          <div className="w-full bg-[#e9e4f5] rounded-full h-1.5">
-            <div className="bg-[#8b5cf6] h-1.5 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+        {/* Stopped at timestamp for movies */}
+        {item.favorite_type === 'movie' && item.stopped_at && (
+          <div className="text-xs text-[#7c7291]">
+            Stopped at <span className="font-medium text-[#2d2640]">{item.stopped_at}</span>
           </div>
         )}
 
         <div className="flex gap-1.5 mt-auto pt-1">
-          <button onClick={() => patch({ current_episode: item.current_episode + 1 })} className="flex-1 text-[10px] bg-[#f5f3ff] hover:bg-[#e9e4f5] text-[#7c3aed] font-medium px-2 py-1.5 rounded-lg transition-colors">
-            +1 Ep
-          </button>
+          {(item.favorite_type === 'tv' || item.favorite_type === 'anime') && (
+            <button onClick={() => patch({ current_episode: item.current_episode + 1 })} className="flex-1 text-[10px] bg-[#f5f3ff] hover:bg-[#e9e4f5] text-[#7c3aed] font-medium px-2 py-1.5 rounded-lg transition-colors">
+              +1 Ep
+            </button>
+          )}
           <button onClick={() => patch({ status: 'completed' })} className="flex-1 text-[10px] bg-[#f0f7ef] hover:bg-[#d4e6d1] text-[#6b9a65] font-medium px-2 py-1.5 rounded-lg transition-colors">
             Done
           </button>
