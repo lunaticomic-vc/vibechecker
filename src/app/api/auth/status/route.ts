@@ -3,6 +3,11 @@ import { verifyAuthCookie } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET(req: NextRequest) {
+  // No password set = local dev, treat as owner
+  if (!process.env.APP_PASSWORD) {
+    return NextResponse.json({ role: 'owner', remaining: Infinity });
+  }
+
   const isOwner = verifyAuthCookie(req.cookies.get('cc_auth')?.value);
   if (isOwner) {
     return NextResponse.json({ role: 'owner', remaining: Infinity });

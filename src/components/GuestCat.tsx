@@ -77,7 +77,7 @@ export default function GuestCat() {
       className="fixed bottom-3 left-3 z-50 cursor-pointer select-none"
     >
       <div className="flex flex-col items-center gap-0.5">
-        <svg width="70" height="85" viewBox="0 0 120 150" fill="none" stroke="#c0b8d0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="140" height="170" viewBox="0 0 120 150" fill="none" stroke="#c0b8d0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
 
           {/* Tail — smooth Framer Motion swing */}
           <motion.path
@@ -113,49 +113,25 @@ export default function GuestCat() {
           <path d="M43 38 L38 24 L49 35" strokeWidth="1" opacity="0.4" />
           <path d="M77 38 L82 24 L71 35" strokeWidth="1" opacity="0.4" />
 
-          {/* Eyes — the main feature, large and expressive */}
-          {/* Eye outlines */}
-          <ellipse cx="50" cy="50" rx="6" ry="5.5" strokeWidth="1.5" />
-          <ellipse cx="70" cy="50" rx="6" ry="5.5" strokeWidth="1.5" />
-          {/* Pupils — follow mouse */}
-          <motion.ellipse
-            cx={50 + eyeOffset.x}
+          {/* Eyes — just dots that follow mouse */}
+          <motion.circle
+            cx={52 + eyeOffset.x}
             cy={50 + eyeOffset.y}
-            rx={attacking ? 4.5 : 3}
-            ry={attacking ? 2 : 4}
+            r={attacking ? 4 : 3}
             fill="#8a7fa0"
             stroke="none"
-            animate={{ rx: attacking ? 4.5 : 3, ry: attacking ? 2 : 4 }}
+            animate={{ r: attacking ? 4 : 3 }}
             transition={{ duration: 0.15 }}
           />
-          <motion.ellipse
-            cx={70 + eyeOffset.x}
+          <motion.circle
+            cx={68 + eyeOffset.x}
             cy={50 + eyeOffset.y}
-            rx={attacking ? 4.5 : 3}
-            ry={attacking ? 2 : 4}
+            r={attacking ? 4 : 3}
             fill="#8a7fa0"
             stroke="none"
-            animate={{ rx: attacking ? 4.5 : 3, ry: attacking ? 2 : 4 }}
+            animate={{ r: attacking ? 4 : 3 }}
             transition={{ duration: 0.15 }}
           />
-          {/* Eye glints */}
-          <circle cx={51.5 + eyeOffset.x * 0.3} cy={48.5 + eyeOffset.y * 0.3} r="1.2" fill="white" stroke="none" />
-          <circle cx={71.5 + eyeOffset.x * 0.3} cy={48.5 + eyeOffset.y * 0.3} r="1.2" fill="white" stroke="none" />
-
-          {/* Nose — tiny triangle */}
-          <path d="M58.5 57 L60 59.5 L61.5 57 Z" fill="#c0b8d0" strokeWidth="1" />
-
-          {/* Mouth */}
-          <path d="M60 59.5 Q57 62 55 61" strokeWidth="1.2" />
-          <path d="M60 59.5 Q63 62 65 61" strokeWidth="1.2" />
-
-          {/* Whiskers */}
-          <line x1="22" y1="55" x2="44" y2="56" strokeWidth="1" opacity="0.5" />
-          <line x1="22" y1="60" x2="44" y2="59" strokeWidth="1" opacity="0.5" />
-          <line x1="24" y1="65" x2="45" y2="62" strokeWidth="1" opacity="0.4" />
-          <line x1="98" y1="55" x2="76" y2="56" strokeWidth="1" opacity="0.5" />
-          <line x1="98" y1="60" x2="76" y2="59" strokeWidth="1" opacity="0.5" />
-          <line x1="96" y1="65" x2="75" y2="62" strokeWidth="1" opacity="0.4" />
 
           {/* Paw attack */}
           <AnimatePresence>
@@ -166,13 +142,10 @@ export default function GuestCat() {
                 exit={{ opacity: 0, x: -10, y: -10 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
               >
-                {/* Extended paw */}
                 <path d="M30 100 L10 85 L15 90" strokeWidth="2" />
-                {/* Claws */}
                 <line x1="10" y1="85" x2="4" y2="78" strokeWidth="1.5" />
                 <line x1="10" y1="85" x2="2" y2="83" strokeWidth="1.5" />
                 <line x1="10" y1="85" x2="6" y2="88" strokeWidth="1.5" />
-                {/* Scratch marks */}
                 <motion.g
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 1, 0.6] }}
