@@ -112,7 +112,7 @@ export default function AnimePage() {
   return (
     <StatusDragProvider onStatusChange={handleStatusChange}>
     <div className="min-h-screen bg-white overflow-y-auto">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 pt-20 pb-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-semibold text-[#2d2640]">Anime</h1>

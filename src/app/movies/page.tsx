@@ -148,7 +148,7 @@ export default function MoviesPage() {
   return (
     <StatusDragProvider onStatusChange={handleStatusChange}>
     <div className="min-h-screen bg-white overflow-y-auto">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 pt-20 pb-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>

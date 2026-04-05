@@ -118,7 +118,7 @@ export default function Header() {
             transition: 'filter 0.7s ease',
           }}
         >
-          <canvas ref={canvasRef} className="w-full h-full rounded-full" style={{ background: 'radial-gradient(circle at 35% 35%, #e0d6f5, #c4bbd8)' }} />
+          <canvas ref={canvasRef} className="w-full h-full rounded-full" />
         </button>
       </div>
 
