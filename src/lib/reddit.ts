@@ -54,18 +54,20 @@ export async function searchRedditForTitle(title: string, type: string): Promise
 
             // Filter for quality: comments about the show's quality, worth watching, etc.
             const lower = body.toLowerCase();
-            const isRelevant =
-              lower.includes('worth') || lower.includes('recommend') || lower.includes('loved') ||
-              lower.includes('amazing') || lower.includes('great') || lower.includes('best') ||
-              lower.includes('terrible') || lower.includes('boring') || lower.includes('masterpiece') ||
-              lower.includes('underrated') || lower.includes('overrated') || lower.includes('must watch') ||
-              lower.includes('waste') || lower.includes('beautiful') || lower.includes('emotional') ||
-              lower.includes('ending') || lower.includes('season') || lower.includes('episode') ||
-              lower.includes('acting') || lower.includes('story') || lower.includes('plot') ||
-              lower.includes('character') || lower.includes('enjoy') || lower.includes('watch') ||
-              score >= 10; // High-score comments are likely quality
-
-            if (!isRelevant) continue;
+            // Only include genuine reviews — opinions on quality, worth watching, acting, story
+            const reviewSignals = [
+              'worth watching', 'worth it', 'must watch', 'must see', 'highly recommend',
+              'masterpiece', 'underrated', 'overrated', 'waste of time',
+              'the acting', 'the story', 'the plot', 'the writing', 'the cinematography',
+              'the ending', 'the characters', 'character development',
+              'loved it', 'hated it', 'blown away', 'disappointed',
+              'one of the best', 'one of the worst', 'beautiful', 'incredible',
+              'made me cry', 'made me think', 'couldn\'t stop watching',
+              'slow burn', 'gripping', 'boring', 'predictable', 'surprising',
+            ];
+            const isReview = reviewSignals.some(sig => lower.includes(sig)) || score >= 15;
+            // Skip short quips, jokes, and off-topic comments
+            if (!isReview || body.length < 50) continue;
 
             const trimmed = body.length > 300 ? body.substring(0, 300) + '...' : body;
 

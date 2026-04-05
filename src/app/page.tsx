@@ -227,7 +227,7 @@ export default function Home() {
         {screen === 'result' && recommendation && (
           <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out] py-16">
             <div className="w-full max-w-sm">
-              <RecommendationCard recommendation={recommendation} />
+              <RecommendationCard recommendation={recommendation} onAccept={startOver} />
             </div>
 
             <div className="flex gap-3 mt-2 items-center">
