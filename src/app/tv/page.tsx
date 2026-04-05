@@ -172,6 +172,7 @@ export default function TVPage() {
           <GlassTabs tabs={SECTION_ORDER} active={activeTab} onChange={(tab) => { setActiveTab(tab); setOffset(0); fetchFavorites(0, false, statusGroupToApi[tab]); }} layoutId="tv-tab" />
         </div>
 
+        {activeTab !== 'Todo' && (
         <div className="flex gap-1.5 mb-6 flex-wrap items-center">
           {(['all', 'felt_things', 'enjoyed', 'watched', 'not_my_thing'] as const).map(v => (
             <button key={v} onClick={() => setRatingFilter(v)}
@@ -180,6 +181,7 @@ export default function TVPage() {
             </button>
           ))}
         </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" /></div>
