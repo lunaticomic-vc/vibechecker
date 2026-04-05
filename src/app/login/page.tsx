@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LoadingMouse from '@/components/LoadingMouse';
 
-type Step = 'are-you' | 'login' | 'what-is' | 'wanna-try' | 'guest-welcome' | 'bye';
+type Step = 'are-you' | 'login' | 'what-is' | 'what-is-explain' | 'wanna-try' | 'guest-welcome' | 'bye';
 
 export default function LoginPage() {
   const [step, setStep] = useState<Step>('are-you');
@@ -111,10 +111,19 @@ export default function LoginPage() {
         )}
 
         {step === 'what-is' && (
-          <div className="flex flex-col items-center gap-5 max-w-[300px] text-center">
+          <>
             <p className="text-lg text-[#2d2640] font-medium tracking-wide">do you know what this is?</p>
+            <div className="flex flex-col gap-3 w-full items-center">
+              <button onClick={() => { setStep('wanna-try'); catSay('okay cool~'); }} className={btnClass}>yes</button>
+              <button onClick={() => { setStep('what-is-explain'); catSay('let me explain~'); }} className={btnClass}>no</button>
+            </div>
+          </>
+        )}
+
+        {step === 'what-is-explain' && (
+          <div className="flex flex-col items-center gap-5 max-w-[300px] text-center">
             <p className="text-xs text-[#7c7291] leading-relaxed">
-              this app gives you vibe-based recommendations across movies, tv, anime, youtube, k-drama and more. describe your mood and get something tailored to watch. it also tracks everything you're watching and learns your taste over time.
+              describe your mood and get a tailored recommendation across movies, tv, anime, youtube, k-drama and more. it learns your taste over time so every pick gets better.
             </p>
             <button onClick={() => { setStep('wanna-try'); catSay('interested?~'); }} className={btnClass}>cool, got it</button>
           </div>
