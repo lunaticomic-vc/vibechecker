@@ -2,9 +2,9 @@
 
 *You finally have free time. You're on the couch, food's ready, and you open Netflix. Then YouTube. Then your anime list. Then back to Netflix. 20 minutes later you're still scrolling, the food's cold, and you've watched nothing.*
 
-**Consumption Corner takes the decision away.** You tell it how you feel — and it picks something perfect. A movie, a show, an anime, a K-drama, a YouTube video, or even an article to read. Based on what you actually love, not what's trending.
+**Consumption Corner kills the choice paralysis.** Instead of doomscrolling through catalogs, you tell it how you feel — and it picks something perfect. A movie, a show, an anime, a K-drama, a YouTube video, or even an article to read. Based on what you actually love, not what's trending.
 
-The more you use it, the more it understands your taste. Your ratings, your interests, the things that made you *feel* something — it remembers all of it.
+It lets you make the most out of your free time by choosing based on your mood, not an algorithm. The more you use it, the more it understands your taste. Your ratings, your interests, the things that made you *feel* something — it remembers all of it.
 
 ---
 
