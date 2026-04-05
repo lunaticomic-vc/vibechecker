@@ -241,13 +241,6 @@ export default function Home() {
                 </svg>
               </button>
               <button
-                onClick={handleAcceptRec}
-                disabled={accepting}
-                className="px-5 py-2.5 text-xs bg-[#8b5cf6] text-white hover:bg-[#7c3aed] rounded-xl transition-all shadow-md shadow-purple-200/50 disabled:opacity-50"
-              >
-                {accepting ? 'Adding...' : 'Accept & start watching'}
-              </button>
-              <button
                 onClick={startOver}
                 className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
                 title="Start over"

@@ -9,6 +9,7 @@ const TYPE_LABELS: Record<string, string> = {
   tv: 'TV Show',
   anime: 'Anime',
   youtube: 'YouTube',
+  substack: 'Substack',
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -16,6 +17,7 @@ const TYPE_COLORS: Record<string, string> = {
   tv: 'bg-[#f0f7ef] text-[#6b9a65]',
   anime: 'bg-[#f5f3ff] text-[#8b5cf6]',
   youtube: 'bg-[#fef2f2] text-[#dc2626]',
+  substack: 'bg-[#fff7ed] text-[#c2410c]',
 };
 
 interface FavoriteCardProps {

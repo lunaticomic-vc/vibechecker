@@ -4,7 +4,7 @@ import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
 import { log } from '@/lib/logger';
 import type { ContentType } from '@/types/index';
 
-const VALID_CONTENT_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube'];
+const VALID_CONTENT_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'substack'];
 
 export async function POST(req: NextRequest) {
   log.api('POST', '/api/recommend');

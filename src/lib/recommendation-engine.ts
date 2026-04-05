@@ -85,6 +85,7 @@ export function buildRecommendationPrompt(
     movie: 'Suggest a specific movie with its release year. Include enough detail (title + year) so it can be found on streaming sites.',
     tv: 'Suggest a specific TV show. Include season recommendation if relevant (e.g., "start at Season 2"). Add episodeInfo if applicable.',
     anime: 'Suggest a specific anime. Include episode count or arc recommendation in episodeInfo if helpful.',
+    substack: 'Suggest a specific Substack article or newsletter that matches the vibe. Include the author/publication name, article title, and a searchQuery to find it. Focus on the user\'s interests for topic matching.',
   };
 
   return [
@@ -196,6 +197,10 @@ export async function getRecommendation(
     const query = ai.searchQuery ?? title;
     actionUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
     actionLabel = 'Search on YouTube';
+  } else if (contentType === 'substack') {
+    const query = ai.searchQuery ?? title;
+    actionUrl = `https://substack.com/search/${encodeURIComponent(query)}`;
+    actionLabel = 'Find on Substack';
   } else {
     actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
     actionLabel = 'Watch on sflix';

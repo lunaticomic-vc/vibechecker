@@ -118,6 +118,31 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
       </svg>
     ),
   },
+  {
+    type: 'substack' as ContentType,
+    label: 'substack',
+    icon: (
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Open book/letter with pages */}
+        <path d="M16 18 L36 24 L56 18" />
+        <path d="M16 18 L16 52 L36 58 L56 52 L56 18" />
+        <path d="M36 24 L36 58" />
+        {/* Text lines on left page */}
+        <line x1="22" y1="30" x2="32" y2="33" strokeWidth="0.8" opacity="0.3" />
+        <line x1="22" y1="36" x2="32" y2="39" strokeWidth="0.8" opacity="0.3" />
+        <line x1="22" y1="42" x2="30" y2="44" strokeWidth="0.8" opacity="0.25" />
+        {/* Text lines on right page */}
+        <line x1="40" y1="33" x2="50" y2="30" strokeWidth="0.8" opacity="0.3" />
+        <line x1="40" y1="39" x2="50" y2="36" strokeWidth="0.8" opacity="0.3" />
+        <line x1="40" y1="44" x2="48" y2="42" strokeWidth="0.8" opacity="0.25" />
+        {/* Decorative bookmark ribbon */}
+        <path d="M44 18 L44 12 L48 15 L52 12 L52 18" strokeWidth="0.8" opacity="0.25" />
+        {/* Small flourish */}
+        <path d="M12 22 Q 10 28, 12 34" strokeWidth="0.7" opacity="0.15" />
+        <path d="M60 22 Q 62 28, 60 34" strokeWidth="0.7" opacity="0.15" />
+      </svg>
+    ),
+  },
 ];
 
 interface Props {
@@ -127,14 +152,14 @@ interface Props {
 
 export default function ContentTypeSelector({ selected, onSelect }: Props) {
   return (
-    <div className="grid grid-cols-2 gap-6 sm:gap-8 w-full max-w-[360px] sm:max-w-[440px] mx-auto">
+    <div className="flex flex-wrap justify-center gap-5 sm:gap-6 w-full max-w-[400px] sm:max-w-[460px] mx-auto">
       {CONTENT_TYPES.map(({ type, label, icon }) => {
         const isSelected = selected === type;
         return (
           <button
             key={type}
             onClick={() => onSelect(type)}
-            className={`group aspect-square flex flex-col items-center justify-center gap-3 rounded-3xl border-2 transition-all duration-500 active:scale-95 ${
+            className={`group w-[140px] h-[140px] sm:w-[160px] sm:h-[160px] flex flex-col items-center justify-center gap-3 rounded-3xl border-2 transition-all duration-500 active:scale-95 ${
               isSelected
                 ? 'border-[#c4b5fd] bg-white/90 shadow-xl shadow-purple-100/60 scale-[1.03]'
                 : 'border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#d4cee6] hover:shadow-lg hover:shadow-purple-50/40'

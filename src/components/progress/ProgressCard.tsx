@@ -14,11 +14,12 @@ const STATUS_COLORS: Record<string, string> = {
   on_hold: 'bg-[#fefce8] text-[#a16207] border border-[#fde68a]',
 };
 
-const TYPE_COLORS = {
+const TYPE_COLORS: Record<string, string> = {
   movie: 'bg-[#f3f0ff] text-[#7c3aed]',
   tv: 'bg-[#f0f7ef] text-[#6b9a65]',
   anime: 'bg-[#f5f3ff] text-[#8b5cf6]',
   youtube: 'bg-[#fef2f2] text-[#dc2626]',
+  substack: 'bg-[#fff7ed] text-[#c2410c]',
 };
 
 export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {

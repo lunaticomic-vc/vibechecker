@@ -30,7 +30,7 @@ export async function initDb(): Promise<Client> {
   await db.batch([
     `CREATE TABLE IF NOT EXISTS favorites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube')),
+      type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack')),
       title TEXT NOT NULL,
       external_id TEXT,
       metadata TEXT,

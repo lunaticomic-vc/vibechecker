@@ -1,4 +1,4 @@
-export type ContentType = 'movie' | 'tv' | 'anime' | 'youtube';
+export type ContentType = 'movie' | 'tv' | 'anime' | 'youtube' | 'substack';
 
 export interface Favorite {
   id: number;

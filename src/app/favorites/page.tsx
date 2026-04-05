@@ -11,6 +11,7 @@ const TABS: { label: string; value: ContentType | 'all' }[] = [
   { label: 'TV Shows', value: 'tv' },
   { label: 'YouTube', value: 'youtube' },
   { label: 'Anime', value: 'anime' },
+  { label: 'Substack', value: 'substack' },
 ];
 
 type WatchStatus = 'not_seen' | 'watching' | 'on_hold' | 'completed';

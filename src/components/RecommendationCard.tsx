@@ -9,7 +9,31 @@ const TYPE_COLORS: Record<string, string> = {
   tv: 'bg-[#f0f7ef] text-[#6b9a65] border-[#a7c4a0]',
   youtube: 'bg-[#fef2f2] text-[#dc2626] border-[#fca5a5]',
   anime: 'bg-[#f5f3ff] text-[#8b5cf6] border-[#c4b5fd]',
+  substack: 'bg-[#fff7ed] text-[#c2410c] border-[#fdba74]',
 };
+
+async function autoAddToProgress(rec: Recommendation) {
+  try {
+    const favRes = await fetch('/api/favorites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: rec.type,
+        title: rec.title,
+        image_url: rec.thumbnailUrl ?? rec.imageUrls?.[0],
+        metadata: JSON.stringify({ year: rec.year, source: 'recommendation' }),
+      }),
+    });
+    const fav = await favRes.json();
+    if (fav.id && rec.type !== 'youtube' && rec.type !== 'substack') {
+      await fetch('/api/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ favorite_id: fav.id, status: 'watching' }),
+      });
+    }
+  } catch { /* best effort */ }
+}
 
 interface Props {
   recommendation: Recommendation;
@@ -88,7 +112,7 @@ export default function RecommendationCard({ recommendation }: Props) {
         {/* YouTube thumbnail — rectangular */}
         {thumbnailUrl && (
           <a href={actionUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 group">
-            <div className="w-[200px] rounded-xl overflow-hidden border-2 border-[#e9e4f5] hover:border-[#c4b5fd] transition-all shadow-sm hover:shadow-md">
+            <div className="w-[280px] sm:w-[320px] rounded-xl overflow-hidden border-2 border-[#e9e4f5] hover:border-[#c4b5fd] transition-all shadow-sm hover:shadow-md">
               <img src={thumbnailUrl} alt={title} className="w-full aspect-video object-cover group-hover:scale-105 transition-transform duration-300" />
             </div>
           </a>
@@ -133,6 +157,7 @@ export default function RecommendationCard({ recommendation }: Props) {
           </div>
 
           <a href={actionUrl} target="_blank" rel="noopener noreferrer"
+            onClick={() => autoAddToProgress(recommendation)}
             className="flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-4 py-2 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] text-xs">
             Watch on YouTube
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -213,6 +238,7 @@ export default function RecommendationCard({ recommendation }: Props) {
         </div>
 
         <a href={actionUrl} target="_blank" rel="noopener noreferrer"
+          onClick={() => autoAddToProgress(recommendation)}
           className="flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-5 py-2.5 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] text-xs">
           {actionLabel}
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
