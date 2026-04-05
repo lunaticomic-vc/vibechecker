@@ -1,64 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import FavoriteCard from '@/components/favorites/FavoriteCard';
-import AddFavoriteForm from '@/components/favorites/AddFavoriteForm';
-import type { Favorite, ContentType, Rating, RatingValue } from '@/types/index';
+import { useState, useEffect } from 'react';
+import type { ContentType } from '@/types/index';
 
-const TABS: { label: string; value: ContentType | 'all' }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Movies', value: 'movie' },
-  { label: 'TV Shows', value: 'tv' },
-  { label: 'YouTube', value: 'youtube' },
-  { label: 'Anime', value: 'anime' },
-  { label: 'Substack', value: 'substack' },
-];
-
-type WatchStatus = 'not_seen' | 'watching' | 'on_hold' | 'completed';
-const STATUS_SECTIONS: { label: string; value: WatchStatus }[] = [
-  { label: "Haven't seen", value: 'not_seen' },
-  { label: 'In progress', value: 'watching' },
-  { label: 'On hold', value: 'on_hold' },
-  { label: 'Completed', value: 'completed' },
-];
-
-interface ProgressInfo {
-  favorite_id: number;
-  status: string;
-  current_season: number;
-  current_episode: number;
-  stopped_at?: string;
-}
-
-function getStatus(fav: Favorite, progressMap: Map<number, ProgressInfo>): WatchStatus {
-  const prog = progressMap.get(fav.id);
-  if (prog) {
-    if (prog.status === 'completed') return 'completed';
-    if (prog.status === 'on_hold') return 'on_hold';
-    if (prog.status === 'watching') return 'watching';
-  }
-  try {
-    const meta = fav.metadata ? JSON.parse(fav.metadata) : null;
-    if (meta?.status === 'completed') return 'completed';
-    if (meta?.status === 'watching') return 'watching';
-    if (meta?.status === 'on_hold') return 'on_hold';
-  } catch { /* ignore */ }
-  return 'not_seen';
-}
-
-export default function FavoritesPage() {
-  const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [ratings, setRatings] = useState<Record<number, Rating>>({});
-  const [progressMap, setProgressMap] = useState<Map<number, ProgressInfo>>(new Map());
-  const [filter, setFilter] = useState<ContentType | 'all'>('all');
-  const [ratingFilter, setRatingFilter] = useState<RatingValue | 'all'>('all');
-  const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(false);
-  const [total, setTotal] = useState(0);
-  const PAGE_SIZE = 25;
-
-  // Import states
+export default function SettingsPage() {
   const [bulkText, setBulkText] = useState('');
   const [bulkType, setBulkType] = useState<ContentType>('movie');
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -74,7 +19,6 @@ export default function FavoritesPage() {
   const [ytLoading, setYtLoading] = useState(false);
   const [ytMessage, setYtMessage] = useState('');
 
-  // Load saved MAL username
   useEffect(() => {
     fetch('/api/accounts/mal').then(r => r.json()).then(d => { if (d.username) setLastMalUser(d.username); }).catch(() => {});
   }, []);
@@ -85,60 +29,14 @@ export default function FavoritesPage() {
     if (params.get('yt_connected') === '1') {
       setYtConnected(true);
       setYtMessage('YouTube connected!');
-      window.history.replaceState({}, '', '/favorites');
+      window.history.replaceState({}, '', '/settings');
       setTimeout(() => setYtMessage(''), 5000);
     } else if (params.get('yt_error')) {
       setYtMessage('Failed to connect YouTube.');
-      window.history.replaceState({}, '', '/favorites');
+      window.history.replaceState({}, '', '/settings');
       setTimeout(() => setYtMessage(''), 5000);
     }
   }, []);
-
-  const fetchFavorites = useCallback(async (append = false) => {
-    if (!append) setLoading(true);
-    const offset = append ? favorites.length : 0;
-    const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
-    if (filter !== 'all') params.set('type', filter);
-    const res = await fetch(`/api/favorites?${params}`);
-    const data = await res.json();
-    const items = data.favorites ?? (Array.isArray(data) ? data : []);
-    setFavorites(prev => append ? [...prev, ...items] : items);
-    setHasMore(data.hasMore ?? false);
-    setTotal(data.total ?? items.length);
-    setLoading(false);
-    if (!append) {
-      fetch('/api/ratings').then(r => r.json()).then(all => {
-        const map: Record<number, Rating> = {};
-        if (Array.isArray(all)) for (const r of all) map[r.favorite_id] = r;
-        setRatings(map);
-      }).catch(() => {});
-      fetch('/api/progress').then(r => r.json()).then(items => {
-        const map = new Map<number, ProgressInfo>();
-        if (Array.isArray(items)) for (const p of items) map.set(p.favorite_id, p);
-        setProgressMap(map);
-      }).catch(() => {});
-    }
-  }, [filter]);
-
-  useEffect(() => { fetchFavorites(); }, [fetchFavorites]);
-
-  async function handleAdd(data: { type: ContentType; title: string; image_url?: string; metadata?: string }) {
-    await fetch('/api/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    setShowForm(false);
-    fetchFavorites();
-  }
-
-  async function handleDelete(id: number) {
-    await fetch(`/api/favorites?id=${id}`, { method: 'DELETE' });
-    fetchFavorites();
-  }
-
-  async function handleRate(favoriteId: number, rating: RatingValue, reasoning?: string) {
-    await fetch('/api/ratings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favorite_id: favoriteId, rating, reasoning }) });
-    const res = await fetch(`/api/ratings?favorite_id=${favoriteId}`);
-    const updated = await res.json();
-    if (updated) setRatings(prev => ({ ...prev, [favoriteId]: updated }));
-  }
 
   async function handleBulkImport() {
     const lines = bulkText.split('\n').map(l => l.trim()).filter(Boolean);
@@ -151,7 +49,6 @@ export default function FavoritesPage() {
     }
     setBulkText(''); setBulkLoading(false);
     setBulkMessage(`Added ${added} favorite${added !== 1 ? 's' : ''}.`);
-    fetchFavorites();
     setTimeout(() => setBulkMessage(''), 3000);
   }
 
@@ -168,7 +65,6 @@ export default function FavoritesPage() {
         setLastMalUser(user);
         setMalUsername('');
         fetch('/api/accounts/mal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user }) });
-        fetchFavorites();
       }
     } catch { setMalMessage('Network error'); }
     setMalLoading(false);
@@ -182,7 +78,7 @@ export default function FavoritesPage() {
       const res = await fetch('/api/imports/mal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: lastMalUser }) });
       const data = await res.json();
       if (!res.ok) { setMalMessage(data.error || 'Sync failed'); }
-      else { setMalMessage(data.message); fetchFavorites(); }
+      else { setMalMessage(data.message); }
     } catch { setMalMessage('Network error'); }
     setMalLoading(false);
     setTimeout(() => setMalMessage(''), 5000);
@@ -194,7 +90,7 @@ export default function FavoritesPage() {
       const res = await fetch('/api/imports/youtube', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) });
       const data = await res.json();
       if (!res.ok) { setYtMessage(data.error || 'Import failed'); }
-      else { setYtMessage(data.message); fetchFavorites(); }
+      else { setYtMessage(data.message); }
     } catch { setYtMessage('Network error'); }
     setYtLoading(false);
     setTimeout(() => setYtMessage(''), 5000);
@@ -213,108 +109,23 @@ export default function FavoritesPage() {
       const res = await fetch('/api/imports/letterboxd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ csv: lbCsv }) });
       const data = await res.json();
       if (!res.ok) { setLbMessage(data.error || 'Import failed'); }
-      else { setLbMessage(data.message); setLbCsv(''); fetchFavorites(); }
+      else { setLbMessage(data.message); setLbCsv(''); }
     } catch { setLbMessage('Network error'); }
     setLbLoading(false);
     setTimeout(() => setLbMessage(''), 5000);
   }
 
-  // Group favorites by status
-  const grouped = { not_seen: [] as Favorite[], watching: [] as Favorite[], on_hold: [] as Favorite[], completed: [] as Favorite[] };
-  for (const fav of favorites) {
-    const status = getStatus(fav, progressMap);
-    // Apply rating filter for in_progress and completed
-    if (ratingFilter !== 'all' && (status === 'watching' || status === 'completed')) {
-      const r = ratings[fav.id];
-      if (!r || r.rating !== ratingFilter) continue;
-    }
-    grouped[status].push(fav);
-  }
-
-  const inputClass = "bg-[#f5f3ff] border-2 border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd]";
-  const msgClass = (msg: string) => msg.toLowerCase().includes('import') || msg.toLowerCase().includes('added') || msg.toLowerCase().includes('connected') ? 'text-[#6b9a65]' : 'text-red-500';
+  const inputClass = "bg-white border-2 border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd]";
+  const msgClass = (msg: string) => msg.toLowerCase().includes('import') || msg.toLowerCase().includes('added') || msg.toLowerCase().includes('connected') || msg.toLowerCase().includes('sync') ? 'text-[#6b9a65]' : 'text-red-500';
 
   return (
-    <main className="min-h-screen px-4 py-8 max-w-6xl mx-auto overflow-y-auto" style={{ maxHeight: '100vh' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#2d2640]">Favorites</h1>
-          <p className="text-xs text-[#7c7291] mt-0.5">{total} items</p>
-        </div>
-        <button onClick={() => setShowForm(v => !v)} className="px-4 py-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-sm text-white rounded-lg transition-colors">
-          {showForm ? 'Cancel' : '+ Add'}
-        </button>
+    <main className="min-h-screen px-4 py-8 max-w-2xl mx-auto overflow-y-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-[#2d2640]">Settings</h1>
+        <p className="text-xs text-[#7c7291] mt-0.5">Manage integrations and imports</p>
       </div>
 
-      {showForm && <div className="mb-6"><AddFavoriteForm onAdd={handleAdd} onCancel={() => setShowForm(false)} /></div>}
-
-      {/* Category tabs */}
-      <div className="flex gap-1 mb-4 border-b border-[#e9e4f5] pb-0 overflow-x-auto">
-        {TABS.map(tab => (
-          <button key={tab.value} onClick={() => { setFilter(tab.value); setFavorites([]); }}
-            className={`px-3 py-2 text-xs font-medium rounded-t-lg transition-colors -mb-px border-b-2 whitespace-nowrap ${
-              filter === tab.value ? 'border-[#8b5cf6] text-[#2d2640]' : 'border-transparent text-[#7c7291]'
-            }`}>
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Rating filter for in progress / completed */}
-      <div className="flex gap-1.5 mb-6 flex-wrap">
-        <span className="text-[10px] text-[#b0a8c4] uppercase tracking-wider self-center mr-1">filter by rating:</span>
-        {(['all', 'felt_things', 'enjoyed', 'watched', 'not_my_thing'] as const).map(v => (
-          <button key={v} onClick={() => setRatingFilter(v)}
-            className={`text-[10px] px-2 py-1 rounded-full border transition-all ${
-              ratingFilter === v ? 'border-[#8b5cf6] bg-[#f5f3ff] text-[#7c3aed]' : 'border-[#e9e4f5] text-[#b0a8c4]'
-            }`}>
-            {v === 'all' ? 'all' : v === 'felt_things' ? '💜 felt things' : v === 'enjoyed' ? '👍 enjoyed' : v === 'watched' ? '👁 watched' : '👎 not my thing'}
-          </button>
-        ))}
-      </div>
-
-      {/* Content grouped by status */}
-      {loading ? (
-        <div className="text-center text-[#b8b0c8] py-16">Loading...</div>
-      ) : favorites.length === 0 ? (
-        <div className="text-center text-[#b8b0c8] py-16">
-          <p className="text-lg mb-2">No favorites yet</p>
-          <p className="text-sm">Import or add some below.</p>
-        </div>
-      ) : (
-        <div className="space-y-8 mb-8">
-          {STATUS_SECTIONS.map(({ label, value }) => {
-            const items = grouped[value];
-            if (items.length === 0) return null;
-            return (
-              <div key={value}>
-                <h3 className="text-xs font-semibold text-[#7c7291] mb-3 uppercase tracking-wider flex items-center gap-2">
-                  {label}
-                  <span className="text-[10px] text-[#b0a8c4] font-normal">({items.length})</span>
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {items.map(fav => (
-                    <FavoriteCard key={fav.id} favorite={fav} rating={ratings[fav.id]} onDelete={handleDelete} onRate={handleRate} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Show more */}
-      {hasMore && (
-        <div className="text-center mb-8">
-          <button onClick={() => fetchFavorites(true)} className="px-6 py-2 text-xs border-2 border-[#e9e4f5] text-[#7c7291] rounded-xl hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all">
-            Show more ({favorites.length}/{total})
-          </button>
-        </div>
-      )}
-
-      {/* Import Section */}
-      <div className="border-t border-[#e9e4f5] pt-8 space-y-8">
+      <div className="space-y-6">
         <h2 className="text-base font-semibold text-[#2d2640]">Import</h2>
 
         {/* MAL */}
@@ -339,7 +150,6 @@ export default function FavoritesPage() {
                   const data = await res.json();
                   setLastMalUser('');
                   setMalMessage(`Removed account and ${data.removed} anime`);
-                  fetchFavorites();
                   setTimeout(() => setMalMessage(''), 5000);
                 }} className="px-4 py-2 text-sm bg-[#fef2f2] hover:bg-[#fecaca] text-red-500 rounded-lg transition-colors">
                   Remove

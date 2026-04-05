@@ -135,21 +135,36 @@ export default function Header() {
       {/* Nav dropdown */}
       <div
         className={`mt-4 flex flex-col items-center transition-all duration-500 ease-out overflow-hidden ${
-          open ? 'max-h-48 opacity-100 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'
+          open ? 'max-h-[420px] opacity-100 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'
         }`}
       >
         <div className="bg-white/85 backdrop-blur-xl border border-[#e9e4f5] rounded-2xl px-6 py-3 shadow-lg shadow-purple-100/20 flex flex-col gap-0.5">
           <Link href="/" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
             Home
           </Link>
-          <Link href="/favorites" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            Favorites
+          <Link href="/movies" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
+            Movies
+          </Link>
+          <Link href="/tv" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
+            TV
+          </Link>
+          <Link href="/anime" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
+            Anime
+          </Link>
+          <Link href="/youtube" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
+            YouTube
+          </Link>
+          <Link href="/substack" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
+            Substack
           </Link>
           <Link href="/progress" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
             Progress
           </Link>
           <Link href="/interests" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
             Interests
+          </Link>
+          <Link href="/settings" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
+            Settings
           </Link>
         </div>
       </div>
