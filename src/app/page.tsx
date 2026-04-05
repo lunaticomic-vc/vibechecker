@@ -69,17 +69,17 @@ export default function Home() {
 
   if (loading) {
     return (
-      <main className="min-h-screen h-screen relative overflow-hidden flex items-center justify-center">
+      <main className="min-h-screen relative flex items-center justify-center">
         <LoadingMouse />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen h-screen relative overflow-hidden">
+    <main className="min-h-screen relative overflow-y-auto">
 
 
-      <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen">
+      <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen py-16">
 
         {/* Screen 1: Just the four squares */}
         {screen === 'pick' && (
@@ -115,7 +115,7 @@ export default function Home() {
 
         {/* Screen 4: Recommendation */}
         {screen === 'result' && recommendation && (
-          <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out] py-16">
+          <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out]">
             {loading ? null : (
               <div className="w-full max-w-sm">
                 <RecommendationCard recommendation={recommendation} onAccept={startOver} />

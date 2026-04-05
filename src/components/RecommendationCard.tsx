@@ -184,7 +184,8 @@ function ScreencapCard({ src, alt, width, delay }: { src: string; alt: string; w
 
 export default function RecommendationCard({ recommendation, onAccept }: Props) {
   const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights, interests, tropes, channelName } = recommendation;
-  const [openSection, setOpenSection] = useState<AccordionSection>('description');
+  const isMobileInit = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window);
+  const [openSection, setOpenSection] = useState<AccordionSection>(isMobileInit ? null : 'description');
 
   const isYouTube = type === 'youtube';
   const isSubstack = type === 'substack';
