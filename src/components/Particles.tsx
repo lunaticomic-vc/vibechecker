@@ -23,121 +23,139 @@ export default function Particles() {
     function draw() {
       const w = canvas!.width;
       const h = canvas!.height;
-      const imageData = ctx!.createImageData(w, h);
-      const data = imageData.data;
       const step = window.innerWidth < 600 ? 3 : 2;
-
       time += 0.003;
 
-      // Shore runs vertically — sand left (~45%), water fills entire right side
-      // Wave edge rocks toward shore then pulls back
+      // Wave rocks back and forth
       const waveCycle = Math.sin(time * 1.2) * 0.04 + Math.sin(time * 0.5) * 0.02;
 
-      for (let y = 0; y < h; y += step) {
-        // Shore edge — organic wavy line running top to bottom
+      // First pass: fill entire canvas with two solid halves
+      ctx!.fillStyle = '#f8f5ff'; // sand — light lilac-white
+      ctx!.fillRect(0, 0, w, h);
+
+      // Draw water as solid grey on right half, with wavy edge
+      ctx!.beginPath();
+      // Start from top-right
+      ctx!.moveTo(w, 0);
+
+      // Draw the wavy shore edge from top to bottom
+      for (let y = 0; y <= h; y += 2) {
         const ny = y / h;
         const edgeWave =
           Math.sin(ny * 3.5 + time * 0.8) * 0.04 +
           Math.sin(ny * 7 - time * 0.6) * 0.02 +
           Math.sin(ny * 12 + time * 1.5) * 0.008;
+        const shoreX = (0.45 + waveCycle + edgeWave) * w;
+        ctx!.lineTo(shoreX, y);
+      }
 
-        // Base shore position ~45% from left, rocking with waveCycle
+      // Close the path along the right and top edges
+      ctx!.lineTo(w, h);
+      ctx!.lineTo(w, 0);
+      ctx!.closePath();
+
+      // Fill solid grey water
+      ctx!.fillStyle = '#d5d2dc';
+      ctx!.fill();
+
+      // Second pass: draw dithered wave texture on top of the water
+      const imageData = ctx!.getImageData(0, 0, w, h);
+      const data = imageData.data;
+
+      for (let y = 0; y < h; y += step) {
+        const ny = y / h;
+        const edgeWave =
+          Math.sin(ny * 3.5 + time * 0.8) * 0.04 +
+          Math.sin(ny * 7 - time * 0.6) * 0.02 +
+          Math.sin(ny * 12 + time * 1.5) * 0.008;
         const shoreEdge = (0.45 + waveCycle + edgeWave) * w;
-
-        // Foam band width oscillates
-        const foamWidth = w * (0.04 + Math.sin(ny * 5 + time * 2) * 0.015);
+        const foamWidth = w * (0.035 + Math.sin(ny * 5 + time * 2) * 0.01);
 
         for (let x = 0; x < w; x += step) {
-          let r, g, b;
           const nx = x / w;
 
-          if (x < shoreEdge - foamWidth * 2) {
-            // === SAND — soft warm lilac-white ===
-            const sandGrain = (Math.random() - 0.5) * 3;
-            const sandPattern = Math.sin(nx * 30 + ny * 25) * 1.5 + Math.sin(ny * 50 + nx * 12) * 0.8;
+          if (x < shoreEdge - foamWidth) {
+            // === SAND — add subtle grain texture ===
+            const sandGrain = (Math.random() - 0.5) * 4;
+            const sandTex = Math.sin(nx * 30 + ny * 25) * 2;
+            const wetness = Math.max(0, 1 - (shoreEdge - foamWidth - x) / (w * 0.06));
 
-            // Wet sand gradient near shore
-            const wetness = Math.max(0, 1 - (shoreEdge - foamWidth * 2 - x) / (w * 0.08));
+            const r = Math.round(248 - wetness * 15 + sandTex + sandGrain);
+            const g = Math.round(244 - wetness * 18 + sandTex + sandGrain);
+            const b = Math.round(252 - wetness * 8 + sandTex * 0.5 + sandGrain);
 
-            r = Math.round(248 - wetness * 12 + sandPattern + sandGrain);
-            g = Math.round(244 - wetness * 14 + sandPattern + sandGrain);
-            b = Math.round(252 - wetness * 6 + sandPattern * 0.5 + sandGrain);
+            for (let dy = 0; dy < step && y + dy < h; dy++) {
+              for (let dx = 0; dx < step && x + dx < w; dx++) {
+                const idx = ((y + dy) * w + (x + dx)) * 4;
+                data[idx] = Math.max(0, Math.min(255, r));
+                data[idx + 1] = Math.max(0, Math.min(255, g));
+                data[idx + 2] = Math.max(0, Math.min(255, b));
+              }
+            }
 
           } else if (x < shoreEdge + foamWidth) {
-            // === FOAM EDGE — white frothy line ===
-            const foamPos = (x - (shoreEdge - foamWidth * 2)) / (foamWidth * 3);
-
-            // Foam intensity — peaks at the edge, dithered
-            const foamNoise = Math.random() * 0.3;
+            // === FOAM — dithered white dots ===
+            const foamPos = (x - (shoreEdge - foamWidth)) / (foamWidth * 2);
+            const foamNoise = Math.random();
             const foamCurve = Math.sin(foamPos * Math.PI);
-            const foamDetail = Math.sin(ny * 20 + time * 4) * 0.15 + Math.sin(ny * 35 - time * 6) * 0.08;
-            const foam = foamCurve * 0.7 + foamDetail + foamNoise;
+            const foamDetail = Math.sin(ny * 20 + time * 4) * 0.2;
+            const isFoam = (foamCurve + foamDetail) > 0.3 + foamNoise * 0.4;
 
-            // Dither the foam — scattered white dots on grey
-            const isFoamDot = foam > 0.4 + Math.random() * 0.3;
-
-            if (isFoamDot) {
-              // White foam
-              r = Math.round(250 + Math.random() * 5);
-              g = Math.round(248 + Math.random() * 5);
-              b = Math.round(252 + Math.random() * 3);
-            } else {
-              // Transition zone
-              const t = foamPos;
-              r = Math.round(238 - t * 20 + Math.random() * 4);
-              g = Math.round(235 - t * 22 + Math.random() * 4);
-              b = Math.round(245 - t * 12 + Math.random() * 3);
+            if (isFoam) {
+              for (let dy = 0; dy < step && y + dy < h; dy++) {
+                for (let dx = 0; dx < step && x + dx < w; dx++) {
+                  const idx = ((y + dy) * w + (x + dx)) * 4;
+                  data[idx] = 252;
+                  data[idx + 1] = 250;
+                  data[idx + 2] = 254;
+                }
+              }
             }
 
           } else {
-            // === WATER — light grey dithered waves ===
+            // === WATER — dithered wave texture over the solid grey ===
             const waterStart = shoreEdge + foamWidth;
             const waterNx = Math.min(1, (x - waterStart) / (w - waterStart));
 
-            // Multiple wave layers — rocking toward shore and pulling back
-            const waveRock = Math.sin(time * 1.2); // main rock cycle
-            const wave1 = Math.sin(ny * 4 + time * 2 * waveRock + waterNx * 3) * 0.12;
-            const wave2 = Math.sin(ny * 9 - time * 1.5 + waterNx * 6) * 0.08;
-            const wave3 = Math.sin((ny * 6 + waterNx * 4) + time * 2.5) * 0.06;
-            const wave4 = Math.sin(ny * 16 - time * 3 + waterNx * 10) * 0.03; // fine ripples
-            const wave5 = Math.cos(ny * 3 + time * 0.8) * Math.sin(waterNx * 5 - time * 1.2) * 0.05;
-
-            let wave = wave1 + wave2 + wave3 + wave4 + wave5;
+            const waveRock = Math.sin(time * 1.2);
+            const wave =
+              Math.sin(ny * 4 + time * 2 * waveRock + waterNx * 3) * 0.12 +
+              Math.sin(ny * 9 - time * 1.5 + waterNx * 6) * 0.08 +
+              Math.sin((ny + waterNx) * 7 + time * 2.8) * 0.06 +
+              Math.sin(ny * 16 - time * 3 + waterNx * 10) * 0.03;
 
             // Mouse ripple
+            let ripple = 0;
             if (mouse.active) {
               const mx = mouse.x / w;
               const my = mouse.y / h;
               const dist = Math.sqrt((nx - mx) ** 2 + (ny - my) ** 2);
               if (dist < 0.2) {
-                wave += Math.sin(dist * 35 - time * 7) * Math.max(0, 0.2 - dist) * 1.5;
+                ripple = Math.sin(dist * 35 - time * 7) * Math.max(0, 0.2 - dist) * 1.5;
               }
             }
 
-            const val = (wave + 0.5);
+            const v = wave + ripple;
+            const dither = (Math.random() - 0.5) * 0.06;
+            const val = v + dither;
 
-            // Dither — scattered dots
-            const dither = (Math.random() - 0.5) * 0.08;
-            const v = Math.max(0, Math.min(1, val + dither));
-
-            // Distinct light grey — clearly different from the sand/white side
+            // Modulate the base grey water color with wave brightness
             const depth = waterNx * 0.2;
-            r = Math.round(205 - depth * 30 + v * 20);
-            g = Math.round(203 - depth * 30 + v * 20);
-            b = Math.round(210 - depth * 20 + v * 15);
-          }
+            const baseR = 195 - depth * 20;
+            const baseG = 193 - depth * 20;
+            const baseB = 205 - depth * 15;
 
-          r = Math.max(0, Math.min(255, r));
-          g = Math.max(0, Math.min(255, g));
-          b = Math.max(0, Math.min(255, b));
+            const r = Math.round(baseR + val * 25);
+            const g = Math.round(baseG + val * 25);
+            const b = Math.round(baseB + val * 20);
 
-          for (let dy = 0; dy < step && y + dy < h; dy++) {
-            for (let dx = 0; dx < step && x + dx < w; dx++) {
-              const idx = ((y + dy) * w + (x + dx)) * 4;
-              data[idx] = r;
-              data[idx + 1] = g;
-              data[idx + 2] = b;
-              data[idx + 3] = 255;
+            for (let dy = 0; dy < step && y + dy < h; dy++) {
+              for (let dx = 0; dx < step && x + dx < w; dx++) {
+                const idx = ((y + dy) * w + (x + dx)) * 4;
+                data[idx] = Math.max(0, Math.min(255, r));
+                data[idx + 1] = Math.max(0, Math.min(255, g));
+                data[idx + 2] = Math.max(0, Math.min(255, b));
+              }
             }
           }
         }
