@@ -85,6 +85,12 @@ export async function searchRedditForTitle(title: string, type: string): Promise
             // Skip short quips, jokes, and off-topic comments
             if (!isReview || body.length < 50) continue;
 
+            // Verify comment is relevant — should mention the title or be clearly about it
+            const titleWords = title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+            const mentionsTitle = titleWords.some(w => lower.includes(w));
+            const isOpinion = ['movie', 'film', 'show', 'series', 'it ', 'this ', 'watch'].some(w => lower.includes(w));
+            if (!mentionsTitle && !isOpinion) continue;
+
             const trimmed = body.length > 300 ? body.substring(0, 300) + '...' : body;
 
             insights.push({
