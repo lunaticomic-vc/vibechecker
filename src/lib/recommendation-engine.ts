@@ -5,7 +5,7 @@ import { getAllRatings } from '@/lib/ratings';
 import { searchRedditForTitle } from '@/lib/reddit';
 import { searchTMDB } from '@/lib/tmdb';
 import { searchSubstackMulti, verifyUrl } from '@/lib/substack';
-import { searchScreenshots } from '@/lib/brave-images';
+// Brave image search removed — TMDB backdrops are more reliable for stills
 import type { SubstackSearchResult } from '@/lib/substack';
 import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
 import type { YouTubeResult } from '@/lib/youtube';
@@ -513,17 +513,13 @@ export async function getRecommendation(
   const actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
   const actionLabel = 'Watch on sflix';
 
-  // Fetch poster from TMDB, screenshots from Brave
+  // Fetch poster and stills from TMDB
   let imageUrls: string[] = [];
   let thumbnailUrl: string | undefined;
   const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
-  const [tmdb, screenshots] = await Promise.all([
-    searchTMDB(title, tmdbType),
-    searchScreenshots(title, ai.year),
-  ]);
+  const tmdb = await searchTMDB(title, tmdbType);
   if (tmdb?.posterUrl) thumbnailUrl = tmdb.posterUrl;
-  // Use Brave screenshots for the circles, TMDB backdrops as fallback
-  imageUrls = screenshots.length > 0 ? screenshots : (tmdb?.backdropUrls ?? []);
+  imageUrls = tmdb?.backdropUrls ?? [];
   // Gradient fallbacks if no images found
   if (imageUrls.length === 0) {
     imageUrls = [0, 1, 2].map(i => `gradient:${i}:${encodeURIComponent(title)}`);
