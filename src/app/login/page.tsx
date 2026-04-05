@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LoadingMouse from '@/components/LoadingMouse';
 
-type Step = 'are-you' | 'login' | 'wanna-try' | 'guest-welcome' | 'bye';
+type Step = 'are-you' | 'login' | 'what-is' | 'wanna-try' | 'guest-welcome' | 'bye';
 
 export default function LoginPage() {
   const [step, setStep] = useState<Step>('are-you');
@@ -68,7 +68,7 @@ export default function LoginPage() {
             <p className="text-lg text-[#2d2640] font-medium tracking-wide">Are you Danitsa?</p>
             <div className="flex flex-col gap-3 w-full items-center">
               <button onClick={() => { setStep('login'); catSay('prove it~'); }} className={btnClass}>yes</button>
-              <button onClick={() => { setStep('wanna-try'); catSay('hmm a stranger...'); }} className={btnClass}>no</button>
+              <button onClick={() => { setStep('what-is'); catSay('hmm a stranger...'); }} className={btnClass}>no</button>
             </div>
           </>
         )}
@@ -110,9 +110,19 @@ export default function LoginPage() {
           </form>
         )}
 
+        {step === 'what-is' && (
+          <div className="flex flex-col items-center gap-5 max-w-[300px] text-center">
+            <p className="text-lg text-[#2d2640] font-medium tracking-wide">do you know what this is?</p>
+            <p className="text-xs text-[#7c7291] leading-relaxed">
+              this app gives you vibe-based recommendations across movies, tv, anime, youtube, k-drama and more. describe your mood and get something tailored to watch. it also tracks everything you're watching and learns your taste over time.
+            </p>
+            <button onClick={() => { setStep('wanna-try'); catSay('interested?~'); }} className={btnClass}>cool, got it</button>
+          </div>
+        )}
+
         {step === 'wanna-try' && (
           <>
-            <p className="text-lg text-[#2d2640] font-medium tracking-wide">wanna try out the app?</p>
+            <p className="text-lg text-[#2d2640] font-medium tracking-wide">wanna try it out?</p>
             <div className="flex flex-col gap-3 w-full items-center">
               <button onClick={() => { setStep('guest-welcome'); catSay('3 recs on the house~'); }} className={btnClass}>yes</button>
               <button onClick={() => { setStep('bye'); catSay('nuh uh'); }} className={btnClass}>no</button>
