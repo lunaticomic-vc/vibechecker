@@ -189,7 +189,7 @@ export default function TVPage() {
               <p className="text-center text-[#7c7291] py-16 text-sm">{activeTab === 'Todo' ? 'Nothing in your todo list.' : `No ${activeTab.toLowerCase()} shows.`}</p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {activeItems.map(fav => <FavoriteCard key={fav.id} favorite={fav} rating={ratingsMap[fav.id]} currentStatus={getCurrentStatus(fav)} onDelete={handleDelete} onRate={handleRate} />)}
+                {activeItems.map(fav => <FavoriteCard key={fav.id} favorite={fav} rating={ratingsMap[fav.id]} currentStatus={getCurrentStatus(fav)} onDelete={handleDelete} onRate={handleRate} onStatusChange={handleStatusChange} />)}
               </div>
             )}
             {hasMore && (

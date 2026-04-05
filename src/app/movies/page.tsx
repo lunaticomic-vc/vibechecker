@@ -236,6 +236,7 @@ export default function MoviesPage() {
                     currentStatus={getCurrentStatus(fav)}
                     onDelete={handleDelete}
                     onRate={handleRate}
+                    onStatusChange={handleStatusChange}
                   />
                 ))}
               </div>

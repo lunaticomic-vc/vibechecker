@@ -272,6 +272,7 @@ export default function YouTubePage() {
                     landscape
                     onDelete={handleDelete}
                     onRate={handleRate}
+                    onStatusChange={handleStatusChange}
                   />
                 ))}
               </div>

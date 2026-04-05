@@ -30,6 +30,7 @@ interface FavoriteCardProps {
   landscape?: boolean;
   onDelete: (id: number) => void;
   onRate: (favoriteId: number, rating: RatingValue, reasoning?: string) => void;
+  onStatusChange?: (favoriteId: number, newStatus: string) => void;
 }
 
 type AccordionSection = 'about' | 'vibe' | 'rating' | null;
@@ -39,13 +40,14 @@ function parseMeta(metadata?: string): Record<string, unknown> | null {
   try { return JSON.parse(metadata); } catch { return null; }
 }
 
-export default function FavoriteCard({ favorite, rating, currentStatus, showTypeLabel, landscape, onDelete, onRate }: FavoriteCardProps) {
+export default function FavoriteCard({ favorite, rating, currentStatus, showTypeLabel, landscape, onDelete, onRate, onStatusChange }: FavoriteCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [openSection, setOpenSection] = useState<AccordionSection>(null);
   const [cardOrigin, setCardOrigin] = useState({ x: 0, y: 0 });
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
   const didDrag = useRef(false);
+  const clickLock = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { startDrag } = useDragStatus();
 
@@ -65,7 +67,10 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
   }
 
   function handleClick() {
+    if (clickLock.current) return;
     if (!didDrag.current) {
+      clickLock.current = true;
+      setTimeout(() => { clickLock.current = false; }, 300);
       if (cardRef.current) {
         const rect = cardRef.current.getBoundingClientRect();
         setCardOrigin({
