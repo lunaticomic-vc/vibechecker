@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import ProgressCard from '@/components/progress/ProgressCard';
+import StatusDragProvider from '@/components/StatusDragOverlay';
 import type { ProgressWithFavorite } from '@/lib/progress';
 
-type Filter = 'watching' | 'completed' | 'dropped';
+type Filter = 'todo' | 'watching' | 'on_hold' | 'completed' | 'dropped';
 
 const FILTERS: { label: string; value: Filter }[] = [
-  { label: 'Currently Watching', value: 'watching' },
+  { label: 'Todo', value: 'todo' },
+  { label: 'Watching', value: 'watching' },
+  { label: 'On Hold', value: 'on_hold' },
   { label: 'Completed', value: 'completed' },
   { label: 'Dropped', value: 'dropped' },
 ];
@@ -34,10 +37,16 @@ export default function ProgressPage() {
 
   const filtered = items.filter((i) => i.status === filter);
 
+  async function handleStatusChange(favoriteId: number, newStatus: string) {
+    await fetch(`/api/progress?id=${favoriteId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
+    fetchProgress();
+  }
+
   return (
-    <div className="min-h-screen px-4 py-8 max-w-6xl mx-auto">
+    <StatusDragProvider onStatusChange={handleStatusChange}>
+    <div className="min-h-screen px-4 pt-20 pb-8 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-[#2d2640] mb-1">Watch Progress</h1>
-      <p className="text-sm text-[#7c7291] mb-8">Track what you're watching, completed, or dropped.</p>
+      <p className="text-sm text-[#7c7291] mb-8">Track your content across all categories.</p>
 
       {/* Filter tabs */}
       <div className="flex gap-2 mb-8 border-b border-[#e9e4f5] pb-0">
@@ -85,5 +94,6 @@ export default function ProgressPage() {
         </div>
       )}
     </div>
+    </StatusDragProvider>
   );
 }

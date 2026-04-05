@@ -1,6 +1,8 @@
 'use client';
 
+import { useRef } from 'react';
 import type { ProgressWithFavorite } from '@/lib/progress';
+import { useDragStatus } from '@/components/StatusDragOverlay';
 
 interface ProgressCardProps {
   item: ProgressWithFavorite;
@@ -24,6 +26,21 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
+  const holdTimer = useRef<NodeJS.Timeout | null>(null);
+  const { startDrag } = useDragStatus();
+
+  function handlePointerDown(e: React.MouseEvent | React.TouchEvent) {
+    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    holdTimer.current = setTimeout(() => {
+      startDrag(item.favorite_id, item.favorite_title, item.status, x, y);
+    }, 500);
+  }
+
+  function handlePointerUp() {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+  }
+
   const progressPercent =
     item.total_episodes
       ? Math.round((item.current_episode / item.total_episodes) * 100)
@@ -39,7 +56,14 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
   }
 
   return (
-    <div className="bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden flex flex-col hover:border-[#c4b5fd] hover:shadow-sm transition-all">
+    <div
+      className="bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden flex flex-col hover:border-[#c4b5fd] hover:shadow-sm transition-all select-none"
+      onMouseDown={handlePointerDown}
+      onMouseUp={handlePointerUp}
+      onMouseLeave={handlePointerUp}
+      onTouchStart={handlePointerDown}
+      onTouchEnd={handlePointerUp}
+    >
       {/* Thumbnail */}
       <div className="relative h-40 bg-[#f5f3ff]">
         {item.favorite_image ? (
