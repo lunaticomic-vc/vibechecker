@@ -136,12 +136,9 @@ export default function Home() {
   return (
     <main className="min-h-screen h-screen relative overflow-hidden">
 
-      {/* Title — right side */}
-      <div className="fixed right-8 top-1/2 -translate-y-1/2 z-10 hidden lg:block">
-        <h1
-          className="text-5xl font-extralight tracking-[0.25em] text-white/30 select-none"
-          style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-        >
+      {/* Title — upper right */}
+      <div className="fixed right-8 top-6 z-10">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-[0.04em] text-[#2d2640] select-none font-[family-name:var(--font-playfair)] italic">
           Consumption Corner
         </h1>
       </div>
