@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const [contentOpen, setContentOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -13,6 +14,7 @@ export default function Header() {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false);
+        setContentOpen(false);
       }
     }
     if (open) document.addEventListener('mousedown', handleClickOutside);
@@ -26,7 +28,7 @@ export default function Header() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const size = 52;
+    const size = 48;
     canvas.width = size;
     canvas.height = size;
     let animId: number;
@@ -37,10 +39,8 @@ export default function Header() {
       const cx = s / 2;
       const cy = s / 2;
       const r = s / 2 - 2;
-
       ctx!.clearRect(0, 0, s, s);
       time += 0.015;
-
       const isActive = hovering || open;
 
       for (let y = 0; y < s; y += 2) {
@@ -48,33 +48,20 @@ export default function Header() {
           const dx = x - cx;
           const dy = y - cy;
           const dist = Math.sqrt(dx * dx + dy * dy);
-
           if (dist > r + 1) continue;
 
-          // Crescent: darken the right side
           const crescentFade = Math.max(0, Math.min(1, (dx + r * 0.3) / (r * 1.2)));
-
-          // Surface waves
           const nx = x / s;
           const ny = y / s;
-          const wave = Math.sin(nx * 10 + time * 2) * 0.1
-            + Math.sin(ny * 12 - time * 1.5) * 0.08
-            + Math.sin((nx + ny) * 8 + time) * 0.06;
-
-          // Light direction (top-left)
+          const wave = Math.sin(nx * 10 + time * 2) * 0.1 + Math.sin(ny * 12 - time * 1.5) * 0.08;
           const lightAngle = Math.atan2(dy, dx);
           const lightFade = (Math.cos(lightAngle + 2.4) + 1) * 0.5;
-
           const base = 0.6 + lightFade * 0.3 + crescentFade * 0.1 + wave;
           const glow = isActive ? 0.15 : 0;
-
           const dither = (Math.random() - 0.5) * 0.12;
           const val = Math.max(0, Math.min(1, base + dither + glow));
-
-          // Edge softness
           const edgeFade = dist > r - 1.5 ? Math.max(0, (r + 1 - dist) / 2.5) : 1;
 
-          // Colors: lilac-grey moon
           const rr = Math.round(195 + val * 55);
           const gg = Math.round(185 + val * 60);
           const bb = Math.round(215 + val * 38);
@@ -83,19 +70,16 @@ export default function Header() {
           ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${alpha})`;
           ctx!.fillRect(x, y, 2, 2);
 
-          // Crater dots
-          const craterDist1 = Math.sqrt((x - cx + 4) ** 2 + (y - cy - 5) ** 2);
-          const craterDist2 = Math.sqrt((x - cx - 6) ** 2 + (y - cy + 3) ** 2);
-          const craterDist3 = Math.sqrt((x - cx + 2) ** 2 + (y - cy + 8) ** 2);
-
-          if ((craterDist1 < 4 || craterDist2 < 3 || craterDist3 < 2.5) && Math.random() > 0.5) {
+          const c1 = Math.sqrt((x - cx + 4) ** 2 + (y - cy - 5) ** 2);
+          const c2 = Math.sqrt((x - cx - 6) ** 2 + (y - cy + 3) ** 2);
+          const c3 = Math.sqrt((x - cx + 2) ** 2 + (y - cy + 8) ** 2);
+          if ((c1 < 4 || c2 < 3 || c3 < 2.5) && Math.random() > 0.5) {
             ctx!.fillStyle = `rgba(170, 160, 195, ${0.15 * edgeFade})`;
             ctx!.fillRect(x, y, 2, 2);
           }
         }
       }
 
-      // Shine halo when active
       if (isActive) {
         const gradient = ctx!.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 1.8);
         gradient.addColorStop(0, 'rgba(196, 181, 253, 0.15)');
@@ -112,61 +96,69 @@ export default function Header() {
     return () => cancelAnimationFrame(animId);
   }, [hovering, open]);
 
-  return (
-    <div ref={menuRef} className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center pt-5 pointer-events-none">
-      {/* Moon */}
-      <button
-        onClick={() => setOpen(v => !v)}
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => setHovering(false)}
-        className="pointer-events-auto relative w-[52px] h-[52px] rounded-full focus:outline-none"
-        aria-label="Menu"
-        style={{
-          filter: hovering || open ? 'drop-shadow(0 0 20px rgba(196,181,253,0.5))' : 'drop-shadow(0 0 8px rgba(196,181,253,0.15))',
-          transition: 'filter 0.7s ease',
-        }}
-      >
-        <canvas
-          ref={canvasRef}
-          className="w-full h-full rounded-full"
-        />
-      </button>
+  function navClick() {
+    setOpen(false);
+    setContentOpen(false);
+  }
 
-      {/* Nav dropdown */}
+  const linkClass = "px-3 py-1.5 rounded-lg text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors whitespace-nowrap";
+
+  return (
+    <div ref={menuRef} className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center pointer-events-none">
+      {/* Horizontal nav bar — slides down from top */}
       <div
-        className={`mt-4 flex flex-col items-center transition-all duration-500 ease-out overflow-hidden ${
-          open ? 'max-h-[420px] opacity-100 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'
+        className={`w-full transition-all duration-500 ease-out overflow-hidden ${
+          open ? 'max-h-16 opacity-100 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'
         }`}
       >
-        <div className="bg-white/85 backdrop-blur-xl border border-[#e9e4f5] rounded-2xl px-6 py-3 shadow-lg shadow-purple-100/20 flex flex-col gap-0.5">
-          <Link href="/" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            Home
-          </Link>
-          <Link href="/movies" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            Movies
-          </Link>
-          <Link href="/tv" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            TV
-          </Link>
-          <Link href="/anime" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            Anime
-          </Link>
-          <Link href="/youtube" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            YouTube
-          </Link>
-          <Link href="/substack" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            Substack
-          </Link>
-          <Link href="/progress" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            Progress
-          </Link>
-          <Link href="/interests" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            Interests
-          </Link>
-          <Link href="/settings" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl text-sm text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors text-center">
-            Settings
-          </Link>
+        <div className="bg-white/85 backdrop-blur-xl border-b border-[#e9e4f5] shadow-sm shadow-purple-100/10">
+          <div className="mx-auto max-w-3xl flex items-center justify-center gap-1 px-4 py-2.5">
+            <Link href="/" onClick={navClick} className={linkClass}>Home</Link>
+
+            {/* Content dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setContentOpen(v => !v)}
+                className={`${linkClass} flex items-center gap-1`}
+              >
+                Content
+                <svg className={`w-3 h-3 transition-transform duration-200 ${contentOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {contentOpen && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white/95 backdrop-blur-xl border border-[#e9e4f5] rounded-xl shadow-lg shadow-purple-100/15 py-1.5 min-w-[120px] z-50">
+                  <Link href="/movies" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Movies</Link>
+                  <Link href="/tv" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">TV Shows</Link>
+                  <Link href="/anime" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Anime</Link>
+                  <Link href="/youtube" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">YouTube</Link>
+                  <Link href="/substack" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Substack</Link>
+                </div>
+              )}
+            </div>
+
+            <Link href="/progress" onClick={navClick} className={linkClass}>Progress</Link>
+            <Link href="/interests" onClick={navClick} className={linkClass}>Interests</Link>
+            <Link href="/settings" onClick={navClick} className={linkClass}>Settings</Link>
+          </div>
         </div>
+      </div>
+
+      {/* Moon — pushes down when nav is open */}
+      <div className={`transition-all duration-500 ease-out ${open ? 'pt-2' : 'pt-5'}`}>
+        <button
+          onClick={() => { setOpen(v => !v); setContentOpen(false); }}
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          className="pointer-events-auto relative w-[48px] h-[48px] rounded-full focus:outline-none"
+          aria-label="Menu"
+          style={{
+            filter: hovering || open ? 'drop-shadow(0 0 20px rgba(196,181,253,0.5))' : 'drop-shadow(0 0 8px rgba(196,181,253,0.15))',
+            transition: 'filter 0.7s ease',
+          }}
+        >
+          <canvas ref={canvasRef} className="w-full h-full rounded-full" />
+        </button>
       </div>
     </div>
   );
