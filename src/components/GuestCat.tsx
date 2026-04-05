@@ -8,6 +8,8 @@ export default function GuestCat() {
   const [isOwner, setIsOwner] = useState(false);
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [attacking, setAttacking] = useState(false);
+  const [bubble, setBubble] = useState<string | null>(null);
+  const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const catRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,9 +38,32 @@ export default function GuestCat() {
     return () => window.removeEventListener('mousemove', handleMouse);
   }, []);
 
+  function showBubble(msg: string, duration = 3000) {
+    if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
+    setBubble(msg);
+    bubbleTimer.current = setTimeout(() => setBubble(null), duration);
+  }
+
+  // Show rec count on first load for guests
+  useEffect(() => {
+    if (!isOwner && remaining !== null) {
+      const msgs = remaining === 0
+        ? ["no recs left... sorry!"]
+        : [`${remaining} rec${remaining !== 1 ? 's' : ''} left`, "click wisely~"];
+      showBubble(msgs[0]);
+      if (msgs[1]) {
+        setTimeout(() => showBubble(msgs[1]), 3500);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remaining, isOwner]);
+
+  const ATTACK_MESSAGES = ['ow!', 'hey!', 'mrrow!', 'hiss!', '*chomp*', 'rude.', '>:3'];
+
   function handleClick() {
     if (attacking) return;
     setAttacking(true);
+    showBubble(ATTACK_MESSAGES[Math.floor(Math.random() * ATTACK_MESSAGES.length)], 2000);
     setTimeout(() => setAttacking(false), 700);
   }
 
@@ -162,11 +187,20 @@ export default function GuestCat() {
           </AnimatePresence>
         </svg>
 
-        {!isOwner && remaining !== null && (
-          <span className="text-[10px] text-[#b0a8c4] font-medium">
-            {remaining === 0 ? 'no recs left' : `${remaining} rec${remaining !== 1 ? 's' : ''} left`}
-          </span>
-        )}
+        <AnimatePresence>
+          {bubble && (
+            <motion.div
+              initial={{ opacity: 0, y: 5, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 5, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+              className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white/90 backdrop-blur-sm border border-[#e9e4f5] rounded-xl px-3 py-1 shadow-sm"
+            >
+              <span className="text-[11px] text-[#7c7291]">{bubble}</span>
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white/90 border-r border-b border-[#e9e4f5] rotate-45" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

@@ -7,8 +7,15 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [contentOpen, setContentOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const [authed, setAuthed] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/status').then(r => r.json()).then(data => {
+      if (data.role === 'owner') setAuthed(true);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -102,6 +109,8 @@ export default function Header() {
   }
 
   const linkClass = "px-3 py-1.5 rounded-lg text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors whitespace-nowrap";
+
+  if (!authed) return null;
 
   return (
     <div ref={menuRef} className="fixed top-0 left-0 right-0 z-[60] pointer-events-none">
