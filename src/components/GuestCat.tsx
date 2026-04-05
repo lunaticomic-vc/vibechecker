@@ -98,26 +98,39 @@ export default function GuestCat() {
       className="fixed bottom-3 left-3 z-50 cursor-pointer select-none"
     >
       <div className="flex flex-col items-center gap-0.5 relative">
-        <pre className="text-[#b0a8c4] text-[14px] leading-[1.1] font-mono select-none" style={{ fontFamily: 'monospace' }}>
+        <pre className="text-[#b0a8c4] text-[11px] leading-[1.15] select-none" style={{ fontFamily: 'monospace' }}>
 {attacking
-? ` /\\_/\\
-( o.o )
- > ^ <
-/|   |\\
-  |___|`
-: ` /\\_/\\
-( ${eyeOffset.x > 0.5 ? 'o' : eyeOffset.x < -0.5 ? 'o' : '•'}.${eyeOffset.x > 0.5 ? 'o' : eyeOffset.x < -0.5 ? 'o' : '•'} )
- > ^ <`}
+? `  |\\      /|
+  | \\    / |
+  |  \\  /  |
+  |   \\/   |
+  |  ${eyeOffset.x > 0 ? 'o' : '•'} ${eyeOffset.x < 0 ? 'o' : '•'}  |
+  |   >.<  |
+  /        \\
+ /  /|  |\\  \\
+/  / |  | \\  \\
+\\_/  |  |  \\_/
+     |__|`
+: `  |\\    /|
+  | \\  / |
+  |  \\/  |
+  | ${eyeOffset.x > 0 ? 'o' : '•'}  ${eyeOffset.x < 0 ? 'o' : '•'} |
+  |  >.<  |
+   \\      /
+    |    |
+    |    |
+    |    |
+   /|    |\\
+  (_|    |_)`}
         </pre>
-        {/* Animated tail */}
-        <motion.div
-          className="text-[#b0a8c4] text-[14px] font-mono select-none -mt-1 ml-3"
-          animate={{ rotate: [0, 20, -20, 0] }}
+        <motion.pre
+          className="text-[#b0a8c4] text-[11px] leading-[1.15] select-none -mt-3"
+          style={{ fontFamily: 'monospace', transformOrigin: '20% 0%' }}
+          animate={{ rotate: [0, 15, -15, 0] }}
           transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ transformOrigin: 'left center', display: 'inline-block' }}
         >
-          ~
-        </motion.div>
+{'          ~'}
+        </motion.pre>
 
         {/* Speech bubble */}
         <AnimatePresence>
