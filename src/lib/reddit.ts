@@ -54,6 +54,19 @@ export async function searchRedditForTitle(title: string, type: string): Promise
 
             // Filter for quality: comments about the show's quality, worth watching, etc.
             const lower = body.toLowerCase();
+            // Skip spoilers and context-dependent comments
+            if (lower.includes('spoiler') || lower.includes('spoilers') || lower.includes('&gt;!') ||
+                lower.includes('spoiler alert') || lower.includes('major spoiler') ||
+                lower.includes('dies') || lower.includes('killed off') || lower.includes('plot twist') ||
+                lower.includes('the ending is') || lower.includes('turns out') ||
+                lower.includes('did you see when') || lower.includes('that scene where') ||
+                lower.includes('remember when') || lower.includes('lmao') || lower.includes('same') ||
+                lower.includes('this') === (body.trim().length < 15) ||
+                lower.startsWith('i mean') || lower.startsWith('right?') ||
+                lower.startsWith('lol') || lower.startsWith('ikr') ||
+                lower.includes('replied to') || lower.includes('username') ||
+                body.split(' ').length < 8) continue;
+
             // Only include genuine reviews — opinions on quality, worth watching, acting, story
             const reviewSignals = [
               'worth watching', 'worth it', 'must watch', 'must see', 'highly recommend',
