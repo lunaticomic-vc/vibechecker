@@ -62,11 +62,8 @@ Open `.env` and add your keys:
 | `MAL_CLIENT_ID` | Optional | MyAnimeList import | [myanimelist.net/apiconfig](https://myanimelist.net/apiconfig) |
 | `GOOGLE_CLIENT_ID` | Optional | YouTube liked videos import | Google Cloud Console > OAuth |
 | `GOOGLE_CLIENT_SECRET` | Optional | Same | Same |
-| `TURSO_DATABASE_URL` | For deploy | Cloud database | [turso.tech](https://turso.tech) |
-| `TURSO_AUTH_TOKEN` | For deploy | Same | Same |
-| `NEXT_PUBLIC_BASE_URL` | For deploy | Your production URL | Your Vercel dashboard |
 
-> For local development, only `OPENAI_API_KEY` is needed. Everything else is optional or only needed for deployment.
+> For local development, only `OPENAI_API_KEY` is needed. Everything else enhances the experience but isn't required. Locally, the app uses a SQLite file — no cloud database setup needed.
 
 ### 3. Run it
 
@@ -75,31 +72,6 @@ npm run dev
 ```
 
 Open [https://localhost:3000](https://localhost:3000)
-
----
-
-## Deploying to Vercel
-
-### Set up Turso (free cloud database)
-
-```bash
-curl -sSfL https://get.tur.so/install.sh | bash
-turso auth signup
-turso db create vibechecker
-turso db show vibechecker --url         # → TURSO_DATABASE_URL
-turso db tokens create vibechecker      # → TURSO_AUTH_TOKEN
-```
-
-### Deploy
-
-1. Go to [vercel.com/new](https://vercel.com/new) → import this repo
-2. Add your environment variables
-3. Deploy
-
-If using YouTube import, add this redirect URI in Google Cloud Console:
-```
-https://your-app.vercel.app/api/auth/google/callback
-```
 
 ---
 
