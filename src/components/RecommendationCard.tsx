@@ -92,8 +92,8 @@ function PosterImage({ src, alt }: { src: string; alt: string }) {
         alt={alt}
         className="rounded-2xl border-2 border-[#e9e4f5] object-cover shadow-sm transition-all duration-500 ease-out"
         style={{
-          width: expanded ? '220px' : '90px',
-          height: expanded ? 'auto' : '90px',
+          width: expanded ? '300px' : '180px',
+          height: expanded ? 'auto' : '180px',
           objectFit: expanded ? 'contain' : 'cover',
           boxShadow: expanded ? '0 20px 60px rgba(0,0,0,0.15), 0 0 40px rgba(196,181,253,0.2)' : '0 4px 15px rgba(0,0,0,0.04)',
           borderColor: expanded ? 'rgba(196,181,253,0.5)' : 'rgba(233,228,245,0.5)',
@@ -167,7 +167,7 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
       <div className="relative z-10 flex gap-4 items-start max-w-[480px] mx-auto">
         {thumbnailUrl && (
           <div onClick={handleWatch} className="shrink-0 cursor-pointer group">
-            <div className="w-[280px] sm:w-[320px] rounded-xl overflow-hidden border-2 border-[#e9e4f5] hover:border-[#c4b5fd] transition-all shadow-sm hover:shadow-md">
+            <div className="w-[360px] sm:w-[420px] rounded-xl overflow-hidden border-2 border-[#e9e4f5] hover:border-[#c4b5fd] transition-all shadow-sm hover:shadow-md">
               <img src={thumbnailUrl} alt={title} className="w-full aspect-video object-cover group-hover:scale-105 transition-transform duration-300" />
             </div>
           </div>
@@ -260,7 +260,7 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
         if (!pos) return null;
         return (
           <div key={i} className="fixed z-[3]" style={pos}>
-            <ScreencapCircle src={src} alt={`${title} scene ${i + 1}`} size={150} delay={i} />
+            <ScreencapCircle src={src} alt={`${title} scene ${i + 1}`} size={300} delay={i} />
           </div>
         );
       })}
