@@ -169,11 +169,13 @@ export default function Home() {
               <button
                 onClick={async () => {
                   if (!recommendation || loading) return;
-                  await fetch('/api/rejected', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: recommendation.title, type: recommendation.type }),
-                  });
+                  try {
+                    await fetch('/api/rejected', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ title: recommendation.title, type: recommendation.type }),
+                    });
+                  } catch { /* save is best-effort, always regenerate */ }
                   if (lastVibe) handleSubmit(lastVibe);
                 }}
                 disabled={loading}

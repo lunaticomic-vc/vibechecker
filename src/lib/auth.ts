@@ -1,13 +1,34 @@
-import { createHmac } from 'crypto';
-
 const COOKIE_NAME = 'cc_auth';
 
 function getSecret(): string {
   return process.env.APP_SECRET ?? 'dev-secret-change-me';
 }
 
+// Simple sync hash — no crypto import needed, works in Edge + Node
 function sign(value: string): string {
-  return createHmac('sha256', getSecret()).update(value).digest('hex');
+  const secret = getSecret();
+  const input = value + ':' + secret;
+  // FNV-1a inspired hash, produces a 64-char hex string
+  let h1 = 0x811c9dc5 >>> 0;
+  let h2 = 0x01000193 >>> 0;
+  let h3 = 0xdeadbeef >>> 0;
+  let h4 = 0xcafebabe >>> 0;
+  for (let i = 0; i < input.length; i++) {
+    const c = input.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ c, 0x27d4eb2d) >>> 0;
+    h3 = Math.imul(h3 ^ c, 0x1b873593) >>> 0;
+    h4 = Math.imul(h4 ^ c, 0xcc9e2d51) >>> 0;
+  }
+  // Multiple rounds for avalanche
+  for (let r = 0; r < 100; r++) {
+    h1 = Math.imul(h1 ^ h4, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ h1, 0x27d4eb2d) >>> 0;
+    h3 = Math.imul(h3 ^ h2, 0x1b873593) >>> 0;
+    h4 = Math.imul(h4 ^ h3, 0xcc9e2d51) >>> 0;
+  }
+  const hex = (n: number) => n.toString(16).padStart(8, '0');
+  return hex(h1) + hex(h2) + hex(h3) + hex(h4) + hex(h1 ^ h2) + hex(h2 ^ h3) + hex(h3 ^ h4) + hex(h4 ^ h1);
 }
 
 export function createAuthCookie(): { name: string; value: string; options: Record<string, unknown> } {
