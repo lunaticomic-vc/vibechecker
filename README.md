@@ -15,6 +15,31 @@ A personal vibe-based recommendation engine. Pick what you want to watch, descri
 - **Imports** — MyAnimeList, YouTube (OAuth), Letterboxd (CSV), bulk paste
 - **Ethereal UI** — dithered wave background, floating moon navigation, glassmorphism
 
+## Why this exists
+
+You finally have free time. You're on the couch, food's ready, and you open Netflix. Then YouTube. Then your anime list. Then back to Netflix. 20 minutes later you're still scrolling, the food's cold, and you've watched nothing.
+
+**VibeChecker fixes that.** You tell it how you feel, and it picks for you — based on what you actually love, not what's trending.
+
+### Scenarios
+
+**"I'm eating lunch, want something light"**
+→ Pick YouTube → type "eating, something light and fun, 15 mins" → get a specific video that matches your humor and interests
+
+**"Cozy Sunday, want to feel something"**
+→ Pick Movie → "rainy day, wrapped in blanket, want to cry a little" → get a film recommendation based on what made you feel things before, with Reddit reviews to confirm it's worth it
+
+**"Can't sleep, need background noise"**
+→ Pick TV Show → "falling asleep, nothing too intense, familiar vibes" → get a comfort show suggestion with episode info
+
+**"I want to learn something interesting"**
+→ Pick Substack → "curious, want something thought-provoking about society or philosophy" → get a specific article recommendation matched to your interests
+
+**"I have the whole evening free"**
+→ Pick Anime → "binge mode, something gripping that I won't be able to stop watching" → get an anime matched to your taste profile with screencaps and actor info
+
+The more you rate things and add interests, the better it knows you.
+
 ## Setup
 
 ### 1. Clone and install
