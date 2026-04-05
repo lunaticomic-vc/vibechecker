@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import FavoriteCard from '@/components/favorites/FavoriteCard';
+import StatusDragProvider from '@/components/StatusDragOverlay';
 import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index';
 
 type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
@@ -96,12 +97,20 @@ export default function AnimePage() {
   const grouped = SECTION_ORDER.reduce<Record<StatusGroup, Favorite[]>>((acc, s) => { acc[s] = []; return acc; }, {} as Record<StatusGroup, Favorite[]>);
   for (const fav of favorites) { grouped[getGroup(fav)].push(fav); }
 
+  const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
+  function getCurrentStatus(fav: Favorite): string { return statusGroupToApi[getGroup(fav)]; }
+  async function handleStatusChange(favoriteId: number, newStatus: string) {
+    await fetch('/api/progress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favorite_id: favoriteId, status: newStatus }) });
+    await fetchProgress();
+  }
+
   const ratingOrder: Record<string, number> = { felt_things: 0, enjoyed: 1, watched: 2, not_my_thing: 3 };
   let activeItems: Favorite[] = grouped[activeTab] ?? [];
-  if (ratingFilter !== 'all') { activeItems = activeItems.filter(f => ratingsMap[f.id]?.rating === ratingFilter); }
-  activeItems = [...activeItems].sort((a, b) => (ratingOrder[ratingsMap[a.id]?.rating] ?? 4) - (ratingOrder[ratingsMap[b.id]?.rating] ?? 4));
+  if (ratingFilter !== 'all' && activeTab !== 'Todo') { activeItems = activeItems.filter(f => ratingsMap[f.id]?.rating === ratingFilter); }
+  if (activeTab !== 'Todo') activeItems = [...activeItems].sort((a, b) => (ratingOrder[ratingsMap[a.id]?.rating] ?? 4) - (ratingOrder[ratingsMap[b.id]?.rating] ?? 4));
 
   return (
+    <StatusDragProvider onStatusChange={handleStatusChange}>
     <div className="min-h-screen bg-white overflow-y-auto">
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
@@ -130,14 +139,16 @@ export default function AnimePage() {
           ))}
         </div>
 
-        <div className="flex gap-1.5 mb-6 flex-wrap items-center">
-          {(['all', 'felt_things', 'enjoyed', 'watched', 'not_my_thing'] as const).map(v => (
-            <button key={v} onClick={() => setRatingFilter(v)}
-              className={`text-[10px] px-2 py-1 rounded-full border transition-all ${ratingFilter === v ? 'border-[#8b5cf6] bg-[#f5f3ff] text-[#7c3aed]' : 'border-[#e9e4f5] text-[#b0a8c4] hover:text-[#7c7291]'}`}>
-              {v === 'all' ? 'all' : v === 'felt_things' ? '💜 felt things' : v === 'enjoyed' ? '👍 enjoyed' : v === 'watched' ? '👁 watched' : '👎 not my thing'}
-            </button>
-          ))}
-        </div>
+        {activeTab !== 'Todo' && (
+          <div className="flex gap-1.5 mb-6 flex-wrap items-center">
+            {(['all', 'felt_things', 'enjoyed', 'watched', 'not_my_thing'] as const).map(v => (
+              <button key={v} onClick={() => setRatingFilter(v)}
+                className={`text-[10px] px-2 py-1 rounded-full border transition-all ${ratingFilter === v ? 'border-[#8b5cf6] bg-[#f5f3ff] text-[#7c3aed]' : 'border-[#e9e4f5] text-[#b0a8c4] hover:text-[#7c7291]'}`}>
+                {v === 'all' ? 'all' : v === 'felt_things' ? '💜 felt things' : v === 'enjoyed' ? '👍 enjoyed' : v === 'watched' ? '👁 watched' : '👎 not my thing'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" /></div>
@@ -147,7 +158,7 @@ export default function AnimePage() {
               <p className="text-center text-[#7c7291] py-16 text-sm">{activeTab === 'Todo' ? 'Nothing in your todo list. Add some or import from MAL in Settings!' : `No ${activeTab.toLowerCase()} anime.`}</p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {activeItems.map(fav => <FavoriteCard key={fav.id} favorite={fav} rating={ratingsMap[fav.id]} onDelete={handleDelete} onRate={handleRate} />)}
+                {activeItems.map(fav => <FavoriteCard key={fav.id} favorite={fav} rating={ratingsMap[fav.id]} currentStatus={getCurrentStatus(fav)} onDelete={handleDelete} onRate={handleRate} />)}
               </div>
             )}
             {hasMore && (
@@ -159,5 +170,6 @@ export default function AnimePage() {
         )}
       </div>
     </div>
+    </StatusDragProvider>
   );
 }

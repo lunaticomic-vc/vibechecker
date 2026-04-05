@@ -136,34 +136,11 @@ export default function Home() {
     <main className="min-h-screen relative overflow-hidden">
       <Particles />
 
-      <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen">
+      <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen -mt-[70px]">
 
         {/* Screen 1: Just the four squares */}
         {screen === 'pick' && (
           <div className="animate-[fadeIn_0.5s_ease-out] flex flex-col items-center gap-6">
-            {/* Last watching banner */}
-            {lastWatching && !lastDismissed && (
-              <div className="w-full max-w-[340px] sm:max-w-[440px] bg-white/70 backdrop-blur-sm border-2 border-[#e9e4f5] rounded-2xl px-4 py-3 flex items-center gap-3 animate-[fadeIn_0.3s_ease-out]">
-                <p className="text-xs text-[#7c7291] flex-1">
-                  Add <span className="font-medium text-[#2d2640]">{lastWatching.favorite_title}</span> to completed?
-                </p>
-                <button
-                  onClick={handleMarkCompleted}
-                  className="text-[10px] px-3 py-1.5 bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-colors shrink-0"
-                >
-                  Yes
-                </button>
-                <button
-                  onClick={() => setLastDismissed(true)}
-                  className="text-[#c8c2d6] hover:text-[#7c7291] transition-colors shrink-0"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            )}
-
             <ContentTypeSelector selected={null} onSelect={handlePickType} />
           </div>
         )}
@@ -253,6 +230,20 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Bottom-right notification */}
+      {lastWatching && !lastDismissed && (
+        <div className="fixed bottom-6 right-6 z-50 bg-white/80 backdrop-blur-2xl border border-white/40 rounded-2xl px-4 py-3 shadow-lg shadow-purple-200/15 flex items-center gap-3 max-w-[300px] animate-[fadeIn_0.3s_ease-out]"
+          style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}>
+          <p className="text-xs text-[#7c7291] flex-1">
+            Mark <span className="font-medium text-[#2d2640]">{lastWatching.favorite_title}</span> completed?
+          </p>
+          <button onClick={handleMarkCompleted} className="text-[10px] px-3 py-1.5 bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-colors shrink-0">Yes</button>
+          <button onClick={() => setLastDismissed(true)} className="text-[#c8c2d6] hover:text-[#7c7291] transition-colors shrink-0">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
 
       <style jsx>{`
         @keyframes fadeIn {

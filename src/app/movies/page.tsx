@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index';
 import FavoriteCard from '@/components/favorites/FavoriteCard';
 import AddFavoriteForm from '@/components/favorites/AddFavoriteForm';
+import StatusDragProvider from '@/components/StatusDragOverlay';
 
 type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
 
@@ -119,18 +120,33 @@ export default function MoviesPage() {
   }
 
   // Apply rating filter and sort
+  const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
+  const apiToStatusGroup: Record<string, StatusGroup> = { todo: 'Todo', watching: 'In Progress', on_hold: 'On Hold', completed: 'Completed' };
+
+  function getCurrentStatus(fav: Favorite): string {
+    return statusGroupToApi[getGroup(fav)];
+  }
+
+  async function handleStatusChange(favoriteId: number, newStatus: string) {
+    await fetch('/api/progress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favorite_id: favoriteId, status: newStatus }) });
+    await fetchProgress();
+  }
+
   const ratingOrder: Record<string, number> = { felt_things: 0, enjoyed: 1, watched: 2, not_my_thing: 3 };
   let activeItems: Favorite[] = grouped[activeTab] ?? [];
-  if (ratingFilter !== 'all') {
+  if (ratingFilter !== 'all' && activeTab !== 'Todo') {
     activeItems = activeItems.filter(f => ratingsMap[f.id]?.rating === ratingFilter);
   }
-  activeItems = [...activeItems].sort((a, b) => {
-    const oa = ratingOrder[ratingsMap[a.id]?.rating] ?? 4;
-    const ob = ratingOrder[ratingsMap[b.id]?.rating] ?? 4;
-    return oa - ob;
-  });
+  if (activeTab !== 'Todo') {
+    activeItems = [...activeItems].sort((a, b) => {
+      const oa = ratingOrder[ratingsMap[a.id]?.rating] ?? 4;
+      const ob = ratingOrder[ratingsMap[b.id]?.rating] ?? 4;
+      return oa - ob;
+    });
+  }
 
   return (
+    <StatusDragProvider onStatusChange={handleStatusChange}>
     <div className="min-h-screen bg-white overflow-y-auto">
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
@@ -176,17 +192,19 @@ export default function MoviesPage() {
           ))}
         </div>
 
-        {/* Rating filter + sort */}
-        <div className="flex gap-1.5 mb-6 flex-wrap items-center">
-          {(['all', 'felt_things', 'enjoyed', 'watched', 'not_my_thing'] as const).map(v => (
-            <button key={v} onClick={() => setRatingFilter(v)}
-              className={`text-[10px] px-2 py-1 rounded-full border transition-all ${
-                ratingFilter === v ? 'border-[#8b5cf6] bg-[#f5f3ff] text-[#7c3aed]' : 'border-[#e9e4f5] text-[#b0a8c4] hover:text-[#7c7291]'
-              }`}>
-              {v === 'all' ? 'all' : v === 'felt_things' ? '💜 felt things' : v === 'enjoyed' ? '👍 enjoyed' : v === 'watched' ? '👁 watched' : '👎 not my thing'}
-            </button>
-          ))}
-        </div>
+        {/* Rating filter — hidden on Todo tab */}
+        {activeTab !== 'Todo' && (
+          <div className="flex gap-1.5 mb-6 flex-wrap items-center">
+            {(['all', 'felt_things', 'enjoyed', 'watched', 'not_my_thing'] as const).map(v => (
+              <button key={v} onClick={() => setRatingFilter(v)}
+                className={`text-[10px] px-2 py-1 rounded-full border transition-all ${
+                  ratingFilter === v ? 'border-[#8b5cf6] bg-[#f5f3ff] text-[#7c3aed]' : 'border-[#e9e4f5] text-[#b0a8c4] hover:text-[#7c7291]'
+                }`}>
+                {v === 'all' ? 'all' : v === 'felt_things' ? '💜 felt things' : v === 'enjoyed' ? '👍 enjoyed' : v === 'watched' ? '👁 watched' : '👎 not my thing'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16">
@@ -205,6 +223,7 @@ export default function MoviesPage() {
                     key={fav.id}
                     favorite={fav}
                     rating={ratingsMap[fav.id]}
+                    currentStatus={getCurrentStatus(fav)}
                     onDelete={handleDelete}
                     onRate={handleRate}
                   />
@@ -226,5 +245,6 @@ export default function MoviesPage() {
         )}
       </div>
     </div>
+    </StatusDragProvider>
   );
 }

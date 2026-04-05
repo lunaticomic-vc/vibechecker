@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { Favorite, RatingValue } from '@/types/index';
 import RatingSelector from '@/components/RatingSelector';
+import { useDragStatus } from '@/components/StatusDragOverlay';
 
 const TYPE_LABELS: Record<string, string> = {
   movie: 'Movie',
@@ -23,12 +24,27 @@ const TYPE_COLORS: Record<string, string> = {
 interface FavoriteCardProps {
   favorite: Favorite;
   rating?: { rating: RatingValue; reasoning?: string };
+  currentStatus?: string;
   onDelete: (id: number) => void;
   onRate: (favoriteId: number, rating: RatingValue, reasoning?: string) => void;
 }
 
-export default function FavoriteCard({ favorite, rating, onDelete, onRate }: FavoriteCardProps) {
+export default function FavoriteCard({ favorite, rating, currentStatus, onDelete, onRate }: FavoriteCardProps) {
   const [confirming, setConfirming] = useState(false);
+  const holdTimer = useRef<NodeJS.Timeout | null>(null);
+  const { startDrag } = useDragStatus();
+
+  function handlePointerDown(e: React.MouseEvent | React.TouchEvent) {
+    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    holdTimer.current = setTimeout(() => {
+      startDrag(favorite.id, favorite.title, currentStatus ?? 'todo', x, y);
+    }, 500);
+  }
+
+  function handlePointerUp() {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+  }
 
   function handleDelete() {
     if (!confirming) {
@@ -39,7 +55,14 @@ export default function FavoriteCard({ favorite, rating, onDelete, onRate }: Fav
   }
 
   return (
-    <div className="relative group bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden hover:border-[#c4b5fd] hover:shadow-sm transition-all">
+    <div
+      className="relative group bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden hover:border-[#c4b5fd] hover:shadow-sm transition-all select-none"
+      onMouseDown={handlePointerDown}
+      onMouseUp={handlePointerUp}
+      onMouseLeave={handlePointerUp}
+      onTouchStart={handlePointerDown}
+      onTouchEnd={handlePointerUp}
+    >
       {/* Thumbnail */}
       <div className="aspect-[2/3] bg-[#f5f3ff] overflow-hidden">
         {favorite.image_url ? (

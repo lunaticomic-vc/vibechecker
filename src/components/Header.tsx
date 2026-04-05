@@ -105,10 +105,27 @@ export default function Header() {
 
   return (
     <div ref={menuRef} className="fixed top-0 left-0 right-0 z-[60] flex flex-col items-center pointer-events-none">
+      {/* Moon — always at top */}
+      <div className={`transition-all duration-500 ease-out ${open ? 'pt-2' : 'pt-4'}`}>
+        <button
+          onClick={() => { setOpen(v => !v); setContentOpen(false); }}
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          className="pointer-events-auto relative w-[48px] h-[48px] rounded-full focus:outline-none"
+          aria-label="Menu"
+          style={{
+            filter: hovering || open ? 'drop-shadow(0 0 20px rgba(196,181,253,0.5))' : 'drop-shadow(0 0 8px rgba(196,181,253,0.15))',
+            transition: 'filter 0.7s ease',
+          }}
+        >
+          <canvas ref={canvasRef} className="w-full h-full rounded-full" />
+        </button>
+      </div>
+
       {/* Floating glass nav pill */}
       <div
         className={`transition-all duration-500 ease-out ${
-          open ? 'mt-3 opacity-100 pointer-events-auto translate-y-0' : 'mt-0 opacity-0 pointer-events-none -translate-y-4'
+          open ? 'mt-2 opacity-100 pointer-events-auto translate-y-0' : 'mt-0 opacity-0 pointer-events-none -translate-y-4'
         }`}
       >
         <div className="bg-white/50 backdrop-blur-2xl backdrop-saturate-150 border border-white/40 rounded-2xl shadow-lg shadow-purple-200/10 mx-auto" style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}>
@@ -148,22 +165,6 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Moon — pushes down when nav is open */}
-      <div className={`transition-all duration-500 ease-out ${open ? 'pt-2' : 'pt-5'}`}>
-        <button
-          onClick={() => { setOpen(v => !v); setContentOpen(false); }}
-          onMouseEnter={() => setHovering(true)}
-          onMouseLeave={() => setHovering(false)}
-          className="pointer-events-auto relative w-[48px] h-[48px] rounded-full focus:outline-none"
-          aria-label="Menu"
-          style={{
-            filter: hovering || open ? 'drop-shadow(0 0 20px rgba(196,181,253,0.5))' : 'drop-shadow(0 0 8px rgba(196,181,253,0.15))',
-            transition: 'filter 0.7s ease',
-          }}
-        >
-          <canvas ref={canvasRef} className="w-full h-full rounded-full" />
-        </button>
-      </div>
     </div>
   );
 }

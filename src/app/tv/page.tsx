@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index';
 import FavoriteCard from '@/components/favorites/FavoriteCard';
 import AddFavoriteForm from '@/components/favorites/AddFavoriteForm';
+import StatusDragProvider from '@/components/StatusDragOverlay';
 
 type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
 
@@ -118,18 +119,26 @@ export default function TVPage() {
     grouped[getGroup(fav)].push(fav);
   }
 
+  const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
+  function getCurrentStatus(fav: Favorite): string { return statusGroupToApi[getGroup(fav)]; }
+  async function handleStatusChange(favoriteId: number, newStatus: string) {
+    await fetch('/api/progress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favorite_id: favoriteId, status: newStatus }) });
+    await fetchProgress();
+  }
+
   const ratingOrder: Record<string, number> = { felt_things: 0, enjoyed: 1, watched: 2, not_my_thing: 3 };
   let activeItems: Favorite[] = grouped[activeTab] ?? [];
-  if (ratingFilter !== 'all') {
+  if (ratingFilter !== 'all' && activeTab !== 'Todo') {
     activeItems = activeItems.filter(f => ratingsMap[f.id]?.rating === ratingFilter);
   }
-  activeItems = [...activeItems].sort((a, b) => {
+  if (activeTab !== 'Todo') activeItems = [...activeItems].sort((a, b) => {
     const oa = ratingOrder[ratingsMap[a.id]?.rating] ?? 4;
     const ob = ratingOrder[ratingsMap[b.id]?.rating] ?? 4;
     return oa - ob;
   });
 
   return (
+    <StatusDragProvider onStatusChange={handleStatusChange}>
     <div className="min-h-screen bg-white overflow-y-auto">
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
@@ -170,7 +179,7 @@ export default function TVPage() {
               <p className="text-center text-[#7c7291] py-16 text-sm">{activeTab === 'Todo' ? 'Nothing in your todo list.' : `No ${activeTab.toLowerCase()} shows.`}</p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {activeItems.map(fav => <FavoriteCard key={fav.id} favorite={fav} rating={ratingsMap[fav.id]} onDelete={handleDelete} onRate={handleRate} />)}
+                {activeItems.map(fav => <FavoriteCard key={fav.id} favorite={fav} rating={ratingsMap[fav.id]} currentStatus={getCurrentStatus(fav)} onDelete={handleDelete} onRate={handleRate} />)}
               </div>
             )}
             {hasMore && (
@@ -182,5 +191,6 @@ export default function TVPage() {
         )}
       </div>
     </div>
+    </StatusDragProvider>
   );
 }
