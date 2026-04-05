@@ -239,6 +239,25 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               </button>
+              {/* Reject and regenerate */}
+              <button
+                onClick={async () => {
+                  if (!recommendation || loading) return;
+                  await fetch('/api/rejected', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: recommendation.title, type: recommendation.type }),
+                  });
+                  if (lastVibe) handleSubmit(lastVibe);
+                }}
+                disabled={loading}
+                className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-red-300 hover:text-red-400 transition-all disabled:opacity-40"
+                title="Reject and never show again"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
               {/* Regenerate */}
               <button
                 onClick={() => { if (lastVibe && !loading) handleSubmit(lastVibe); }}

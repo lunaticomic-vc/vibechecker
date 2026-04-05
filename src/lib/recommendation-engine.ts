@@ -113,7 +113,8 @@ export function buildRecommendationPrompt(
     '',
     discoveryMode === 'from_library'
       ? `IMPORTANT: You MUST recommend something from the user's existing library/favorites listed above. Pick one that best fits the vibe. For YouTube, pick from their saved channels/videos.`
-      : `IMPORTANT: Recommend something NEW that the user has NOT seen/watched yet. Do NOT suggest anything already in their library above. For YouTube, suggest channels or creators they are NOT subscribed to.`,
+      : `IMPORTANT: Recommend something NEW that the user has NOT seen/watched yet. Do NOT suggest anything already in their library above. For YouTube, suggest channels or creators they are NOT subscribed to.
+NEVER recommend any of these rejected titles: ${[...favorites.map(f => f.title)].join(', ')}`,
     '',
     `Your task: ${instructions[contentType]}`,
     '',
@@ -405,6 +406,15 @@ export async function getRecommendation(
 ): Promise<Recommendation> {
   const favorites = await getAllFavorites();
   const allProgress = await getAllProgress();
+
+  // Fetch rejected titles
+  let rejectedTitles: string[] = [];
+  try {
+    const { db: getDb } = await import('@/lib/db');
+    const client = await getDb();
+    const rejResult = await client.execute('SELECT title FROM rejected_recommendations');
+    rejectedTitles = rejResult.rows.map((r: unknown) => (r as { title: string }).title);
+  } catch { /* ignore */ }
   const ratings = await getAllRatings();
 
   // Fetch user interests
@@ -470,7 +480,7 @@ export async function getRecommendation(
     userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode, interests);
   }
 
-  const existingTitles = favorites.map(f => f.title);
+  const existingTitles = [...favorites.map(f => f.title), ...rejectedTitles];
 
   // --- YOUTUBE: two-pass approach with real videos ---
   if (contentType === 'youtube') {

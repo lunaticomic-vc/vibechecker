@@ -104,7 +104,7 @@ function PosterImage({ src, alt }: { src: string; alt: string }) {
 }
 
 // Screencap circle that floats
-function ScreencapCircle({ src, alt, size, delay }: { src: string; alt: string; size: number; delay: number }) {
+function ScreencapCard({ src, alt, width, delay }: { src: string; alt: string; width: number; delay: number }) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -113,8 +113,7 @@ function ScreencapCircle({ src, alt, size, delay }: { src: string; alt: string; 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width: hovered ? size * 1.3 : size,
-        height: hovered ? size * 1.3 : size,
+        width: hovered ? width * 1.1 : width,
         animation: `floatBob ${3 + delay}s ease-in-out infinite`,
         animationDelay: `${delay * 0.5}s`,
         zIndex: hovered ? 20 : 5,
@@ -123,7 +122,7 @@ function ScreencapCircle({ src, alt, size, delay }: { src: string; alt: string; 
       <img
         src={src}
         alt={alt}
-        className="w-full h-full rounded-full object-cover border-2 transition-all duration-500"
+        className="w-full h-auto rounded-2xl object-cover border-2 transition-all duration-500"
         style={{
           borderColor: hovered ? 'rgba(196,181,253,0.6)' : 'rgba(233,228,245,0.4)',
           boxShadow: hovered ? '0 0 40px rgba(196,181,253,0.35), 0 8px 25px rgba(0,0,0,0.06)' : '0 4px 15px rgba(0,0,0,0.04)',
@@ -260,7 +259,7 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
         if (!pos) return null;
         return (
           <div key={i} className="fixed z-[3]" style={pos}>
-            <ScreencapCircle src={src} alt={`${title} scene ${i + 1}`} size={300} delay={i} />
+            <ScreencapCard src={src} alt={`${title} scene ${i + 1}`} width={280} delay={i} />
           </div>
         );
       })}
