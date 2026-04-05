@@ -5,19 +5,10 @@ import ProgressCard from '@/components/progress/ProgressCard';
 import StatusDragProvider from '@/components/StatusDragOverlay';
 import type { ProgressWithFavorite } from '@/lib/progress';
 
-type Filter = 'todo' | 'watching' | 'on_hold' | 'completed' | 'dropped';
-
-const FILTERS: { label: string; value: Filter }[] = [
-  { label: 'Todo', value: 'todo' },
-  { label: 'Watching', value: 'watching' },
-  { label: 'On Hold', value: 'on_hold' },
-  { label: 'Completed', value: 'completed' },
-  { label: 'Dropped', value: 'dropped' },
-];
+// Only shows "watching" items — drag-and-drop to move to other statuses
 
 export default function ProgressPage() {
   const [items, setItems] = useState<ProgressWithFavorite[]>([]);
-  const [filter, setFilter] = useState<Filter>('watching');
   const [loading, setLoading] = useState(true);
 
   const fetchProgress = useCallback(async () => {
@@ -35,7 +26,7 @@ export default function ProgressPage() {
     fetchProgress();
   }, [fetchProgress]);
 
-  const filtered = items.filter((i) => i.status === filter);
+  const filtered = items.filter((i) => i.status === 'watching');
 
   async function handleStatusChange(favoriteId: number, newStatus: string) {
     await fetch(`/api/progress?id=${favoriteId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
@@ -45,30 +36,8 @@ export default function ProgressPage() {
   return (
     <StatusDragProvider onStatusChange={handleStatusChange}>
     <div className="min-h-screen px-4 pt-20 pb-8 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-[#2d2640] mb-1">Watch Progress</h1>
-      <p className="text-sm text-[#7c7291] mb-8">Track your content across all categories.</p>
-
-      {/* Filter tabs */}
-      <div className="flex gap-2 mb-8 border-b border-[#e9e4f5] pb-0">
-        {FILTERS.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors -mb-px border-b-2 ${
-              filter === f.value
-                ? 'border-[#8b5cf6] text-[#7c3aed]'
-                : 'border-transparent text-[#7c7291] hover:text-[#2d2640]'
-            }`}
-          >
-            {f.label}
-            {!loading && (
-              <span className="ml-2 text-xs opacity-60">
-                ({items.filter((i) => i.status === f.value).length})
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      <h1 className="text-2xl font-bold text-[#2d2640] mb-1">In Progress</h1>
+      <p className="text-sm text-[#7c7291] mb-8">Hold and drag to change status.</p>
 
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -78,12 +47,8 @@ export default function ProgressPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-24 text-[#7c7291]">
-          <div className="text-5xl mb-4">
-            {filter === 'watching' ? '📺' : filter === 'completed' ? '✅' : '🗑'}
-          </div>
-          <p className="text-lg font-medium text-[#2d2640]">
-            {filter === 'watching' ? 'Nothing in progress' : `No ${filter} items`}
-          </p>
+          <div className="text-5xl mb-4">📺</div>
+          <p className="text-lg font-medium text-[#2d2640]">Nothing in progress</p>
           <p className="text-sm mt-1">Start tracking by getting recommendations!</p>
         </div>
       ) : (
