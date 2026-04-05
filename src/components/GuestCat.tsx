@@ -119,7 +119,7 @@ export default function GuestCat() {
   }
 
   useEffect(() => {
-    if (!isOwner && remaining !== null && window.location.pathname !== '/login') {
+    if (!isOwner && remaining !== null && pathname !== '/login') {
       const msgs = remaining === 0
         ? ['no recs left... sorry!']
         : [`${remaining} rec${remaining !== 1 ? 's' : ''} left`, 'click wisely~'];
@@ -179,113 +179,109 @@ export default function GuestCat() {
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         />
 
-        {/* Cat silhouette + animated overlays */}
+        {/* Cat from SVG Repo — split into body + eyes for animation */}
         <motion.div
           className="relative z-10"
           animate={{ y: [0, -3, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ filter: 'drop-shadow(0 0 10px rgba(196,181,253,0.25))' }}
         >
-          {/* Body silhouette from SVG file */}
-          <motion.div
-            animate={{ rotate: attacking ? [0, -8, 5, 0] : 0 }}
+          <motion.svg
+            width="100" height="100" viewBox="0 0 32 32"
+            animate={{ rotate: attacking ? [0, -6, 4, 0] : 0 }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
-            style={{ filter: 'drop-shadow(0 0 10px rgba(196,181,253,0.25))' }}
+            className="overflow-visible"
           >
-            <svg width="90" height="112" viewBox="0 0 200 250" className="transition-colors duration-300" style={{ color: attacking ? 'rgba(180,140,220,0.45)' : 'rgba(176,168,196,0.28)' }}>
-              {/* Body */}
-              <path fill="currentColor" d="
-                M 100 245
-                C 85 245, 75 240, 70 230
-                C 62 215, 58 195, 55 175
-                C 52 155, 48 140, 42 125
-                C 36 110, 30 100, 28 90
-                C 26 80, 28 70, 32 62
-                C 36 54, 42 48, 48 44
-                C 44 38, 38 28, 35 18
-                C 33 10, 34 5, 38 3
-                C 42 1, 48 6, 55 16
-                C 60 24, 64 30, 68 36
-                C 74 30, 80 24, 86 18
-                C 92 10, 98 6, 102 8
-                C 106 10, 106 16, 104 24
-                C 100 34, 94 42, 90 48
-                C 96 52, 102 58, 108 66
-                C 114 74, 118 84, 120 96
-                C 122 108, 124 122, 126 136
-                C 128 150, 130 165, 130 180
-                C 130 195, 128 210, 125 225
-                C 122 235, 115 245, 100 245
-                Z
-              "/>
-            </svg>
-            {/* Animated tail — separate so it can swing */}
-            <svg className="absolute -right-1 bottom-[10%] pointer-events-none" width="40" height="50" viewBox="0 0 50 60" style={{ color: attacking ? 'rgba(180,140,220,0.45)' : 'rgba(176,168,196,0.28)' }}>
-              <motion.path
-                stroke="currentColor"
-                strokeWidth="10"
-                strokeLinecap="round"
-                fill="none"
-                animate={{ d: [
-                  'M5 55 C12 42, 22 28, 32 18 C38 12, 44 10, 46 14',
-                  'M5 55 C8 40, 12 26, 16 18 C18 12, 20 10, 24 14',
-                  'M5 55 C12 42, 22 28, 32 18 C38 12, 44 10, 46 14',
-                ]}}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-              />
-            </svg>
-          </motion.div>
-
-          {/* Eyes — glowing dots that track mouse */}
-          {[
-            { left: '32%', top: '22%' },
-            { left: '44%', top: '22%' },
-          ].map((pos, i) => (
-            <motion.div
-              key={i}
-              className="absolute rounded-full pointer-events-none"
-              style={{
-                width: attacking ? 7 : 5,
-                height: attacking ? 7 : 5,
-                left: `calc(${pos.left} + ${eyeOffset.x}px)`,
-                top: `calc(${pos.top} + ${eyeOffset.y}px)`,
-                background: attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.7)',
-              }}
-              animate={{
-                boxShadow: attacking
-                  ? '0 0 10px rgba(200,160,240,0.7)'
-                  : ['0 0 4px rgba(196,181,253,0.2)', '0 0 8px rgba(196,181,253,0.4)', '0 0 4px rgba(196,181,253,0.2)'],
-              }}
-              transition={attacking ? { duration: 0.15 } : { duration: 3, repeat: Infinity, ease: 'easeInOut', delay: i * 0.5 }}
+            {/* Body — everything except eyes */}
+            <path
+              d="M28.926 1.17l-2.182 3.608c-1.876-0.608-4.669-0.489-6.426 0l-2.102-3.557c-3.452 6.448-2.475 10.523 0.159 12.549-0.403 0.252-0.818 0.529-1.247 0.833-10.979-8.759-20.863 1.106-14.379 9.92h0.050c1.163 1.687 2.503 2.731 3.95 3.277 2.050 0.773 4.159 0.551 6.236 0.257s4.109-0.663 6.046-0.525c1.937 0.138 3.874 0.635 5.647 2.569 1.209 1.318 2.926-0.101 1.486-1.507-2.185-2.134-4.525-2.959-6.825-3.122s-4.505 0.293-6.502 0.576c-1.997 0.283-3.761 0.409-5.276-0.163-0.711-0.268-1.403-0.69-2.070-1.36h22.51c1.064-3.756 1.177-7.73-0.033-10.237 3.635-1.897 5.097-6.376 0.958-13.116z"
+              fill={attacking ? 'rgba(180,140,220,0.4)' : 'rgba(176,168,196,0.25)'}
+              className="transition-[fill] duration-300"
             />
-          ))}
 
-          {/* Attack sparkles */}
-          <AnimatePresence>
-            {attacking && (
-              <>
-                <motion.div
-                  className="absolute -left-3 bottom-4 pointer-events-none text-xl"
-                  initial={{ opacity: 0, x: 5, rotate: 20 }}
-                  animate={{ opacity: 1, x: -8, rotate: -15 }}
-                  exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.2 }}
-                  style={{ color: 'rgba(176,168,196,0.5)' }}
-                >
-                  ✦
-                </motion.div>
-                <motion.div
-                  className="absolute -top-1 left-2 pointer-events-none text-sm"
-                  initial={{ opacity: 0, scale: 0.3 }}
-                  animate={{ opacity: [0, 0.8, 0.3], scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.4, delay: 0.1 }}
-                  style={{ color: 'rgba(196,181,253,0.5)' }}
-                >
-                  ✧
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+            {/* Left eye — follows mouse */}
+            <motion.path
+              d="M22.176 10.872c-2.316 1.117-3.367 0.212-3.817-1.656 2.273-1.41 3.626-0.278 3.817 1.656z"
+              fill={attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.6)'}
+              className="transition-[fill] duration-200"
+              animate={{
+                x: eyeOffset.x * 0.3,
+                y: eyeOffset.y * 0.3,
+              }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+            />
+
+            {/* Right eye — follows mouse */}
+            <motion.path
+              d="M25.067 10.872c0.191-1.934 1.544-3.067 3.817-1.656-0.45 1.868-1.502 2.774-3.817 1.656z"
+              fill={attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.6)'}
+              className="transition-[fill] duration-200"
+              animate={{
+                x: eyeOffset.x * 0.3,
+                y: eyeOffset.y * 0.3,
+              }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+            />
+
+            {/* Eye glow */}
+            <motion.circle
+              cx={21} cy={10} r={2}
+              fill="none"
+              stroke="rgba(196,181,253,0.3)"
+              strokeWidth="0.3"
+              animate={{
+                opacity: [0.1, 0.4, 0.1],
+                x: eyeOffset.x * 0.3,
+                y: eyeOffset.y * 0.3,
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.circle
+              cx={27} cy={10} r={2}
+              fill="none"
+              stroke="rgba(196,181,253,0.3)"
+              strokeWidth="0.3"
+              animate={{
+                opacity: [0.1, 0.4, 0.1],
+                x: eyeOffset.x * 0.3,
+                y: eyeOffset.y * 0.3,
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+            />
+
+            {/* Paw swipe on attack */}
+            <AnimatePresence>
+              {attacking && (
+                <motion.g>
+                  {/* Paw extending left */}
+                  <motion.line
+                    x1={8} y1={22}
+                    initial={{ x2: 8, y2: 22 }}
+                    animate={{ x2: 1, y2: 18 }}
+                    exit={{ x2: 8, y2: 22 }}
+                    stroke="rgba(176,168,196,0.5)"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                  />
+                  {/* Scratch marks */}
+                  {[[-0.5, -1.5], [-1.5, -0.5], [-1.5, 0.8]].map(([dx, dy], i) => (
+                    <motion.line
+                      key={i}
+                      x1={1} y1={18}
+                      initial={{ x2: 1, y2: 18, opacity: 0 }}
+                      animate={{ x2: 1 + (dx ?? 0) * 2, y2: 18 + (dy ?? 0) * 2, opacity: [0, 0.7, 0.2] }}
+                      exit={{ opacity: 0 }}
+                      stroke="rgba(196,181,253,0.5)"
+                      strokeWidth="0.5"
+                      strokeLinecap="round"
+                      transition={{ duration: 0.3, delay: 0.08 }}
+                    />
+                  ))}
+                </motion.g>
+              )}
+            </AnimatePresence>
+          </motion.svg>
         </motion.div>
 
         {/* Speech bubble */}
