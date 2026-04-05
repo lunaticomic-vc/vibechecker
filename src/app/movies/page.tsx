@@ -171,7 +171,7 @@ export default function MoviesPage() {
                   : 'border-transparent text-[#7c7291] hover:text-[#2d2640]'
               }`}
             >
-              {tab} ({grouped[tab]?.length ?? 0})
+              {tab} ({grouped[tab]?.length ?? 0}{hasMore ? '+' : ''})
             </button>
           ))}
         </div>

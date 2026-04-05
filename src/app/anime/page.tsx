@@ -125,7 +125,7 @@ export default function AnimePage() {
           {SECTION_ORDER.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 text-xs font-medium rounded-t-lg transition-colors -mb-px border-b-2 ${activeTab === tab ? 'border-[#8b5cf6] text-[#7c3aed]' : 'border-transparent text-[#7c7291] hover:text-[#2d2640]'}`}>
-              {tab} ({grouped[tab]?.length ?? 0})
+              {tab} ({grouped[tab]?.length ?? 0}{hasMore ? '+' : ''})
             </button>
           ))}
         </div>
