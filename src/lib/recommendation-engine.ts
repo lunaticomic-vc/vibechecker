@@ -6,6 +6,8 @@ import { searchRedditForTitle } from '@/lib/reddit';
 import { searchTMDB } from '@/lib/tmdb';
 import { searchSubstackMulti, verifyUrl } from '@/lib/substack';
 import type { SubstackSearchResult } from '@/lib/substack';
+import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
+import type { YouTubeResult } from '@/lib/youtube';
 import type { ContentType, DiscoveryMode, Favorite, WatchProgress, Rating, Recommendation } from '@/types/index';
 
 type AIResponse = {
@@ -134,6 +136,99 @@ export function buildRecommendationPrompt(
     '  "imageSearchTerms": ["scene description 1", "scene description 2", "scene description 3"]',
     '}',
   ].join('\n');
+}
+
+async function getYouTubeRecommendation(
+  vibe: string,
+  userPrompt: string,
+  interests: string[],
+  tasteProfile: string | null = null
+): Promise<Recommendation> {
+  const openai = getOpenAI();
+
+  // Step 1: GPT generates search queries
+  const queryResponse = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.9,
+    messages: [
+      {
+        role: 'system',
+        content: 'Generate YouTube search queries to find full-length videos (NOT Shorts). Return ONLY a JSON array of 3-4 specific search strings. No markdown.',
+      },
+      {
+        role: 'user',
+        content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${tasteProfile ? `\nTaste: ${tasteProfile.slice(0, 400)}` : ''}\n\nGenerate 3-4 YouTube search queries. Think about video essays, deep dives, niche creators. Be specific.`,
+      },
+    ],
+  });
+
+  let queries: string[];
+  try { queries = JSON.parse(queryResponse.choices[0]?.message?.content ?? '[]'); } catch { queries = [vibe]; }
+
+  // Step 2: Search YouTube for real videos (excludes Shorts via duration filter)
+  const allResults: YouTubeResult[] = [];
+  const seen = new Set<string>();
+  for (const q of queries) {
+    const results = await searchYouTube(q, true);
+    for (const r of results) {
+      if (!seen.has(r.videoId)) { seen.add(r.videoId); allResults.push(r); }
+    }
+  }
+
+  if (allResults.length > 0) {
+    // Step 3: GPT picks the best video
+    const videoList = allResults.slice(0, 12).map((v, i) =>
+      `${i + 1}. "${v.title}" by ${v.channelTitle || 'unknown'}`
+    ).join('\n');
+
+    const pickResponse = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.7,
+      messages: [
+        {
+          role: 'system',
+          content: 'Pick the best YouTube video from a list. Return ONLY JSON: {"pick": <number>, "description": "brief summary", "reasoning": "why this fits", "interests": ["tag1", "tag2"]}',
+        },
+        {
+          role: 'user',
+          content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}\n\nPick the best match:\n\n${videoList}`,
+        },
+      ],
+    });
+
+    let pick = 0, description = '', reasoning = '', videoInterests: string[] = [];
+    try {
+      const parsed = JSON.parse(pickResponse.choices[0]?.message?.content ?? '{}');
+      pick = (parsed.pick ?? 1) - 1;
+      description = parsed.description ?? '';
+      reasoning = parsed.reasoning ?? '';
+      videoInterests = parsed.interests ?? [];
+    } catch { pick = 0; }
+
+    const chosen = allResults[Math.min(Math.max(pick, 0), allResults.length - 1)];
+    return {
+      title: chosen.title,
+      type: 'youtube',
+      description: description || `By ${chosen.channelTitle}`,
+      reasoning,
+      actionUrl: buildYouTubeWatchUrl(chosen.videoId),
+      actionLabel: 'Watch on YouTube',
+      thumbnailUrl: chosen.thumbnail,
+      interests: videoInterests,
+    };
+  }
+
+  // Fallback: use GPT's suggestion as search
+  const fallbackQuery = vibe + ' ' + interests.slice(0, 2).join(' ');
+  return {
+    title: vibe,
+    type: 'youtube',
+    description: 'Could not find a specific video. Here is a search instead.',
+    reasoning: '',
+    actionUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(fallbackQuery)}`,
+    actionLabel: 'Search YouTube',
+    interests: interests.slice(0, 5),
+  };
 }
 
 async function getSubstackRecommendation(
@@ -347,6 +442,11 @@ export async function getRecommendation(
     userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode, interests);
   }
 
+  // --- YOUTUBE: two-pass approach with real videos ---
+  if (contentType === 'youtube') {
+    return getYouTubeRecommendation(vibe, userPrompt, interests, tasteProfile);
+  }
+
   // --- SUBSTACK: two-pass approach with real articles ---
   if (contentType === 'substack') {
     return getSubstackRecommendation(vibe, userPrompt, interests, tasteProfile);
@@ -379,42 +479,30 @@ export async function getRecommendation(
 
   const title = ai.title ?? 'Unknown';
 
-  let actionUrl: string;
-  let actionLabel: string;
-
-  if (contentType === 'youtube') {
-    const query = ai.searchQuery ?? title;
-    actionUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-    actionLabel = 'Search on YouTube';
-  } else {
-    actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
-    actionLabel = 'Watch on sflix';
-  }
+  // At this point contentType is movie/tv/anime only
+  const actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
+  const actionLabel = 'Watch on sflix';
 
   // Fetch real images from TMDB
   let imageUrls: string[] = [];
   let thumbnailUrl: string | undefined;
-  if (contentType !== 'youtube') {
-    const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
-    const tmdb = await searchTMDB(title, tmdbType);
-    if (tmdb) {
-      if (tmdb.posterUrl) thumbnailUrl = tmdb.posterUrl;
-      imageUrls = tmdb.backdropUrls;
-    }
+  const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
+  const tmdb = await searchTMDB(title, tmdbType);
+  if (tmdb) {
+    if (tmdb.posterUrl) thumbnailUrl = tmdb.posterUrl;
+    imageUrls = tmdb.backdropUrls;
   }
   // Gradient fallbacks if no images found
   if (imageUrls.length === 0) {
     imageUrls = [0, 1, 2].map(i => `gradient:${i}:${encodeURIComponent(title)}`);
   }
 
-  // Fetch Reddit insights for non-YouTube content
+  // Fetch Reddit insights
   let redditInsights;
-  if (contentType !== 'youtube') {
-    try {
-      redditInsights = await searchRedditForTitle(title, contentType);
-    } catch {
-      // Reddit search is best-effort
-    }
+  try {
+    redditInsights = await searchRedditForTitle(title, contentType);
+  } catch {
+    // Reddit search is best-effort
   }
 
   return {

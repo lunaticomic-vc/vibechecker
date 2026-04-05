@@ -51,7 +51,11 @@ export async function autofixTitle(title: string, type: string): Promise<string>
       .replace(/\s*[-–—|].*$/i, '')  // Remove any remaining suffix after dash
       .trim();
 
-    if (cleaned && cleaned.length > 1 && cleaned.length < 200) {
+    // Skip if the result is just a generic term
+    const genericTerms = ['youtube', 'movie', 'tv show', 'anime', 'substack', 'imdb', 'wikipedia', 'watch', 'search'];
+    const isGeneric = genericTerms.some(t => cleaned.toLowerCase() === t);
+
+    if (cleaned && cleaned.length > 1 && cleaned.length < 200 && !isGeneric) {
       if (cleaned.toLowerCase() !== title.toLowerCase()) {
         log.success('Title fixed', `"${title}" -> "${cleaned}"`);
       }

@@ -98,46 +98,63 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
       <div
         ref={cardRef}
         className="select-none"
-        onMouseDown={handlePointerDown}
-        onMouseUp={handlePointerUp}
-        onMouseLeave={handlePointerUp}
-        onTouchStart={handlePointerDown}
-        onTouchEnd={handlePointerUp}
-        onClick={handleClick}
+        onMouseDown={!expanded ? handlePointerDown : undefined}
+        onMouseUp={!expanded ? handlePointerUp : undefined}
+        onMouseLeave={!expanded ? handlePointerUp : undefined}
+        onTouchStart={!expanded ? handlePointerDown : undefined}
+        onTouchEnd={!expanded ? handlePointerUp : undefined}
+        onClick={!expanded ? handleClick : undefined}
       >
-        <div className="group bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden hover:border-[#c4b5fd] hover:shadow-sm transition-colors cursor-pointer">
-          <div className={landscape ? 'aspect-video bg-[#f5f3ff] overflow-hidden' : 'aspect-[2/3] bg-[#f5f3ff] overflow-hidden'}>
-            {favorite.image_url ? (
-              <img src={favorite.image_url} alt={favorite.title} draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-[#c4b5fd]">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        {expanded ? (
+          /* Card back — shown in place while the detail overlay is open */
+          <div className="bg-[#e9e4f5]/40 border-2 border-[#e9e4f5] rounded-xl overflow-hidden cursor-pointer" onClick={() => setExpanded(false)}>
+            <div className={`${landscape ? 'aspect-video' : 'aspect-[2/3]'} flex items-center justify-center`}>
+              <div className="w-12 h-12 rounded-full border-2 border-[#d4cee6] flex items-center justify-center">
+                <svg className="w-5 h-5 text-[#c4b5fd]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15l-3-3m0 0l3-3m-3 3h12" />
                 </svg>
               </div>
-            )}
+            </div>
+            <div className="p-2.5">
+              <p className="text-xs font-medium text-[#b0a8c4] leading-snug line-clamp-2">{favorite.title}</p>
+            </div>
           </div>
+        ) : (
+          /* Card front */
+          <div className="group bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden hover:border-[#c4b5fd] hover:shadow-sm transition-colors cursor-pointer relative">
+            <div className={landscape ? 'aspect-video bg-[#f5f3ff] overflow-hidden' : 'aspect-[2/3] bg-[#f5f3ff] overflow-hidden'}>
+              {favorite.image_url ? (
+                <img src={favorite.image_url} alt={favorite.title} draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[#c4b5fd]">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
+            </div>
 
-          {/* Delete */}
-          <button
-            onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-            onBlur={() => setConfirming(false)}
-            className={`absolute top-2 right-2 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity z-10 ${
-              confirming ? 'bg-red-500 text-white opacity-100' : 'bg-white/80 text-[#7c7291] hover:bg-red-500 hover:text-white'
-            }`}
-          >
-            {confirming ? '!' : '×'}
-          </button>
+            {/* Delete */}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+              onBlur={() => setConfirming(false)}
+              className={`absolute top-2 right-2 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity z-10 ${
+                confirming ? 'bg-red-500 text-white opacity-100' : 'bg-white/80 text-[#7c7291] hover:bg-red-500 hover:text-white'
+              }`}
+            >
+              {confirming ? '!' : '×'}
+            </button>
 
-          <div className="p-2.5 flex-1 min-w-0">
-            {showTypeLabel && (
-              <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mb-1 ${TYPE_COLORS[favorite.type]}`}>
-                {TYPE_LABELS[favorite.type]}
-              </span>
-            )}
-            <p className="text-xs font-medium text-[#2d2640] leading-snug line-clamp-2">{favorite.title}</p>
+            <div className="p-2.5 flex-1 min-w-0">
+              {showTypeLabel && (
+                <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mb-1 ${TYPE_COLORS[favorite.type]}`}>
+                  {TYPE_LABELS[favorite.type]}
+                </span>
+              )}
+              <p className="text-xs font-medium text-[#2d2640] leading-snug line-clamp-2">{favorite.title}</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Expanded overlay */}
@@ -151,7 +168,7 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
             exit={{ opacity: 0 }}
           />
           <motion.div
-            className="relative z-[201] bg-white rounded-2xl border-2 border-[#e9e4f5] w-full max-w-md max-h-[85vh] overflow-y-auto shadow-xl"
+            className="relative z-[201] bg-white rounded-2xl border-2 border-[#e9e4f5] w-full max-w-sm shadow-xl overflow-hidden"
             initial={{
               rotateY: 180,
               scale: 0.3,
@@ -171,18 +188,11 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
             style={{ perspective: '1200px' }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Image */}
-            {favorite.image_url && (
-              <div className={`w-full ${landscape ? 'aspect-video' : 'aspect-[2/3]'} bg-[#f5f3ff] overflow-hidden rounded-t-2xl`}>
-                <img src={favorite.image_url} alt={favorite.title} className="w-full h-full object-cover" />
-              </div>
-            )}
-
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-3">
               {/* Title + type */}
               <div>
                 <h2 className="text-lg font-bold text-[#2d2640] leading-tight">{favorite.title}</h2>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1.5">
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${TYPE_COLORS[favorite.type]}`}>
                     {TYPE_LABELS[favorite.type]}
                   </span>
@@ -209,60 +219,43 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
                 </div>
               )}
 
-              {/* Accordion sections */}
-              <div className="flex flex-col gap-1">
-                {/* About */}
-                {(isRec ? !!meta?.description : !!plainNotes) && (
-                  <div className="rounded-lg border border-[#e9e4f5] overflow-hidden">
-                    <button onClick={() => setOpenSection(s => s === 'about' ? null : 'about')} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#7c7291] hover:bg-[#faf8ff] transition-colors">
-                      About {chevron(openSection === 'about')}
-                    </button>
-                    <div className={`overflow-hidden transition-all duration-300 ${openSection === 'about' ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'}`}>
-                      <p className="px-3 pb-3 text-xs text-[#5a5270] leading-relaxed">
-                        {isRec ? String(meta.description) : plainNotes}
-                      </p>
-                    </div>
-                  </div>
-                )}
+              {/* About */}
+              {(isRec ? !!meta?.description : !!plainNotes) && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1">About</p>
+                  <p className="text-xs text-[#5a5270] leading-relaxed">
+                    {isRec ? String(meta.description) : plainNotes}
+                  </p>
+                </div>
+              )}
 
-                {/* Why this fits */}
-                {isRec && !!meta?.reasoning && (
-                  <div className="rounded-lg border border-[#d4e6d1] overflow-hidden">
-                    <button onClick={() => setOpenSection(s => s === 'vibe' ? null : 'vibe')} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65] hover:bg-[#f6faf5] transition-colors">
-                      Why this fits {chevron(openSection === 'vibe')}
-                    </button>
-                    <div className={`overflow-hidden transition-all duration-300 ${openSection === 'vibe' ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'}`}>
-                      <p className="px-3 pb-3 text-xs italic text-[#4a7044] leading-relaxed">{String(meta.reasoning)}</p>
-                    </div>
-                  </div>
-                )}
+              {/* Why this fits */}
+              {isRec && !!meta?.reasoning && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65] mb-1">Why this fits</p>
+                  <p className="text-xs italic text-[#4a7044] leading-relaxed">{String(meta.reasoning)}</p>
+                </div>
+              )}
 
-                {/* Rating */}
-                {currentStatus && currentStatus !== 'todo' && (
-                  <div className="rounded-lg border border-[#e9e4f5] overflow-hidden">
-                    <button onClick={() => setOpenSection(s => s === 'rating' ? null : 'rating')} className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-[#7c7291] hover:bg-[#faf8ff] transition-colors">
-                      Rating {rating ? `- ${rating.rating.replace('_', ' ')}` : ''} {chevron(openSection === 'rating')}
-                    </button>
-                    <div className={`overflow-hidden transition-all duration-300 ${openSection === 'rating' ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'}`}>
-                      <div className="px-3 pb-3">
-                        <RatingSelector favoriteId={favorite.id} currentRating={rating?.rating} currentReasoning={rating?.reasoning} onRate={onRate} />
-                        {rating?.reasoning && (
-                          <p className="text-[10px] text-[#5a5270] mt-2 italic">&ldquo;{rating.reasoning}&rdquo;</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Rating */}
+              {currentStatus && currentStatus !== 'todo' && (
+                <div onClick={e => e.stopPropagation()}>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1">Rating</p>
+                  <RatingSelector favoriteId={favorite.id} currentRating={rating?.rating} currentReasoning={rating?.reasoning} onRate={onRate} />
+                  {rating?.reasoning && (
+                    <p className="text-[10px] text-[#5a5270] mt-1.5 italic">&ldquo;{rating.reasoning}&rdquo;</p>
+                  )}
+                </div>
+              )}
 
               {/* No info fallback */}
               {!isRec && !plainNotes && !rating?.reasoning && (
                 <p className="text-[10px] text-[#b0a8c4]">No notes yet</p>
               )}
 
-              {/* Close button */}
-              <button onClick={() => setExpanded(false)} className="w-full py-2 text-xs text-[#7c7291] hover:text-[#2d2640] transition-colors">
-                Close
+              {/* Close */}
+              <button onClick={() => setExpanded(false)} className="w-full pt-2 text-xs text-[#c8c2d6] hover:text-[#7c7291] transition-colors">
+                tap to close
               </button>
             </div>
           </motion.div>

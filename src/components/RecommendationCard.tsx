@@ -161,18 +161,18 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
     window.open(actionUrl, '_blank');
   }
 
-  // YouTube: side-by-side with thumbnail
+  // YouTube: stacked with thumbnail
   if (isYouTube) {
     return (
-      <div className="relative z-10 flex gap-4 items-start max-w-[480px] mx-auto">
+      <div className="relative z-10 flex flex-col gap-3 max-w-[360px] mx-auto">
         {thumbnailUrl && (
-          <div onClick={handleWatch} className="shrink-0 cursor-pointer group">
-            <div className="w-[360px] sm:w-[420px] rounded-xl overflow-hidden border-2 border-[#e9e4f5] hover:border-[#c4b5fd] transition-all shadow-sm hover:shadow-md">
+          <div onClick={handleWatch} className="cursor-pointer group">
+            <div className="rounded-xl overflow-hidden border-2 border-[#e9e4f5] hover:border-[#c4b5fd] transition-all shadow-sm hover:shadow-md">
               <img src={thumbnailUrl} alt={title} className="w-full aspect-video object-cover group-hover:scale-105 transition-transform duration-300" />
             </div>
           </div>
         )}
-        <div className="flex-1 rounded-2xl border-2 border-[#e9e4f5] bg-white/92 backdrop-blur-sm p-4 flex flex-col gap-2">
+        <div className="rounded-2xl border-2 border-[#e9e4f5] bg-white/92 backdrop-blur-sm p-4 flex flex-col gap-2">
           <h2 className="text-base font-bold text-[#2d2640] leading-tight">{title}</h2>
           {interests && interests.length > 0 && (
             <div className="flex flex-wrap gap-1">

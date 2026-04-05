@@ -205,9 +205,16 @@ export default function Home() {
         {/* Screen 4: Recommendation */}
         {screen === 'result' && recommendation && (
           <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out] py-16">
-            <div className="w-full max-w-sm">
-              <RecommendationCard recommendation={recommendation} onAccept={startOver} />
-            </div>
+            {loading ? (
+              <div className="flex flex-col items-center gap-3 py-16">
+                <div className="w-8 h-8 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-[#b0a8c4]">Finding something new...</p>
+              </div>
+            ) : (
+              <div className="w-full max-w-sm">
+                <RecommendationCard recommendation={recommendation} onAccept={startOver} />
+              </div>
+            )}
 
             <div className="flex gap-3 mt-2 items-center">
               <button
@@ -216,7 +223,7 @@ export default function Home() {
                 className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all disabled:opacity-40"
                 title="Regenerate with same vibe"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
