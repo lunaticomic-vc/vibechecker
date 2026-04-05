@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ContentTypeSelector from '@/components/ContentTypeSelector';
 import VibeInput from '@/components/VibeInput';
 import RecommendationCard from '@/components/RecommendationCard';
@@ -27,6 +27,13 @@ export default function Home() {
   const [lastDismissed, setLastDismissed] = useState(false);
 
   const [lastVibe, setLastVibe] = useState('');
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/status').then(r => r.json()).then(data => {
+      if (data.role === 'owner') setIsOwner(true);
+    }).catch(() => {});
+  }, []);
 
   // Fetch last watching item on mount
   useState(() => {
@@ -115,7 +122,7 @@ export default function Home() {
             </button>
 
             <div className="w-full max-w-sm">
-              <VibeInput onSubmit={handleSubmit} loading={loading} />
+              <VibeInput onSubmit={handleSubmit} loading={loading} isOwner={isOwner} />
             </div>
 
             {error && (

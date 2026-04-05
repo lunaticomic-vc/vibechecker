@@ -14,9 +14,10 @@ const EXAMPLE_VIBES = [
 interface Props {
   onSubmit: (vibe: string, useInterests: boolean) => void;
   loading: boolean;
+  isOwner?: boolean;
 }
 
-export default function VibeInput({ onSubmit, loading }: Props) {
+export default function VibeInput({ onSubmit, loading, isOwner = false }: Props) {
   const [vibe, setVibe] = useState('');
   const [useInterests, setUseInterests] = useState(true);
 
@@ -27,15 +28,17 @@ export default function VibeInput({ onSubmit, loading }: Props) {
   return (
     <div className="flex flex-col gap-4 items-center">
       <div className="w-full flex flex-col gap-1.5">
-        <label className="flex items-center gap-2 cursor-pointer select-none self-end">
-          <input
-            type="checkbox"
-            checked={useInterests}
-            onChange={(e) => setUseInterests(e.target.checked)}
-            className="w-4 h-4 rounded border-[#e9e4f5] text-[#8b5cf6] focus:ring-[#c4b5fd] focus:ring-offset-0 cursor-pointer accent-[#8b5cf6]"
-          />
-          <span className="text-[12px] text-[#7c7291]">use my interests</span>
-        </label>
+        {isOwner && (
+          <label className="flex items-center gap-2 cursor-pointer select-none self-end">
+            <input
+              type="checkbox"
+              checked={useInterests}
+              onChange={(e) => setUseInterests(e.target.checked)}
+              className="w-4 h-4 rounded border-[#e9e4f5] text-[#8b5cf6] focus:ring-[#c4b5fd] focus:ring-offset-0 cursor-pointer accent-[#8b5cf6]"
+            />
+            <span className="text-[12px] text-[#7c7291]">use my interests</span>
+          </label>
+        )}
         <textarea
           value={vibe}
           onChange={(e) => setVibe(e.target.value)}
