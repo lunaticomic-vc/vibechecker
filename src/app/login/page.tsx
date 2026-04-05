@@ -26,7 +26,8 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        router.push('/');
+        window.location.href = '/';
+        return;
       } else {
         setError('wrong password');
         setPassword('');
@@ -42,7 +43,8 @@ export default function LoginPage() {
     try {
       const res = await fetch('/api/auth/guest', { method: 'POST' });
       if (res.ok) {
-        router.push('/');
+        window.location.href = '/';
+        return;
       }
     } catch { /* */ }
     setLoading(false);
@@ -130,13 +132,34 @@ export default function LoginPage() {
 
         {step === 'bye' && (
           <div className="flex flex-col items-center gap-4">
-            <p className="text-lg text-[#2d2640] font-medium tracking-wide text-center">well gee okay then</p>
+            {/* Silver cat outline */}
+            <svg width="80" height="80" viewBox="0 0 100 100" fill="none" stroke="#b0a8c4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-[catBounce_2s_ease-in-out_infinite]">
+              {/* Ears */}
+              <path d="M30 45 L22 20 L38 35" />
+              <path d="M70 45 L78 20 L62 35" />
+              {/* Head */}
+              <ellipse cx="50" cy="50" rx="25" ry="22" />
+              {/* Eyes */}
+              <circle cx="40" cy="47" r="3" fill="#b0a8c4" stroke="none" />
+              <circle cx="60" cy="47" r="3" fill="#b0a8c4" stroke="none" />
+              {/* Nose */}
+              <path d="M48 54 L50 56 L52 54" />
+              {/* Mouth */}
+              <path d="M50 56 Q46 60 42 58" />
+              <path d="M50 56 Q54 60 58 58" />
+              {/* Whiskers */}
+              <line x1="20" y1="52" x2="36" y2="54" />
+              <line x1="20" y1="58" x2="36" y2="57" />
+              <line x1="80" y1="52" x2="64" y2="54" />
+              <line x1="80" y1="58" x2="64" y2="57" />
+            </svg>
+            <p className="text-lg text-[#2d2640] font-medium tracking-wide text-center">nuh uh</p>
             <p className="text-xs text-[#b0a8c4]">what are you doing here</p>
             <button
-              onClick={() => setStep('are-you')}
+              onClick={() => setStep('wanna-try')}
               className="text-xs text-[#c4b5fd] hover:text-[#7c3aed] transition-colors mt-2"
             >
-              start over
+              fine, show me
             </button>
           </div>
         )}
@@ -147,6 +170,11 @@ export default function LoginPage() {
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.97); }
           to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes catBounce {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          25% { transform: translateY(-5px) rotate(-3deg); }
+          75% { transform: translateY(-5px) rotate(3deg); }
         }
       `}</style>
     </main>
