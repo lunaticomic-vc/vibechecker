@@ -8,6 +8,7 @@ interface ProgressCardProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
+  todo: 'bg-[#f0f4ff] text-[#4a6fa5] border border-[#bfdbfe]',
   watching: 'bg-[#f0f7ef] text-[#6b9a65] border border-[#a7c4a0]',
   completed: 'bg-[#f3f0ff] text-[#7c3aed] border border-[#c4b5fd]',
   dropped: 'bg-[#fef2f2] text-[#dc2626] border border-[#fca5a5]',

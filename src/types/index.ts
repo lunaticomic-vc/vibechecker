@@ -17,7 +17,7 @@ export interface WatchProgress {
   current_episode: number;
   total_seasons?: number;
   total_episodes?: number;
-  status: 'watching' | 'completed' | 'dropped' | 'on_hold';
+  status: 'todo' | 'watching' | 'completed' | 'dropped' | 'on_hold';
   stopped_at?: string;
   updated_at: string;
 }

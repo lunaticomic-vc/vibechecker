@@ -5,16 +5,17 @@ import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index
 import FavoriteCard from '@/components/favorites/FavoriteCard';
 import AddFavoriteForm from '@/components/favorites/AddFavoriteForm';
 
-type StatusGroup = "Haven't seen" | 'In Progress' | 'On Hold' | 'Completed';
+type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
 
 const PROGRESS_STATUS_MAP: Record<WatchProgress['status'], StatusGroup> = {
+  todo: 'Todo',
   watching: 'In Progress',
   on_hold: 'On Hold',
   completed: 'Completed',
   dropped: 'Completed',
 };
 
-const SECTION_ORDER: StatusGroup[] = ["Haven't seen", 'In Progress', 'On Hold', 'Completed'];
+const SECTION_ORDER: StatusGroup[] = ['Todo', 'In Progress', 'On Hold', 'Completed'];
 
 export default function TVPage() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
@@ -69,11 +70,11 @@ export default function TVPage() {
       try {
         const meta = JSON.parse(fav.metadata);
         if (meta.status) {
-          return PROGRESS_STATUS_MAP[meta.status as WatchProgress['status']] ?? "Haven't seen";
+          return PROGRESS_STATUS_MAP[meta.status as WatchProgress['status']] ?? "Todo";
         }
       } catch { /* ignore */ }
     }
-    return "Haven't seen";
+    return "Todo";
   }
 
   async function handleAdd(data: { type: string; title: string; image_url?: string; metadata?: string }) {

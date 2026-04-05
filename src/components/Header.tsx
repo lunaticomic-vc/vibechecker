@@ -105,14 +105,14 @@ export default function Header() {
 
   return (
     <div ref={menuRef} className="fixed top-0 left-0 right-0 z-[60] flex flex-col items-center pointer-events-none">
-      {/* Horizontal nav bar — slides down from top */}
+      {/* Floating glass nav pill */}
       <div
-        className={`w-full transition-all duration-500 ease-out overflow-hidden ${
-          open ? 'max-h-16 opacity-100 pointer-events-auto' : 'max-h-0 opacity-0 pointer-events-none'
+        className={`transition-all duration-500 ease-out ${
+          open ? 'mt-3 opacity-100 pointer-events-auto translate-y-0' : 'mt-0 opacity-0 pointer-events-none -translate-y-4'
         }`}
       >
-        <div className="bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/30 shadow-lg shadow-purple-200/10" style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}>
-          <div className="mx-auto max-w-3xl flex items-center justify-center gap-2 px-4 py-3">
+        <div className="bg-white/50 backdrop-blur-2xl backdrop-saturate-150 border border-white/40 rounded-2xl shadow-lg shadow-purple-200/10 mx-auto" style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}>
+          <div className="flex items-center justify-center gap-1 px-5 py-2.5">
             <Link href="/" onClick={navClick} className={linkClass}>Home</Link>
 
             {/* Content dropdown */}
@@ -127,7 +127,11 @@ export default function Header() {
                 </svg>
               </button>
               {contentOpen && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border border-white/30 rounded-xl shadow-lg shadow-purple-200/15 py-1.5 min-w-[120px] z-50" style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}>
+                <div
+                  className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border border-white/30 rounded-xl shadow-lg shadow-purple-200/15 py-1.5 min-w-[120px] z-[70]"
+                  style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}
+                  onMouseDown={e => e.stopPropagation()}
+                >
                   <Link href="/movies" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Movies</Link>
                   <Link href="/tv" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">TV Shows</Link>
                   <Link href="/anime" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Anime</Link>

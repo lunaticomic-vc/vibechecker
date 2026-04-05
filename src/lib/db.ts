@@ -44,7 +44,7 @@ export async function initDb(): Promise<Client> {
       current_episode INTEGER DEFAULT 1,
       total_seasons INTEGER,
       total_episodes INTEGER,
-      status TEXT DEFAULT 'watching' CHECK(status IN ('watching', 'completed', 'dropped', 'on_hold')),
+      status TEXT DEFAULT 'watching' CHECK(status IN ('todo', 'watching', 'completed', 'dropped', 'on_hold')),
       stopped_at TEXT,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`,

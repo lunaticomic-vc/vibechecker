@@ -7,7 +7,7 @@ import type { Favorite, Rating, RatingValue } from '@/types/index';
 type WatchStatus = 'not_seen' | 'watching' | 'on_hold' | 'completed';
 
 const STATUS_SECTIONS: { label: string; value: WatchStatus }[] = [
-  { label: "Haven't seen", value: 'not_seen' },
+  { label: 'Todo', value: 'not_seen' },
   { label: 'In progress', value: 'watching' },
   { label: 'On hold', value: 'on_hold' },
   { label: 'Completed', value: 'completed' },
