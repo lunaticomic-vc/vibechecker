@@ -40,10 +40,8 @@ export default function GuestCat() {
     setTimeout(() => setAttacking(false), 600);
   }
 
-  // Don't show for owner
-  if (isOwner) return null;
   // Don't show until loaded
-  if (remaining === null) return null;
+  if (remaining === null && !isOwner) return null;
 
   return (
     <div
@@ -92,9 +90,11 @@ export default function GuestCat() {
             </>
           )}
         </svg>
-        <span className="text-[10px] text-[#b0a8c4] font-medium">
-          {remaining === 0 ? 'no recs left' : `${remaining} rec${remaining !== 1 ? 's' : ''} left`}
-        </span>
+        {!isOwner && remaining !== null && (
+          <span className="text-[10px] text-[#b0a8c4] font-medium">
+            {remaining === 0 ? 'no recs left' : `${remaining} rec${remaining !== 1 ? 's' : ''} left`}
+          </span>
+        )}
       </div>
 
       <style jsx>{`
