@@ -87,7 +87,7 @@ export async function fetchMALAnimeList(
 // Search anime by title via Jikan (for recommendations/enrichment)
 export async function searchAnimeJikan(
   title: string
-): Promise<{ posterUrl: string | null; backdropUrls: string[]; year: string | null; description: string | null; actors: string[] } | null> {
+): Promise<{ title: string | null; posterUrl: string | null; backdropUrls: string[]; year: string | null; description: string | null; actors: string[] } | null> {
   const JIKAN_BASE = 'https://api.jikan.moe/v4';
 
   try {
@@ -135,7 +135,8 @@ export async function searchAnimeJikan(
       }
     } catch (error) { console.warn('Failed to fetch additional Jikan anime pictures/characters', error); }
 
-    return { posterUrl, backdropUrls, year, description, actors };
+    const canonicalTitle = top.title_english ?? top.title ?? null;
+    return { title: canonicalTitle, posterUrl, backdropUrls, year, description, actors };
   } catch (error) {
     console.warn('Failed to search anime via Jikan', error);
     return null;

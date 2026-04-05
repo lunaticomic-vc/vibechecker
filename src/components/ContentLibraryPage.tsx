@@ -113,27 +113,33 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
   }
 
   async function handleAdd(data: { type: string; title: string; metadata?: string }) {
-    let image_url: string | undefined;
-    try {
-      const lookupType = IMAGE_LOOKUP_TYPE[contentType] ?? 'tv';
-      const imgRes = await fetch(`/api/image?title=${encodeURIComponent(data.title)}&type=${lookupType}`);
-      const imgData = await imgRes.json();
-      if (imgData.image_url) image_url = imgData.image_url;
-    } catch (error) { console.warn('Failed to fetch image for new favorite', error); }
-
-    setAddError('');
-    const res = await fetch('/api/favorites', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, image_url }),
-    });
-    if (!res.ok) { setAddError('Failed to add. Please try again.'); return; }
     setShowAddForm(false);
     setLoading(true);
+    setAddError('');
     window.dispatchEvent(new CustomEvent('cat-chase', { detail: true }));
-    await fetchFavorites(0);
-    setLoading(false);
-    window.dispatchEvent(new CustomEvent('cat-chase', { detail: false }));
+
+    try {
+      let image_url: string | undefined;
+      try {
+        const lookupType = IMAGE_LOOKUP_TYPE[contentType] ?? 'tv';
+        const imgRes = await fetch(`/api/image?title=${encodeURIComponent(data.title)}&type=${lookupType}`);
+        const imgData = await imgRes.json();
+        if (imgData.image_url) image_url = imgData.image_url;
+      } catch { /* image lookup is best-effort */ }
+
+      const res = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, image_url }),
+      });
+      if (!res.ok) { setAddError('Failed to add. Please try again.'); return; }
+      await fetchFavorites(0);
+    } catch {
+      setAddError('Failed to add. Please try again.');
+    } finally {
+      setLoading(false);
+      window.dispatchEvent(new CustomEvent('cat-chase', { detail: false }));
+    }
   }
 
   async function handleDelete(id: number) {
@@ -269,7 +275,7 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
         )}
 
         {loading ? (
-          <div className="flex justify-center py-16">
+          <div className="fixed inset-0 z-30 flex items-center justify-center">
             <LoadingMouse />
           </div>
         ) : (

@@ -59,7 +59,7 @@ export default function InterestsPage() {
         )}
 
         {isLoading ? (
-          <div className="flex justify-center py-16">
+          <div className="fixed inset-0 z-30 flex items-center justify-center">
             <LoadingMouse />
           </div>
         ) : interests.length === 0 ? (

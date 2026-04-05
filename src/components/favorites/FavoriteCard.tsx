@@ -71,7 +71,7 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
 
   const meta = parseFavoriteMetadata(favorite.metadata);
   const isEnriched = meta !== null && 'source' in meta && (meta.source === 'recommendation' || meta.source === 'manual');
-  const recMeta = isEnriched ? (meta as { source: string; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; year?: string }) : null;
+  const recMeta = isEnriched ? (meta as { source: string; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; year?: string; redditInsights?: { subreddit: string; comment: string; score: number }[] }) : null;
   const plainNotes = meta !== null && 'notes' in meta ? meta.notes : undefined;
 
   const chevron = (open: boolean) => (
@@ -245,6 +245,38 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65] mb-1">Why this fits</p>
                   <p className="text-xs italic text-[#4a7044] leading-relaxed">{recMeta.reasoning}</p>
+                </div>
+              )}
+
+              {/* Reddit insights */}
+              {recMeta?.redditInsights && recMeta.redditInsights.length > 0 && (
+                <div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenSection(openSection === 'about' ? null : 'about'); }}
+                    className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1"
+                  >
+                    Reddit {chevron(openSection === 'about')}
+                  </button>
+                  <AnimatePresence>
+                    {openSection === 'about' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden space-y-2"
+                      >
+                        {recMeta.redditInsights.map((insight, i) => (
+                          <div key={i} className="bg-[#f5f3ff] rounded-lg p-2.5">
+                            <p className="text-[10px] text-[#5a5270] leading-relaxed">{insight.comment}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[9px] text-[#b0a8c4]">r/{insight.subreddit}</span>
+                              <span className="text-[9px] text-[#b0a8c4]">{insight.score} pts</span>
+                            </div>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 

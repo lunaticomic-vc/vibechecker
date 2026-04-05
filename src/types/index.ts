@@ -2,8 +2,8 @@ export const CONTENT_TYPES = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kd
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
 export type FavoriteMetadata =
-  | { source: 'recommendation'; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; year?: string }
-  | { source: 'manual'; year?: string; description?: string; reasoning?: string; interests?: string[]; actors?: string[] }
+  | { source: 'recommendation'; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; year?: string; redditInsights?: RedditInsight[] }
+  | { source: 'manual'; year?: string; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; redditInsights?: RedditInsight[] }
   | { status?: string }
   | { notes: string };
 

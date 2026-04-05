@@ -4,7 +4,7 @@ import { searchTMDBDetailed } from '@/lib/tmdb';
 import { searchAnimeJikan } from '@/lib/mal';
 import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
 import { searchRedditForTitle } from '@/lib/reddit';
-import { autofixTitle } from '@/lib/autofix-title';
+
 import { log } from '@/lib/logger';
 import type { ContentType, Recommendation } from '@/types/index';
 
@@ -24,9 +24,9 @@ const CONTENT_LABELS: Record<ContentType, string> = {
   kdrama: 'Korean drama',
 };
 
-/** Look up external metadata (poster, year, actors) from type-specific APIs */
+/** Look up external metadata (poster, year, actors, canonical title) from type-specific APIs */
 async function lookupExternal(title: string, type: ContentType) {
-  const base = { posterUrl: null as string | null, year: null as string | null, description: null as string | null, actors: [] as string[], external_id: undefined as string | undefined };
+  const base = { title: null as string | null, posterUrl: null as string | null, year: null as string | null, description: null as string | null, actors: [] as string[], external_id: undefined as string | undefined };
 
   if (type === 'anime') {
     const detail = await searchAnimeJikan(title);
@@ -45,6 +45,7 @@ async function lookupExternal(title: string, type: ContentType) {
       const top = results[0];
       return {
         ...base,
+        title: top.title,
         posterUrl: top.thumbnail,
         description: `By ${top.channelTitle}`,
         external_id: buildYouTubeWatchUrl(top.videoId),
@@ -100,16 +101,18 @@ export async function enrichManualAdd(
   type: ContentType,
   existingImageUrl?: string,
 ): Promise<EnrichResult> {
-  const title = await autofixTitle(rawTitle, type);
   const metadata: Record<string, unknown> = { source: 'manual' };
   let imageUrl = existingImageUrl;
   let externalId: string | undefined;
 
-  // Step 1: Type-specific API lookup
-  const detail = await lookupExternal(title, type).catch(err => {
-    log.warn(`External lookup failed for "${title}" (${type})`, String(err));
+  // Step 1: Type-specific API lookup (also gives us the canonical title)
+  const detail = await lookupExternal(rawTitle, type).catch(err => {
+    log.warn(`External lookup failed for "${rawTitle}" (${type})`, String(err));
     return null;
   });
+
+  // Use canonical title from API, fall back to user input
+  const title = detail?.title || rawTitle;
 
   if (detail) {
     if (detail.year) metadata.year = detail.year;

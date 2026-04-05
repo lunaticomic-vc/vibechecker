@@ -89,8 +89,8 @@ export default function PeoplePage() {
 
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-6" />
 
-        {isLoading ? (
-          <div className="flex justify-center py-16">
+        {isLoading || adding ? (
+          <div className="fixed inset-0 z-30 flex items-center justify-center">
             <LoadingMouse />
           </div>
         ) : people.length === 0 ? (

@@ -76,6 +76,76 @@ const GENERAL_PHRASES = [
   "you can look but you can't edit~ mrrp",
 ];
 
+const OWNER_PHRASES: Record<string, string[]> = {
+  '/movies': [
+    "welcome back to your movies~",
+    "what are we watching tonight?",
+    "i already picked a spot on the couch",
+    "movie night? i'll bring the purrs",
+  ],
+  '/tv': [
+    "one more episode... right?",
+    "i've been keeping your spot warm",
+    "binge mode activated",
+    "you say 'last one' but we both know...",
+  ],
+  '/anime': [
+    "anime time~ i'll sit on your keyboard",
+    "sugoi~ or whatever you humans say",
+    "another anime? i'm not judging. ok maybe a little",
+    "the subtitles move too fast for me",
+  ],
+  '/youtube': [
+    "youtube rabbit hole incoming~",
+    "i like the ones where nothing happens",
+    "good taste as always",
+    "play something with birds in it",
+  ],
+  '/substack': [
+    "reading time... i'll nap beside you",
+    "the smart corner. i approve",
+    "very intellectual. very cat-adjacent",
+    "i pretend to read these over your shoulder",
+  ],
+  '/kdrama': [
+    "tissues ready? i am",
+    "the drama section... my favorite nap soundtrack",
+    "i can feel the emotions from here",
+    "another one? your heart is brave",
+  ],
+  '/interests': [
+    "updating the vibe DNA~",
+    "add 'cats' please. for me",
+    "these make your recs better. you're welcome",
+  ],
+  '/people': [
+    "your favorite humans... i tolerate them",
+    "no cats on this list? rude",
+    "good taste in people too, i guess",
+  ],
+  '/progress': [
+    "let's see what you haven't finished~",
+    "no judgment... ok a little judgment",
+    "you'll get through these. i believe in you",
+  ],
+  '/settings': [
+    "ooh the secret settings~",
+    "don't break anything please",
+    "tweaking things? very you",
+  ],
+};
+
+const OWNER_GENERAL = [
+  "hey danichka~ missed you",
+  "welcome home~",
+  "i saved your spot",
+  "the vibes are immaculate today",
+  "ready when you are~",
+  "let's find something good",
+  "i've been guarding the collection",
+  "your taste keeps getting better. must be my influence",
+];
+
 export default function GuestCat() {
   const { isOwner, remaining } = useAuth();
   const [attacking, setAttacking] = useState(false);
@@ -83,7 +153,6 @@ export default function GuestCat() {
   const [pawPrint, setPawPrint] = useState<{ x: number; y: number } | null>(null);
   const [bubble, setBubble] = useState<string | null>(null);
   const [chasing, setChasing] = useState(false);
-  const [chasePos, setChasePos] = useState({ x: 0, y: 0, rotation: 0 });
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mousePos = useRef({ x: 0, y: 0 });
   const catRef = useRef<HTMLDivElement>(null);
@@ -95,7 +164,7 @@ export default function GuestCat() {
   useEffect(() => {
     function handleMouse(e: MouseEvent) {
       mousePos.current = { x: e.clientX, y: e.clientY };
-      if (chasing) return; // eyes follow the orbiting mouse instead
+      if (chasing) return;
       if (!catRef.current) return;
       const rect = catRef.current.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
@@ -125,32 +194,22 @@ export default function GuestCat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Follow the loading mouse — cat trails behind on the same circle
+  // During loading, eyes follow the loading mouse spinner
   useEffect(() => {
     if (!chasing) return;
     function handleMouseAngle(e: Event) {
       const angle = (e as CustomEvent).detail as number;
-      // Cat trails behind the mouse (offset by ~0.8 radians)
-      const catAngle = angle - 0.8;
-      const radius = 32;
-      setChasePos({
-        x: Math.cos(catAngle) * radius,
-        y: Math.sin(catAngle) * radius,
-        rotation: catAngle * (180 / Math.PI) + 90,
-      });
-      // Eyes look toward the mouse (ahead on the circle)
-      const dx = Math.cos(angle) - Math.cos(catAngle);
-      const dy = Math.sin(angle) - Math.sin(catAngle);
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Look toward center-top of screen where the spinner is
       const max = 4;
       setEyeOffset({
-        x: dist > 0 ? (dx / dist) * max : 0,
-        y: dist > 0 ? Math.min((dy / dist) * max, max * 0.6) : 0,
+        x: Math.cos(angle) * max,
+        y: Math.min(Math.sin(angle) * max, max * 0.6),
       });
     }
     window.addEventListener('loading-mouse-angle', handleMouseAngle);
     return () => window.removeEventListener('loading-mouse-angle', handleMouseAngle);
   }, [chasing]);
+
 
   function showBubble(msg: string, duration = 3000) {
     if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
@@ -184,10 +243,12 @@ export default function GuestCat() {
     prevPath.current = pathname;
     if (pathname === '/login' || pathname === '/') return;
 
-    const specific = BROWSE_PHRASES[pathname];
+    const phrasesMap = isOwner ? OWNER_PHRASES : BROWSE_PHRASES;
+    const generalPool = isOwner ? OWNER_GENERAL : GENERAL_PHRASES;
+    const specific = phrasesMap[pathname];
     const pool = specific
-      ? (Math.random() < 0.7 ? specific : GENERAL_PHRASES)
-      : GENERAL_PHRASES;
+      ? (Math.random() < 0.7 ? specific : generalPool)
+      : generalPool;
     const phrase = pool[Math.floor(Math.random() * pool.length)];
 
     const timer = setTimeout(() => showBubble(phrase, 4000), 600);
@@ -209,23 +270,10 @@ export default function GuestCat() {
   if (remaining === null && !isOwner) return null;
 
   return (
-    <motion.div
+    <div
       ref={catRef}
       onClick={handleClick}
-      className="fixed z-50 cursor-pointer select-none"
-      animate={chasing
-        ? {
-            left: '50%',
-            bottom: '50%',
-            x: chasePos.x - 100,
-            y: -chasePos.y + 100,
-          }
-        : { left: 12, bottom: 12, x: 0, y: 0 }
-      }
-      transition={chasing
-        ? { left: { duration: 0.6 }, bottom: { duration: 0.6 }, x: { duration: 0 }, y: { duration: 0 } }
-        : { duration: 0.6, ease: 'easeInOut' }
-      }
+      className="fixed bottom-3 left-3 z-50 cursor-pointer select-none"
     >
       <div className="relative">
         {/* Ethereal glow */}
@@ -323,9 +371,9 @@ export default function GuestCat() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.85 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white/85 backdrop-blur-md border border-[#e9e4f5]/60 rounded-xl px-3 py-1 shadow-[0_2px_12px_rgba(196,181,253,0.15)]"
+              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 max-w-[180px] text-center bg-white/85 backdrop-blur-md border border-[#e9e4f5]/60 rounded-xl px-3 py-1 shadow-[0_2px_12px_rgba(196,181,253,0.15)]"
             >
-              <span className="text-[11px] text-[#7c7291]">{bubble}</span>
+              <span className="text-[11px] text-[#7c7291]" style={{ lineHeight: '1.15' }}>{bubble}</span>
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white/85 border-r border-b border-[#e9e4f5]/60 rotate-45" />
             </motion.div>
           )}
@@ -349,6 +397,6 @@ export default function GuestCat() {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }

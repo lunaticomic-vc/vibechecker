@@ -67,6 +67,14 @@ export default function Home() {
     setError(null);
   };
 
+  if (loading) {
+    return (
+      <main className="min-h-screen h-screen relative overflow-hidden flex items-center justify-center">
+        <LoadingMouse />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen h-screen relative overflow-hidden">
 
@@ -108,12 +116,7 @@ export default function Home() {
         {/* Screen 4: Recommendation */}
         {screen === 'result' && recommendation && (
           <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out] py-16">
-            {loading ? (
-              <div className="flex flex-col items-center gap-3 py-16">
-                <LoadingMouse />
-                <p className="text-xs text-[#b0a8c4]">Finding something new...</p>
-              </div>
-            ) : (
+            {loading ? null : (
               <div className="w-full max-w-sm">
                 <RecommendationCard recommendation={recommendation} onAccept={startOver} />
               </div>
@@ -132,7 +135,7 @@ export default function Home() {
                       title: recommendation.title,
                       external_id: recommendation.actionUrl,
                       image_url: recommendation.thumbnailUrl ?? recommendation.imageUrls?.[0],
-                      metadata: JSON.stringify({ year: recommendation.year, source: 'recommendation', description: recommendation.description, reasoning: recommendation.reasoning, interests: recommendation.interests, actors: recommendation.actors }),
+                      metadata: JSON.stringify({ year: recommendation.year, source: 'recommendation', description: recommendation.description, reasoning: recommendation.reasoning, interests: recommendation.interests, actors: recommendation.actors, redditInsights: recommendation.redditInsights }),
                     }),
                   });
                   if (lastVibe) handleSubmit(lastVibe);

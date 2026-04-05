@@ -105,6 +105,7 @@ export async function searchTMDB(
 }
 
 export interface TMDBDetail {
+  title: string | null;
   posterUrl: string | null;
   backdropUrls: string[];
   year: string | null;
@@ -157,8 +158,10 @@ export async function searchTMDBDetailed(
     // Reuse existing image logic
     const images = await searchTMDB(title, type);
 
-    log.success(`TMDB detail: "${top.title ?? top.name}"`, `year=${resultYear} actors=${actors.length}`);
+    const canonicalTitle = (type === 'movie' ? top.title : top.name) ?? null;
+    log.success(`TMDB detail: "${canonicalTitle}"`, `year=${resultYear} actors=${actors.length}`);
     return {
+      title: canonicalTitle,
       posterUrl,
       backdropUrls: images?.backdropUrls ?? [],
       year: resultYear,
