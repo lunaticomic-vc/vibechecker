@@ -93,8 +93,8 @@ function PosterImage({ src, alt }: { src: string; alt: string }) {
         alt={alt}
         className="rounded-2xl border-2 border-[#e9e4f5] object-cover shadow-sm transition-all duration-500 ease-out"
         style={{
-          width: expanded ? '300px' : '180px',
-          height: expanded ? 'auto' : '180px',
+          width: expanded ? '460px' : '330px',
+          height: expanded ? 'auto' : '330px',
           objectFit: expanded ? 'contain' : 'cover',
           boxShadow: expanded ? '0 20px 60px rgba(0,0,0,0.15), 0 0 40px rgba(196,181,253,0.2)' : '0 4px 15px rgba(0,0,0,0.04)',
           borderColor: expanded ? 'rgba(196,181,253,0.5)' : 'rgba(233,228,245,0.5)',
@@ -114,7 +114,7 @@ function ScreencapCard({ src, alt, width, delay }: { src: string; alt: string; w
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width: hovered ? width * 1.1 : width,
+        width: hovered ? width * 1.15 : width,
         animation: `floatBob ${3 + delay}s ease-in-out infinite`,
         animationDelay: `${delay * 0.5}s`,
         zIndex: hovered ? 20 : 5,
@@ -173,7 +173,7 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
           </div>
         )}
         <div className="rounded-2xl border-2 border-[#e9e4f5] bg-white/92 backdrop-blur-sm p-4 flex flex-col gap-2">
-          <h2 className="text-base font-bold text-[#2d2640] leading-tight">{title}</h2>
+          <h2 className="text-base font-bold text-[#2d2640] leading-tight font-mono">{title}</h2>
           {interests && interests.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {interests.map((tag, i) => <span key={i} className="text-[9px] text-[#7c3aed] bg-[#f5f3ff] border border-[#e9e4f5] px-1.5 py-0.5 rounded-full">{tag}</span>)}
@@ -208,7 +208,7 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
   if (isSubstack) {
     return (
       <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/92 backdrop-blur-sm p-5 flex flex-col gap-3 max-w-[360px] mx-auto">
-        <h2 className="text-lg font-bold text-[#2d2640] leading-tight">{title}</h2>
+        <h2 className="text-lg font-bold text-[#2d2640] leading-tight font-mono">{title}</h2>
         {description && <p className="text-xs text-[#5a5270] leading-relaxed">{description}</p>}
         <button onClick={handleWatch} className="flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-5 py-2.5 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] text-xs">
           Read on Substack
@@ -229,15 +229,15 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
       )}
       {screencaps.map((src, i) => {
         const positions = [
-          { top: '8%', right: '5%' },
-          { bottom: '15%', left: '5%' },
-          { bottom: '12%', right: '4%' },
+          { top: '15%', right: '3%' },
+          { bottom: '5%', left: '3%' },
+          { bottom: '5%', right: '3%' },
         ];
         const pos = positions[i];
         if (!pos) return null;
         return (
           <div key={i} className="fixed z-[3]" style={pos}>
-            <ScreencapCard src={src} alt={`${title} scene ${i + 1}`} width={280} delay={i} />
+            <ScreencapCard src={src} alt={`${title} scene ${i + 1}`} width={480} delay={i} />
           </div>
         );
       })}
@@ -245,7 +245,7 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
       {/* Card */}
       <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/92 backdrop-blur-sm p-5 flex flex-col gap-3 max-w-[320px] mx-auto">
         <div>
-          <h2 className="text-lg font-bold text-[#2d2640] leading-tight">{title}</h2>
+          <h2 className="text-lg font-bold text-[#2d2640] leading-tight font-mono">{title}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium ${TYPE_COLORS[type] ?? ''}`}>{type}</span>
             {year && <span className="text-[10px] text-[#7c7291]">{year}</span>}

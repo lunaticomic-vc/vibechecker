@@ -12,15 +12,16 @@ const EXAMPLE_VIBES = [
 ];
 
 interface Props {
-  onSubmit: (vibe: string) => void;
+  onSubmit: (vibe: string, useInterests: boolean) => void;
   loading: boolean;
 }
 
 export default function VibeInput({ onSubmit, loading }: Props) {
   const [vibe, setVibe] = useState('');
+  const [useInterests, setUseInterests] = useState(true);
 
   const handleSubmit = () => {
-    if (vibe.trim()) onSubmit(vibe.trim());
+    if (vibe.trim()) onSubmit(vibe.trim(), useInterests);
   };
 
   return (
@@ -45,6 +46,16 @@ export default function VibeInput({ onSubmit, loading }: Props) {
           </button>
         ))}
       </div>
+
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={useInterests}
+          onChange={(e) => setUseInterests(e.target.checked)}
+          className="w-4 h-4 rounded border-[#e9e4f5] text-[#8b5cf6] focus:ring-[#c4b5fd] focus:ring-offset-0 cursor-pointer accent-[#8b5cf6]"
+        />
+        <span className="text-[12px] text-[#7c7291]">use my interests</span>
+      </label>
 
       <button
         onClick={handleSubmit}

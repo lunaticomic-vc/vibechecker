@@ -4,7 +4,7 @@ import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
 import { log } from '@/lib/logger';
 import type { ContentType } from '@/types/index';
 
-const VALID_CONTENT_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'substack'];
+const VALID_CONTENT_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama'];
 
 export async function POST(req: NextRequest) {
   log.api('POST', '/api/recommend');
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 503 });
   }
 
-  let body: { contentType?: string; vibe?: string; discoveryMode?: string };
+  let body: { contentType?: string; vibe?: string; discoveryMode?: string; useInterests?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { contentType, vibe, discoveryMode } = body;
+  const { contentType, vibe, discoveryMode, useInterests = true } = body;
   log.ai('Recommendation request', `type=${contentType} vibe="${vibe}" mode=${discoveryMode ?? 'something_new'}`);
 
   if (!contentType || !VALID_CONTENT_TYPES.includes(contentType as ContentType)) {
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   try {
     log.ai('Calling OpenAI gpt-4o-mini...');
-    const recommendation = await getRecommendation(vibe.trim(), contentType as ContentType, (discoveryMode as 'from_library' | 'something_new') ?? 'something_new');
+    const recommendation = await getRecommendation(vibe.trim(), contentType as ContentType, (discoveryMode as 'from_library' | 'something_new') ?? 'something_new', useInterests);
     log.success(`Got recommendation: "${recommendation.title}"`, `(${recommendation.type})`);
 
     if (contentType === 'youtube') {

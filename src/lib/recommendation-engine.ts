@@ -409,7 +409,8 @@ Generate 4-5 search queries to find Substack articles. The vibe/prompt "${vibe}"
 export async function getRecommendation(
   vibe: string,
   contentType: ContentType,
-  discoveryMode: DiscoveryMode = 'something_new'
+  discoveryMode: DiscoveryMode = 'something_new',
+  useInterests: boolean = true
 ): Promise<Recommendation> {
   const favorites = await getAllFavorites();
   const allProgress = await getAllProgress();
@@ -426,12 +427,14 @@ export async function getRecommendation(
 
   // Fetch user interests
   let interests: string[] = [];
-  try {
-    const { db: getDb } = await import('@/lib/db');
-    const client = await getDb();
-    const intResult = await client.execute('SELECT name FROM interests ORDER BY name');
-    interests = intResult.rows.map((r: unknown) => (r as { name: string }).name);
-  } catch { /* ignore */ }
+  if (useInterests) {
+    try {
+      const { db: getDb } = await import('@/lib/db');
+      const client = await getDb();
+      const intResult = await client.execute('SELECT name FROM interests ORDER BY name');
+      interests = intResult.rows.map((r: unknown) => (r as { name: string }).name);
+    } catch { /* ignore */ }
+  }
 
   // Fetch people the user loves
   let peopleSection = '';

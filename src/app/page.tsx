@@ -95,7 +95,7 @@ export default function Home() {
     setScreen('vibe');
   };
 
-  const handleSubmit = async (vibe: string) => {
+  const handleSubmit = async (vibe: string, useInterests: boolean = true) => {
     if (!selectedType) return;
     setLastVibe(vibe);
     setLoading(true);
@@ -105,7 +105,7 @@ export default function Home() {
       const res = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentType: selectedType, vibe, discoveryMode }),
+        body: JSON.stringify({ contentType: selectedType, vibe, discoveryMode, useInterests }),
       });
 
       if (!res.ok) {
