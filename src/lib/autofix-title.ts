@@ -46,14 +46,17 @@ export async function autofixTitle(title: string, type: string): Promise<string>
     // e.g. "Breaking Bad (TV Series 2008–2013) - IMDb" -> "Breaking Bad"
     // e.g. "Spirited Away (2001) - IMDb" -> "Spirited Away"
     const cleaned = resultTitle
+      // Remove prefixes like "Watch", "Stream", "Watch, Rent or Buy ... Online"
+      .replace(/^(watch|stream|rent|buy|download|view)[\s,]+((rent|buy|stream|watch|or)\s*)*/i, '')
+      .replace(/\s+online\s*$/i, '')  // Remove trailing "Online"
       .replace(/\s*[\(\[].*?[\)\]]\s*/g, ' ')  // Remove parentheticals
-      .replace(/\s*[-–—|:].*(imdb|wiki|rotten|tmdb|mal|anilist|youtube|substack).*/i, '')  // Remove site suffixes
+      .replace(/\s*[-–—|:].*(imdb|wiki|rotten|tmdb|mal|anilist|youtube|substack|amazon|apple|netflix|hulu|streaming).*/i, '')  // Remove site suffixes
       .replace(/\s*[-–—|].*$/i, '')  // Remove any remaining suffix after dash
       .trim();
 
     // Skip if the result is just a generic term
-    const genericTerms = ['youtube', 'movie', 'tv show', 'anime', 'substack', 'imdb', 'wikipedia', 'watch', 'search'];
-    const isGeneric = genericTerms.some(t => cleaned.toLowerCase() === t);
+    const genericTerms = ['youtube', 'movie', 'tv show', 'anime', 'substack', 'imdb', 'wikipedia', 'watch', 'search', 'stream', 'online', 'buy', 'rent'];
+    const isGeneric = genericTerms.some(t => cleaned.toLowerCase() === t) || cleaned.toLowerCase().startsWith('watch ') || cleaned.toLowerCase().startsWith('stream ');
 
     if (cleaned && cleaned.length > 1 && cleaned.length < 200 && !isGeneric) {
       if (cleaned.toLowerCase() !== title.toLowerCase()) {
