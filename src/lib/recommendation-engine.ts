@@ -97,7 +97,7 @@ export function buildRecommendationPrompt(
   return [
     `The user's current vibe: "${vibe}"`,
     `They want a recommendation for: ${contentType}`,
-    interests.length > 0 ? `\nThe user's interests/passions: ${interests.join(', ')}. Use these to find content that aligns with what they care about deeply.` : '',
+    interests.length > 0 ? `\nThe user's interests: ${interests.join(', ')}. ONLY use interests that directly relate to the vibe "${vibe}". Ignore any that don't connect to the topic.` : '',
     '',
     favorites.length > 0
       ? `The user's library (with ratings):\n${favoritesSection}`
@@ -148,11 +148,17 @@ async function expandVibe(openai: ReturnType<typeof getOpenAI>, vibe: string, in
     messages: [
       {
         role: 'system',
-        content: `You expand a user's vibe prompt into a rich, detailed concept. First, unpack what "${vibe}" means — the themes, emotions, aesthetics, and ideas it evokes. Then weave in the user's interests to create a nuanced, multi-layered description of what they're looking for. The vibe is ALWAYS the core — interests add depth, never replace it. Return 2-3 sentences, no JSON.`,
+        content: `You expand a user's prompt into a rich search concept. The prompt "${vibe}" is the ONLY topic — never drift from it.
+
+Rules:
+- First, unpack what the prompt means: themes, emotions, aesthetics, ideas
+- ONLY include user interests that DIRECTLY relate to the prompt topic. If an interest doesn't connect, drop it completely.
+- If the prompt is specific (e.g. "feminist mythology"), every word of your expansion must be about that exact topic
+- Return 2-3 sentences, no JSON`,
       },
       {
         role: 'user',
-        content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${tasteProfile ? `\nTaste profile: ${tasteProfile.slice(0, 300)}` : ''}`,
+        content: `Prompt: "${vibe}"${interests.length > 0 ? `\nUser interests (ONLY include if directly relevant to "${vibe}"): ${interests.join(', ')}` : ''}${tasteProfile ? `\nTaste (for tone only): ${tasteProfile.slice(0, 200)}` : ''}`,
       },
     ],
   });

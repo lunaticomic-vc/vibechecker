@@ -24,7 +24,7 @@ export default function Particles() {
     let animationId: number;
     let time = 0;
     let dots: Dot[] = [];
-    let mouse = { x: -1000, y: -1000, active: false };
+    let ripples: { x: number; y: number; time: number }[] = [];
 
     function resize() {
       canvas!.width = window.innerWidth;
@@ -93,14 +93,19 @@ export default function Particles() {
         const drawX = dot.baseX + dot.jitterX + waveX;
         const drawY = dot.baseY + dot.jitterY + waveY;
 
-        // Mouse ripple
+        // Click ripple effects
         let rippleOffset = 0;
-        if (mouse.active) {
-          const mdx = drawX - mouse.x;
-          const mdy = drawY - mouse.y;
+        for (const rip of ripples) {
+          const mdx = drawX - rip.x;
+          const mdy = drawY - rip.y;
           const dist = Math.sqrt(mdx * mdx + mdy * mdy);
-          if (dist < 120) {
-            rippleOffset = Math.sin(dist * 0.1 - time * 5) * (120 - dist) * 0.08;
+          const age = time - rip.time;
+          const waveRadius = age * 300;
+          const ringDist = Math.abs(dist - waveRadius);
+          if (ringDist < 40 && age < 2) {
+            const fade = Math.max(0, 1 - age / 2);
+            const ringFade = Math.max(0, 1 - ringDist / 40);
+            rippleOffset += Math.sin(dist * 0.15 - age * 8) * 6 * fade * ringFade;
           }
         }
 
@@ -136,29 +141,43 @@ export default function Particles() {
         }
       }
 
+      // Draw ripple rings
+      for (const rip of ripples) {
+        const age = time - rip.time;
+        if (age > 2) continue;
+        const fade = Math.max(0, 1 - age / 2);
+        for (let ring = 0; ring < 3; ring++) {
+          const radius = age * 300 - ring * 30;
+          if (radius < 0) continue;
+          ctx!.beginPath();
+          ctx!.arc(rip.x, rip.y, radius, 0, Math.PI * 2);
+          ctx!.strokeStyle = `rgba(255, 255, 255, ${fade * 0.3 * (1 - ring * 0.3)})`;
+          ctx!.lineWidth = 1.5 - ring * 0.4;
+          ctx!.stroke();
+        }
+      }
+
+      // Clean old ripples
+      ripples = ripples.filter(r => time - r.time < 2);
+
       animationId = requestAnimationFrame(draw);
     }
 
-    function handleMouseMove(e: MouseEvent) { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; }
-    function handleTouchMove(e: TouchEvent) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; mouse.active = true; }
-    function handleLeave() { mouse.active = false; }
+    function handleClick(e: MouseEvent) { ripples.push({ x: e.clientX, y: e.clientY, time }); }
+    function handleTouch(e: TouchEvent) { ripples.push({ x: e.touches[0].clientX, y: e.touches[0].clientY, time }); }
 
     resize();
     draw();
 
     window.addEventListener('resize', resize);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove);
-    window.addEventListener('mouseleave', handleLeave);
-    window.addEventListener('touchend', handleLeave);
+    window.addEventListener('click', handleClick);
+    window.addEventListener('touchstart', handleTouch);
 
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('mouseleave', handleLeave);
-      window.removeEventListener('touchend', handleLeave);
+      window.removeEventListener('click', handleClick);
+      window.removeEventListener('touchstart', handleTouch);
     };
   }, []);
 
