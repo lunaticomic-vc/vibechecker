@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCat } from 'react-icons/fa';
 
 const BROWSE_PHRASES: Record<string, string[]> = {
   '/movies': [
@@ -180,103 +179,102 @@ export default function GuestCat() {
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         />
 
-        {/* Cat icon + animated overlays */}
+        {/* Cat silhouette + animated overlays */}
         <motion.div
           className="relative z-10"
           animate={{ y: [0, -3, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         >
-          {/* Base silhouette */}
+          {/* Body silhouette from SVG file */}
           <motion.div
-            animate={{ rotate: attacking ? [0, -10, 6, 0] : 0 }}
+            animate={{ rotate: attacking ? [0, -8, 5, 0] : 0 }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
+            style={{ filter: 'drop-shadow(0 0 10px rgba(196,181,253,0.25))' }}
           >
-            <FaCat
-              size={80}
-              className="transition-colors duration-300"
-              style={{
-                color: attacking ? 'rgba(180,140,220,0.5)' : 'rgba(176,168,196,0.3)',
-                filter: 'drop-shadow(0 0 8px rgba(196,181,253,0.25))',
-              }}
-            />
+            <svg width="90" height="112" viewBox="0 0 200 250" className="transition-colors duration-300" style={{ color: attacking ? 'rgba(180,140,220,0.45)' : 'rgba(176,168,196,0.28)' }}>
+              {/* Body */}
+              <path fill="currentColor" d="
+                M 100 245
+                C 85 245, 75 240, 70 230
+                C 62 215, 58 195, 55 175
+                C 52 155, 48 140, 42 125
+                C 36 110, 30 100, 28 90
+                C 26 80, 28 70, 32 62
+                C 36 54, 42 48, 48 44
+                C 44 38, 38 28, 35 18
+                C 33 10, 34 5, 38 3
+                C 42 1, 48 6, 55 16
+                C 60 24, 64 30, 68 36
+                C 74 30, 80 24, 86 18
+                C 92 10, 98 6, 102 8
+                C 106 10, 106 16, 104 24
+                C 100 34, 94 42, 90 48
+                C 96 52, 102 58, 108 66
+                C 114 74, 118 84, 120 96
+                C 122 108, 124 122, 126 136
+                C 128 150, 130 165, 130 180
+                C 130 195, 128 210, 125 225
+                C 122 235, 115 245, 100 245
+                Z
+              "/>
+            </svg>
+            {/* Animated tail — separate so it can swing */}
+            <svg className="absolute -right-1 bottom-[10%] pointer-events-none" width="40" height="50" viewBox="0 0 50 60" style={{ color: attacking ? 'rgba(180,140,220,0.45)' : 'rgba(176,168,196,0.28)' }}>
+              <motion.path
+                stroke="currentColor"
+                strokeWidth="10"
+                strokeLinecap="round"
+                fill="none"
+                animate={{ d: [
+                  'M5 55 C12 42, 22 28, 32 18 C38 12, 44 10, 46 14',
+                  'M5 55 C8 40, 12 26, 16 18 C18 12, 20 10, 24 14',
+                  'M5 55 C12 42, 22 28, 32 18 C38 12, 44 10, 46 14',
+                ]}}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </svg>
           </motion.div>
 
-          {/* Eyes — glowing dots that follow mouse */}
-          <motion.div
-            className="absolute pointer-events-none"
-            style={{ top: '18%', left: '30%', width: '40%', height: '15%' }}
-          >
-            {/* Left eye */}
+          {/* Eyes — glowing dots that track mouse */}
+          {[
+            { left: '32%', top: '22%' },
+            { left: '44%', top: '22%' },
+          ].map((pos, i) => (
             <motion.div
-              className="absolute rounded-full"
+              key={i}
+              className="absolute rounded-full pointer-events-none"
               style={{
                 width: attacking ? 7 : 5,
                 height: attacking ? 7 : 5,
-                left: `calc(28% + ${eyeOffset.x}px)`,
-                top: `calc(50% + ${eyeOffset.y}px)`,
+                left: `calc(${pos.left} + ${eyeOffset.x}px)`,
+                top: `calc(${pos.top} + ${eyeOffset.y}px)`,
                 background: attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.7)',
-                boxShadow: `0 0 ${attacking ? '8' : '4'}px rgba(196,181,253,${attacking ? '0.6' : '0.3'})`,
               }}
               animate={{
                 boxShadow: attacking
                   ? '0 0 10px rgba(200,160,240,0.7)'
                   : ['0 0 4px rgba(196,181,253,0.2)', '0 0 8px rgba(196,181,253,0.4)', '0 0 4px rgba(196,181,253,0.2)'],
               }}
-              transition={attacking ? { duration: 0.15 } : { duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              transition={attacking ? { duration: 0.15 } : { duration: 3, repeat: Infinity, ease: 'easeInOut', delay: i * 0.5 }}
             />
-            {/* Right eye */}
-            <motion.div
-              className="absolute rounded-full"
-              style={{
-                width: attacking ? 7 : 5,
-                height: attacking ? 7 : 5,
-                left: `calc(68% + ${eyeOffset.x}px)`,
-                top: `calc(50% + ${eyeOffset.y}px)`,
-                background: attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.7)',
-                boxShadow: `0 0 ${attacking ? '8' : '4'}px rgba(196,181,253,${attacking ? '0.6' : '0.3'})`,
-              }}
-              animate={{
-                boxShadow: attacking
-                  ? '0 0 10px rgba(200,160,240,0.7)'
-                  : ['0 0 4px rgba(196,181,253,0.2)', '0 0 8px rgba(196,181,253,0.4)', '0 0 4px rgba(196,181,253,0.2)'],
-              }}
-              transition={attacking ? { duration: 0.15 } : { duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-            />
-          </motion.div>
+          ))}
 
-          {/* Tail — swinging curve behind the cat */}
-          <svg className="absolute -right-3 bottom-1 pointer-events-none" width="30" height="40" viewBox="0 0 30 40" fill="none">
-            <motion.path
-              stroke={attacking ? 'rgba(180,140,220,0.5)' : 'rgba(176,168,196,0.35)'}
-              strokeWidth="3"
-              strokeLinecap="round"
-              fill="none"
-              animate={{ d: [
-                'M4 38 C8 28, 16 18, 22 10 C25 6, 28 4, 28 6',
-                'M4 38 C6 26, 10 16, 12 10 C13 6, 14 4, 16 6',
-                'M4 38 C8 28, 16 18, 22 10 C25 6, 28 4, 28 6',
-              ]}}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-              style={{ filter: 'drop-shadow(0 0 3px rgba(196,181,253,0.2))' }}
-            />
-          </svg>
-
-          {/* Paw swipe on attack */}
+          {/* Attack sparkles */}
           <AnimatePresence>
             {attacking && (
               <>
                 <motion.div
-                  className="absolute -left-3 bottom-3 pointer-events-none text-xl"
+                  className="absolute -left-3 bottom-4 pointer-events-none text-xl"
                   initial={{ opacity: 0, x: 5, rotate: 20 }}
                   animate={{ opacity: 1, x: -8, rotate: -15 }}
                   exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  transition={{ duration: 0.2 }}
                   style={{ color: 'rgba(176,168,196,0.5)' }}
                 >
                   ✦
                 </motion.div>
                 <motion.div
-                  className="absolute -top-1 -right-2 pointer-events-none text-sm"
+                  className="absolute -top-1 left-2 pointer-events-none text-sm"
                   initial={{ opacity: 0, scale: 0.3 }}
                   animate={{ opacity: [0, 0.8, 0.3], scale: 1 }}
                   exit={{ opacity: 0 }}
