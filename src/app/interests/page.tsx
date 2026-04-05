@@ -31,7 +31,7 @@ export default function InterestsPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-8 max-w-lg mx-auto">
+    <main className="min-h-screen px-4 pt-20 pb-8 max-w-lg mx-auto">
       <h1 className="text-2xl font-bold text-[#2d2640] mb-1">Interests</h1>
       <p className="text-xs text-[#7c7291] mb-8">These shape all your recommendations — movies, shows, YouTube, anime.</p>
 

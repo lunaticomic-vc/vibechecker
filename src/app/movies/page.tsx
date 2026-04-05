@@ -80,11 +80,19 @@ export default function MoviesPage() {
     return "Todo";
   }
 
-  async function handleAdd(data: { type: string; title: string; image_url?: string; metadata?: string }) {
+  async function handleAdd(data: { type: string; title: string; metadata?: string }) {
+    // Auto-fetch poster image from TMDB
+    let image_url: string | undefined;
+    try {
+      const imgRes = await fetch(`/api/image?title=${encodeURIComponent(data.title)}&type=movie`);
+      const imgData = await imgRes.json();
+      if (imgData.image_url) image_url = imgData.image_url;
+    } catch { /* best effort */ }
+
     const res = await fetch('/api/favorites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, image_url }),
     });
     if (!res.ok) return;
     setShowAddForm(false);
@@ -169,6 +177,7 @@ export default function MoviesPage() {
         {showAddForm && (
           <div className="mb-8">
             <AddFavoriteForm
+              type="movie"
               onAdd={handleAdd}
               onCancel={() => setShowAddForm(false)}
             />

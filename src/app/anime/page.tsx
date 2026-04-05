@@ -75,7 +75,13 @@ export default function AnimePage() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!addTitle.trim()) return;
-    await fetch('/api/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'anime', title: addTitle.trim() }) });
+    let image_url: string | undefined;
+    try {
+      const imgRes = await fetch(`/api/image?title=${encodeURIComponent(addTitle.trim())}&type=tv`);
+      const imgData = await imgRes.json();
+      if (imgData.image_url) image_url = imgData.image_url;
+    } catch { /* best effort */ }
+    await fetch('/api/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'anime', title: addTitle.trim(), image_url }) });
     setAddTitle('');
     setShowAdd(false);
     setLoading(true);
