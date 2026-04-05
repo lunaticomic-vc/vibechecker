@@ -21,10 +21,12 @@ export default function Particles() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
     let animationId: number;
     let time = 0;
     let dots: Dot[] = [];
     let ripples: { x: number; y: number; time: number }[] = [];
+    let frameCount = 0;
 
     function resize() {
       canvas!.width = window.innerWidth;
@@ -35,7 +37,7 @@ export default function Particles() {
     function initDots() {
       const w = canvas!.width;
       const h = canvas!.height;
-      const spacing = window.innerWidth < 600 ? 10 : 7;
+      const spacing = isMobile ? 14 : 7;
       dots = [];
 
       for (let y = 0; y < h; y += spacing) {
@@ -67,6 +69,12 @@ export default function Particles() {
     }
 
     function draw() {
+      frameCount++;
+      // On mobile, only draw every other frame to save CPU
+      if (isMobile && frameCount % 2 !== 0) {
+        animationId = requestAnimationFrame(draw);
+        return;
+      }
       const w = canvas!.width;
       const h = canvas!.height;
       time += 0.006;
@@ -93,19 +101,21 @@ export default function Particles() {
         const drawX = dot.baseX + dot.jitterX + waveX;
         const drawY = dot.baseY + dot.jitterY + waveY;
 
-        // Click ripple effects
+        // Click ripple effects (skip on mobile)
         let rippleOffset = 0;
-        for (const rip of ripples) {
-          const mdx = drawX - rip.x;
-          const mdy = drawY - rip.y;
-          const dist = Math.sqrt(mdx * mdx + mdy * mdy);
-          const age = time - rip.time;
-          const waveRadius = age * 300;
-          const ringDist = Math.abs(dist - waveRadius);
-          if (ringDist < 40 && age < 2) {
-            const fade = Math.max(0, 1 - age / 2);
-            const ringFade = Math.max(0, 1 - ringDist / 40);
-            rippleOffset += Math.sin(dist * 0.15 - age * 8) * 6 * fade * ringFade;
+        if (!isMobile) {
+          for (const rip of ripples) {
+            const mdx = drawX - rip.x;
+            const mdy = drawY - rip.y;
+            const dist = Math.sqrt(mdx * mdx + mdy * mdy);
+            const age = time - rip.time;
+            const waveRadius = age * 300;
+            const ringDist = Math.abs(dist - waveRadius);
+            if (ringDist < 40 && age < 2) {
+              const fade = Math.max(0, 1 - age / 2);
+              const ringFade = Math.max(0, 1 - ringDist / 40);
+              rippleOffset += Math.sin(dist * 0.15 - age * 8) * 6 * fade * ringFade;
+            }
           }
         }
 
@@ -141,24 +151,24 @@ export default function Particles() {
         }
       }
 
-      // Draw ripple rings
-      for (const rip of ripples) {
-        const age = time - rip.time;
-        if (age > 2) continue;
-        const fade = Math.max(0, 1 - age / 2);
-        for (let ring = 0; ring < 3; ring++) {
-          const radius = age * 300 - ring * 30;
-          if (radius < 0) continue;
-          ctx!.beginPath();
-          ctx!.arc(rip.x, rip.y, radius, 0, Math.PI * 2);
-          ctx!.strokeStyle = `rgba(255, 255, 255, ${fade * 0.3 * (1 - ring * 0.3)})`;
-          ctx!.lineWidth = 1.5 - ring * 0.4;
-          ctx!.stroke();
+      // Draw ripple rings (skip on mobile)
+      if (!isMobile) {
+        for (const rip of ripples) {
+          const age = time - rip.time;
+          if (age > 2) continue;
+          const fade = Math.max(0, 1 - age / 2);
+          for (let ring = 0; ring < 3; ring++) {
+            const radius = age * 300 - ring * 30;
+            if (radius < 0) continue;
+            ctx!.beginPath();
+            ctx!.arc(rip.x, rip.y, radius, 0, Math.PI * 2);
+            ctx!.strokeStyle = `rgba(255, 255, 255, ${fade * 0.3 * (1 - ring * 0.3)})`;
+            ctx!.lineWidth = 1.5 - ring * 0.4;
+            ctx!.stroke();
+          }
         }
+        ripples = ripples.filter(r => time - r.time < 2);
       }
-
-      // Clean old ripples
-      ripples = ripples.filter(r => time - r.time < 2);
 
       animationId = requestAnimationFrame(draw);
     }
@@ -170,14 +180,18 @@ export default function Particles() {
     draw();
 
     window.addEventListener('resize', resize);
-    window.addEventListener('click', handleClick);
-    window.addEventListener('touchstart', handleTouch);
+    if (!isMobile) {
+      window.addEventListener('click', handleClick);
+      window.addEventListener('touchstart', handleTouch);
+    }
 
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('click', handleClick);
-      window.removeEventListener('touchstart', handleTouch);
+      if (!isMobile) {
+        window.removeEventListener('click', handleClick);
+        window.removeEventListener('touchstart', handleTouch);
+      }
     };
   }, []);
 

@@ -17,6 +17,7 @@ export default function LoadingMouse({ size = 'md' }: { size?: 'sm' | 'md' }) {
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const animRef = useRef<number>(0);
   const sparkleTimer = useRef(0);
+  const isMobile = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window);
 
   useEffect(() => {
     const speed = 0.03;
@@ -24,21 +25,21 @@ export default function LoadingMouse({ size = 'md' }: { size?: 'sm' | 'md' }) {
     function animate() {
       setAngle(a => a + speed);
       frame++;
-      // Spawn sparkle every ~4 frames for md size
-      if (size === 'md' && frame % 4 === 0) {
+      // Spawn sparkle every ~4 frames for md size (skip on mobile)
+      if (!isMobile && size === 'md' && frame % 4 === 0) {
         sparkleTimer.current++;
       }
       animRef.current = requestAnimationFrame(animate);
     }
     animRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animRef.current);
-  }, [size]);
+  }, [size, isMobile]);
 
-  // Emit mouse angle for cat eye tracking
+  // Emit mouse angle for cat eye tracking (skip on mobile)
   useEffect(() => {
-    if (size === 'sm') return;
+    if (size === 'sm' || isMobile) return;
     window.dispatchEvent(new CustomEvent('loading-mouse-angle', { detail: angle }));
-  }, [angle, size]);
+  }, [angle, size, isMobile]);
 
   const isSmall = size === 'sm';
   const radius = isSmall ? 7 : 80;

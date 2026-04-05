@@ -153,15 +153,20 @@ export default function GuestCat() {
   const [pawPrint, setPawPrint] = useState<{ x: number; y: number } | null>(null);
   const [bubble, setBubble] = useState<string | null>(null);
   const [chasing, setChasing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mousePos = useRef({ x: 0, y: 0 });
   const catRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const prevPath = useRef(pathname);
 
-
-  // Eye tracking — follows real cursor or orbiting mouse
   useEffect(() => {
+    setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+  }, []);
+
+  // Eye tracking — follows real cursor or orbiting mouse (skip on mobile)
+  useEffect(() => {
+    if (isMobile) return;
     function handleMouse(e: MouseEvent) {
       mousePos.current = { x: e.clientX, y: e.clientY };
       if (chasing) return;
@@ -180,10 +185,11 @@ export default function GuestCat() {
     }
     window.addEventListener('mousemove', handleMouse);
     return () => window.removeEventListener('mousemove', handleMouse);
-  }, [chasing]);
+  }, [chasing, isMobile]);
 
-  // Listen for loading chase events
+  // Listen for loading chase events (skip on mobile)
   useEffect(() => {
+    if (isMobile) return;
     function handleChase(e: Event) {
       const active = (e as CustomEvent).detail;
       setChasing(active);
@@ -192,14 +198,13 @@ export default function GuestCat() {
     window.addEventListener('cat-chase', handleChase);
     return () => window.removeEventListener('cat-chase', handleChase);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isMobile]);
 
-  // During loading, eyes follow the loading mouse spinner
+  // During loading, eyes follow the loading mouse spinner (skip on mobile)
   useEffect(() => {
-    if (!chasing) return;
+    if (isMobile || !chasing) return;
     function handleMouseAngle(e: Event) {
       const angle = (e as CustomEvent).detail as number;
-      // Look toward center-top of screen where the spinner is
       const max = 4;
       setEyeOffset({
         x: Math.cos(angle) * max,
@@ -208,7 +213,7 @@ export default function GuestCat() {
     }
     window.addEventListener('loading-mouse-angle', handleMouseAngle);
     return () => window.removeEventListener('loading-mouse-angle', handleMouseAngle);
-  }, [chasing]);
+  }, [chasing, isMobile]);
 
 
   function showBubble(msg: string, duration = 3000) {
@@ -267,7 +272,7 @@ export default function GuestCat() {
     }, 800);
   }
 
-  if (isLoading) return null;
+  if (isLoading || isMobile) return null;
 
   return (
     <div
@@ -371,9 +376,9 @@ export default function GuestCat() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.85 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 max-w-[180px] text-center bg-white/85 backdrop-blur-md border border-[#e9e4f5]/60 rounded-xl px-2.5 py-0.5 shadow-[0_2px_12px_rgba(196,181,253,0.15)]"
+              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[240px] text-center bg-white/85 backdrop-blur-md border border-[#e9e4f5]/60 rounded-xl px-3 py-1 shadow-[0_2px_12px_rgba(196,181,253,0.15)]"
             >
-              <span className="text-[11px] leading-tight text-[#7c7291]">{bubble}</span>
+              <span className="text-[#7c7291]" style={{ fontSize: '11px', lineHeight: 1.2 }}>{bubble}</span>
               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white/85 border-r border-b border-[#e9e4f5]/60 rotate-45" />
             </motion.div>
           )}

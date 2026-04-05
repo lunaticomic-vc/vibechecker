@@ -255,15 +255,17 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
   }
 
   // Movie/TV/Anime: poster + screencap circles + card
+  const isMobileView = typeof window !== 'undefined' && (window.innerWidth < 768 || 'ontouchstart' in window);
+
   return (
     <>
-      {/* Images: poster left, screencaps stacked right */}
-      {poster && (
+      {/* Desktop: fixed positioned poster & screencaps */}
+      {!isMobileView && poster && (
         <div className="fixed z-[5] top-[12%] left-[4%]">
           <PosterImage src={poster} alt={`${title} poster`} />
         </div>
       )}
-      {screencaps.slice(0, 2).map((src, i) => {
+      {!isMobileView && screencaps.slice(0, 2).map((src, i) => {
         const positions = [
           { top: '10%', right: '3%' },
           { bottom: '5%', right: '3%' },
@@ -276,6 +278,18 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
           </div>
         );
       })}
+
+      {/* Mobile: inline poster above card */}
+      {isMobileView && poster && (
+        <div className="w-full max-w-[280px] mx-auto mb-3">
+          <img
+            src={poster}
+            alt={`${title} poster`}
+            className="w-full rounded-2xl border-2 border-[#e9e4f5] object-cover shadow-sm"
+            style={{ maxHeight: '300px', objectFit: 'cover' }}
+          />
+        </div>
+      )}
 
       {/* Card */}
       <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/92 backdrop-blur-sm p-5 flex flex-col gap-3 max-w-[320px] mx-auto">
