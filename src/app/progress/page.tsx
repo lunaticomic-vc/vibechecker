@@ -1,36 +1,27 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import useSWR, { mutate } from 'swr';
 import ProgressCard from '@/components/progress/ProgressCard';
 import StatusDragProvider from '@/components/StatusDragOverlay';
 import type { ProgressWithFavorite } from '@/lib/progress';
 
-// Only shows "watching" items — drag-and-drop to move to other statuses
+const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function ProgressPage() {
-  const [items, setItems] = useState<ProgressWithFavorite[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchProgress = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/progress');
-      const data = await res.json();
-      setItems(data);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProgress();
-  }, [fetchProgress]);
+  const { data: items = [], isLoading } = useSWR<ProgressWithFavorite[]>('/api/progress', fetcher, {
+    revalidateOnFocus: true,
+    dedupingInterval: 3000,
+  });
 
   const filtered = items.filter((i) => i.status === 'watching');
 
   async function handleStatusChange(favoriteId: number, newStatus: string) {
     await fetch(`/api/progress?id=${favoriteId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
-    fetchProgress();
+    mutate('/api/progress');
+  }
+
+  function handleUpdate() {
+    mutate('/api/progress');
   }
 
   return (
@@ -39,7 +30,7 @@ export default function ProgressPage() {
       <h1 className="text-2xl font-bold text-[#2d2640] mb-1">In Progress</h1>
       <p className="text-sm text-[#7c7291] mb-8">Hold and drag to change status.</p>
 
-      {loading ? (
+      {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white border-2 border-[#e9e4f5] rounded-xl h-64 animate-pulse" />
@@ -54,7 +45,7 @@ export default function ProgressPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtered.map((item) => (
-            <ProgressCard key={item.id} item={item} onUpdate={fetchProgress} />
+            <ProgressCard key={item.id} item={item} onUpdate={handleUpdate} />
           ))}
         </div>
       )}
