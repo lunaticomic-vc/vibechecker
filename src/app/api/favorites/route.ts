@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllFavorites, addFavorite, removeFavorite, countFavorites, getFavoritesByStatus, countFavoritesByStatus } from '@/lib/favorites';
+import { autofixTitle } from '@/lib/autofix-title';
 import { log } from '@/lib/logger';
 import type { ContentType } from '@/types/index';
 
@@ -48,7 +49,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
 
-    const favorite = await addFavorite({ type, title, external_id, metadata, image_url });
+    const fixedTitle = await autofixTitle(title, type);
+    const favorite = await addFavorite({ type, title: fixedTitle, external_id, metadata, image_url });
     log.success(`Added favorite #${favorite.id}`, `"${title}" (${type})`);
     return NextResponse.json(favorite, { status: 201 });
   } catch (err) {

@@ -293,6 +293,22 @@ export async function getRecommendation(
     interests = intResult.rows.map((r: unknown) => (r as { name: string }).name);
   } catch { /* ignore */ }
 
+  // Fetch people the user loves
+  let peopleSection = '';
+  try {
+    const { getAllPeople } = await import('@/lib/people');
+    const people = await getAllPeople();
+    if (people.length > 0) {
+      const grouped: Record<string, string[]> = {};
+      for (const p of people) {
+        const role = p.role ?? 'creator';
+        if (!grouped[role]) grouped[role] = [];
+        grouped[role].push(p.name);
+      }
+      peopleSection = '\n\nPeople the user loves:\n' + Object.entries(grouped).map(([role, names]) => `  ${role}s: ${names.join(', ')}`).join('\n') + '\n\nPrioritize content featuring or created by these people. If recommending something new, look for works by the same people or similar creators.';
+    }
+  } catch { /* ignore */ }
+
   // Load user preferences (condensed taste profile)
   let tasteProfile: string | null = null;
   try {
@@ -318,6 +334,7 @@ export async function getRecommendation(
       `The user's current vibe: "${vibe}"`,
       `They want a recommendation for: ${contentType}`,
       interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : '',
+      peopleSection,
       `\n--- USER TASTE PROFILE ---\n${tasteProfile}\n--- END PROFILE ---`,
       '',
       discoveryMode === 'from_library'

@@ -1,0 +1,104 @@
+import { db } from '@/lib/db';
+import { log } from '@/lib/logger';
+
+export interface Person {
+  id: number;
+  name: string;
+  photo_url: string | null;
+  role: string | null;
+  metadata: string | null;
+  created_at: string;
+}
+
+export async function getAllPeople(): Promise<Person[]> {
+  const client = await db();
+  const result = await client.execute('SELECT * FROM people ORDER BY name');
+  return result.rows as unknown as Person[];
+}
+
+export async function addPerson(data: { name: string; photo_url?: string; role?: string; metadata?: string }): Promise<Person> {
+  const client = await db();
+  await client.execute({
+    sql: 'INSERT INTO people (name, photo_url, role, metadata) VALUES (?, ?, ?, ?)',
+    args: [data.name, data.photo_url ?? null, data.role ?? null, data.metadata ?? null],
+  });
+  const result = await client.execute({ sql: 'SELECT * FROM people WHERE name = ?', args: [data.name] });
+  return result.rows[0] as unknown as Person;
+}
+
+export async function removePerson(id: number): Promise<void> {
+  const client = await db();
+  await client.execute({ sql: 'DELETE FROM people WHERE id = ?', args: [id] });
+}
+
+interface BravePersonResult {
+  photo_url: string | null;
+  role: string;
+  description: string;
+}
+
+export async function searchPersonBrave(name: string): Promise<BravePersonResult> {
+  const apiKey = process.env.BRAVE_API_KEY;
+  if (!apiKey) return { photo_url: null, role: 'unknown', description: '' };
+
+  try {
+    const res = await fetch(
+      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(name + ' actor director writer creator')}&count=5`,
+      {
+        headers: { 'Accept': 'application/json', 'X-Subscription-Token': apiKey },
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+
+    if (!res.ok) return { photo_url: null, role: 'unknown', description: '' };
+
+    const data = await res.json();
+    const results = data?.web?.results ?? [];
+    const descriptions = results.map((r: Record<string, unknown>) => (r.description as string) ?? '').join(' ').toLowerCase();
+
+    // Detect role from search results
+    let role = 'creator';
+    const roleKeywords: [string, string[]][] = [
+      ['actor', ['actor', 'actress', 'starring', 'cast', 'imdb']],
+      ['director', ['director', 'directed', 'filmmaker', 'filmmaking']],
+      ['writer', ['author', 'writer', 'novelist', 'substack', 'journalist', 'columnist']],
+      ['musician', ['singer', 'musician', 'band', 'album', 'songwriter', 'rapper']],
+      ['youtuber', ['youtube', 'youtuber', 'channel', 'subscriber', 'content creator']],
+      ['animator', ['animator', 'mangaka', 'manga', 'anime creator', 'studio']],
+      ['voice actor', ['voice actor', 'voice actress', 'seiyuu', 'dub']],
+    ];
+
+    let maxScore = 0;
+    for (const [r, keywords] of roleKeywords) {
+      const score = keywords.filter(k => descriptions.includes(k)).length;
+      if (score > maxScore) { maxScore = score; role = r; }
+    }
+
+    // Try to get a photo from the thumbnail or infobox
+    let photo_url: string | null = null;
+    const infobox = data?.infobox;
+    if (infobox?.thumbnail?.src) {
+      photo_url = infobox.thumbnail.src;
+    } else if (infobox?.images?.[0]?.src) {
+      photo_url = infobox.images[0].src;
+    }
+    // Fallback: try thumbnail from first result
+    if (!photo_url) {
+      for (const r of results) {
+        const thumb = (r as Record<string, unknown>).thumbnail;
+        if (thumb && typeof thumb === 'object' && (thumb as Record<string, unknown>).src) {
+          photo_url = (thumb as Record<string, unknown>).src as string;
+          break;
+        }
+      }
+    }
+
+    const description = (results[0] as Record<string, unknown>)?.description as string ?? '';
+
+    log.success(`Brave person search: ${name}`, `role=${role} photo=${!!photo_url}`);
+    return { photo_url, role, description: description.slice(0, 300) };
+  } catch (err) {
+    log.warn('Brave person search error', String(err));
+    return { photo_url: null, role: 'unknown', description: '' };
+  }
+}
