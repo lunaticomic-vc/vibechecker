@@ -101,3 +101,68 @@ export async function searchTMDB(
     return null;
   }
 }
+
+export interface TMDBDetail {
+  posterUrl: string | null;
+  backdropUrls: string[];
+  year: string | null;
+  description: string | null;
+  actors: string[];
+}
+
+export async function searchTMDBDetailed(
+  title: string,
+  type: 'movie' | 'tv'
+): Promise<TMDBDetail | null> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const searchType = type === 'tv' ? 'tv' : 'movie';
+    const res = await fetch(
+      `${TMDB_BASE}/search/${searchType}?query=${encodeURIComponent(title)}&include_adult=false&language=en-US&page=1&api_key=${apiKey}`
+    );
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const results = data.results ?? [];
+    if (results.length === 0) return null;
+
+    const top = results[0];
+    const tmdbId = top.id;
+    const posterPath = top.poster_path;
+    const posterUrl = posterPath ? `${IMG_BASE}/w500${posterPath}` : null;
+    const description = top.overview ?? null;
+    const dateStr = type === 'movie' ? top.release_date : top.first_air_date;
+    const year = dateStr ? dateStr.slice(0, 4) : null;
+
+    // Fetch cast
+    let actors: string[] = [];
+    try {
+      const creditsRes = await fetch(
+        `${TMDB_BASE}/${searchType}/${tmdbId}/credits?api_key=${apiKey}`
+      );
+      if (creditsRes.ok) {
+        const creditsData = await creditsRes.json();
+        actors = (creditsData.cast ?? [])
+          .slice(0, 4)
+          .map((c: { name: string }) => c.name);
+      }
+    } catch { /* best effort */ }
+
+    // Reuse existing image logic
+    const images = await searchTMDB(title, type);
+
+    log.success(`TMDB detail: "${top.title ?? top.name}"`, `year=${year} actors=${actors.length}`);
+    return {
+      posterUrl,
+      backdropUrls: images?.backdropUrls ?? [],
+      year,
+      description,
+      actors,
+    };
+  } catch (err) {
+    log.warn('TMDB detailed search failed', String(err));
+    return null;
+  }
+}

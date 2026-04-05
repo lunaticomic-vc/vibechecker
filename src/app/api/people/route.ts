@@ -19,9 +19,10 @@ export async function POST(req: NextRequest) {
 
     // Search Brave for info about this person
     const info = await searchPersonBrave(name.trim());
+    const fixedName = info.fixedName ?? name.trim();
 
     const person = await addPerson({
-      name: name.trim(),
+      name: fixedName,
       photo_url: info.photo_url ?? undefined,
       role: info.role,
       metadata: info.description || undefined,

@@ -80,6 +80,63 @@ export async function fetchMALAnimeList(
   return results;
 }
 
+// Search anime by title via Jikan (for recommendations/enrichment)
+export async function searchAnimeJikan(
+  title: string
+): Promise<{ posterUrl: string | null; backdropUrls: string[]; year: string | null; description: string | null; actors: string[] } | null> {
+  const JIKAN_BASE = 'https://api.jikan.moe/v4';
+
+  try {
+    const res = await fetch(
+      `${JIKAN_BASE}/anime?q=${encodeURIComponent(title)}&limit=1&sfw=true`
+    );
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const top = json.data?.[0];
+    if (!top) return null;
+
+    const posterUrl = top.images?.jpg?.large_image_url ?? top.images?.jpg?.image_url ?? null;
+    const year = top.aired?.from ? top.aired.from.slice(0, 4) : (top.year ? String(top.year) : null);
+    const description = top.synopsis ?? null;
+
+    // Fetch additional pictures and character VAs in parallel
+    let actors: string[] = [];
+    let backdropUrls: string[] = [];
+    try {
+      await delay(350);
+      const [picRes, charRes] = await Promise.all([
+        fetch(`${JIKAN_BASE}/anime/${top.mal_id}/pictures`),
+        fetch(`${JIKAN_BASE}/anime/${top.mal_id}/characters?limit=4`),
+      ]);
+
+      if (picRes.ok) {
+        const picData = await picRes.json();
+        const pics = picData.data ?? [];
+        // Skip the first one (usually same as poster), take up to 3
+        backdropUrls = pics
+          .slice(1, 4)
+          .map((p: { jpg?: { large_image_url?: string; image_url?: string } }) =>
+            p.jpg?.large_image_url ?? p.jpg?.image_url ?? '')
+          .filter(Boolean);
+      }
+
+      if (charRes.ok) {
+        const charData = await charRes.json();
+        const characters = charData.data ?? [];
+        for (const char of characters.slice(0, 4)) {
+          const va = char.voice_actors?.find((v: { language: string }) => v.language === 'Japanese');
+          if (va?.person?.name) actors.push(va.person.name);
+        }
+      }
+    } catch { /* best effort */ }
+
+    return { posterUrl, backdropUrls, year, description, actors };
+  } catch {
+    return null;
+  }
+}
+
 // Jikan fallback (no API key needed, but requires public list)
 async function fetchViaJikan(
   username: string,

@@ -9,6 +9,7 @@ import { searchSubstackMulti, verifyUrl } from '@/lib/substack';
 import type { SubstackSearchResult } from '@/lib/substack';
 import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
 import type { YouTubeResult } from '@/lib/youtube';
+import { searchAnimeJikan } from '@/lib/mal';
 import type { ContentType, DiscoveryMode, Favorite, WatchProgress, Rating, Recommendation } from '@/types/index';
 
 type AIResponse = {
@@ -20,6 +21,7 @@ type AIResponse = {
   substackUrl?: string;
   episodeInfo?: string;
   actors?: string[];
+  tropes?: string[];
   imageSearchTerms?: string[];
   interests?: string[];
 };
@@ -124,7 +126,8 @@ NEVER recommend any of these rejected titles: ${[...favorites.map(f => f.title)]
     'IMPORTANT: Prioritize content similar to what the user LOVED. AVOID anything similar to what they DISLIKED, paying attention to their stated reasons.',
     'Always explain WHY this specific recommendation fits the vibe.',
     '',
-    'For movies/tv/anime: include an "actors" array with 2-4 notable actors/voice actors in it.',
+    'For movies/tv/anime/kdrama: include an "actors" array with 2-4 notable actors/voice actors in it.',
+    'For movies/tv/anime/kdrama: include a "tropes" array with 2-4 prevalent narrative tropes (e.g., "found family", "enemies to lovers", "reluctant hero", "slow burn", "redemption arc", "unreliable narrator", "fish out of water"). Pick only tropes that are genuinely central to the story.',
     'Include an "imageSearchTerms" array with 3-4 search terms to find images that capture the vibe/aesthetic of this recommendation (e.g., "Inception cityscape scene", "Inception spinning top", "Inception zero gravity hallway").',
     '',
     'Respond with ONLY a JSON object (no markdown, no extra text):',
@@ -137,6 +140,7 @@ NEVER recommend any of these rejected titles: ${[...favorites.map(f => f.title)]
     '  "substackUrl": "direct URL to the specific article (substack only)",',
     '  "episodeInfo": "e.g. Start at Season 2 (tv/anime only, optional)",',
     '  "actors": ["Actor 1", "Actor 2"] (omit for youtube),',
+    '  "tropes": ["trope 1", "trope 2"] (omit for youtube/substack),',
     '  "imageSearchTerms": ["scene description 1", "scene description 2", "scene description 3"]',
     '}',
   ].join('\n');
@@ -535,15 +539,27 @@ export async function getRecommendation(
     : `https://sflix.ps/search/${encodeURIComponent(title)}`;
   const actionLabel = contentType === 'kdrama' ? 'Watch on KissAsian' : 'Watch on sflix';
 
-  // Fetch poster and stills from TMDB
+  // Fetch poster and stills
   let imageUrls: string[] = [];
   let thumbnailUrl: string | undefined;
-  const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
-  const tmdb = await searchTMDB(title, tmdbType);
-  if (tmdb?.posterUrl) thumbnailUrl = tmdb.posterUrl;
-  imageUrls = tmdb?.backdropUrls ?? [];
+
+  if (contentType === 'anime') {
+    // Jikan for poster, TMDB for episode stills/backdrops, Jikan art as last resort
+    const [jikan, tmdb] = await Promise.all([
+      searchAnimeJikan(title),
+      searchTMDB(title, 'tv'),
+    ]);
+    thumbnailUrl = jikan?.posterUrl ?? tmdb?.posterUrl ?? undefined;
+    imageUrls = tmdb?.backdropUrls?.length ? tmdb.backdropUrls : (jikan?.backdropUrls ?? []);
+  } else {
+    const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
+    const tmdb = await searchTMDB(title, tmdbType);
+    if (tmdb?.posterUrl) thumbnailUrl = tmdb.posterUrl;
+    imageUrls = tmdb?.backdropUrls ?? [];
+  }
+
   // Gradient fallbacks if no images found
-  if (imageUrls.length === 0) {
+  if (imageUrls.length === 0 && !thumbnailUrl) {
     imageUrls = [0, 1, 2].map(i => `gradient:${i}:${encodeURIComponent(title)}`);
   }
 
@@ -569,5 +585,6 @@ export async function getRecommendation(
     imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     redditInsights: redditInsights && redditInsights.length > 0 ? redditInsights : undefined,
     interests: ai.interests,
+    tropes: ai.tropes,
   };
 }

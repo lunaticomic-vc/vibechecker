@@ -4,9 +4,9 @@ import { useState } from 'react';
 import ContentTypeSelector from '@/components/ContentTypeSelector';
 import VibeInput from '@/components/VibeInput';
 import RecommendationCard from '@/components/RecommendationCard';
-import { ContentType, DiscoveryMode, Recommendation } from '@/types/index';
+import { ContentType, Recommendation } from '@/types/index';
 
-type Screen = 'pick' | 'discover' | 'vibe' | 'result';
+type Screen = 'pick' | 'vibe' | 'result';
 
 interface LastWatching {
   favorite_id: number;
@@ -19,13 +19,13 @@ interface LastWatching {
 export default function Home() {
   const [screen, setScreen] = useState<Screen>('pick');
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
-  const [discoveryMode, setDiscoveryMode] = useState<DiscoveryMode>('something_new');
+
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastWatching, setLastWatching] = useState<LastWatching | null>(null);
   const [lastDismissed, setLastDismissed] = useState(false);
-  const [accepting, setAccepting] = useState(false);
+
   const [lastVibe, setLastVibe] = useState('');
 
   // Fetch last watching item on mount
@@ -46,53 +46,12 @@ export default function Home() {
     setLastDismissed(true);
   }
 
-  async function handleAcceptRec() {
-    if (!recommendation || accepting) return;
-    setAccepting(true);
-    try {
-      // Add as favorite
-      const favRes = await fetch('/api/favorites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: recommendation.type,
-          title: recommendation.title,
-          image_url: recommendation.thumbnailUrl ?? recommendation.imageUrls?.[0],
-          metadata: JSON.stringify({ year: recommendation.year, source: 'recommendation', description: recommendation.description, reasoning: recommendation.reasoning, interests: recommendation.interests, actors: recommendation.actors }),
-        }),
-      });
-      const fav = await favRes.json();
-
-      // Add to progress as watching
-      if (fav.id) {
-        await fetch('/api/progress', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            favorite_id: fav.id,
-            current_season: 1,
-            current_episode: 1,
-            status: 'watching',
-          }),
-        });
-      }
-    } catch {
-      // best effort
-    }
-    setAccepting(false);
-    startOver();
-  }
 
   const handlePickType = (type: ContentType) => {
     setSelectedType(type);
     setError(null);
     setRecommendation(null);
-    setTimeout(() => setScreen('discover'), 150);
-  };
-
-  const handleDiscovery = (mode: DiscoveryMode) => {
-    setDiscoveryMode(mode);
-    setScreen('vibe');
+    setTimeout(() => setScreen('vibe'), 150);
   };
 
   const handleSubmit = async (vibe: string, useInterests: boolean = true) => {
@@ -105,7 +64,7 @@ export default function Home() {
       const res = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentType: selectedType, vibe, discoveryMode, useInterests }),
+        body: JSON.stringify({ contentType: selectedType, vibe, useInterests }),
       });
 
       if (!res.ok) {
@@ -130,18 +89,9 @@ export default function Home() {
     setError(null);
   };
 
-  const libraryLabel = selectedType === 'youtube' ? 'from your subscriptions' : 'from your library';
-  const newLabel = selectedType === 'youtube' ? 'new channels' : 'something new';
-
   return (
     <main className="min-h-screen h-screen relative overflow-hidden">
 
-      {/* Title — upper right */}
-      <div className="fixed right-8 top-6 z-10">
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-[0.04em] text-[#2d2640] select-none font-[family-name:var(--font-playfair)] italic">
-          Consumption Corner
-        </h1>
-      </div>
 
       <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen">
 
@@ -152,42 +102,11 @@ export default function Home() {
           </div>
         )}
 
-        {/* Screen 2: New or from library */}
-        {screen === 'discover' && (
-          <div className="w-full flex flex-col items-center gap-6 animate-[fadeIn_0.4s_ease-out]">
-            <button
-              onClick={() => setScreen('pick')}
-              className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-
-            <p className="text-sm text-[#b0a8c4] tracking-wide">feel like starting something new?</p>
-
-            <div className="flex flex-col gap-3 w-full max-w-[260px]">
-              <button
-                onClick={() => handleDiscovery('from_library')}
-                className="py-4 px-6 rounded-2xl border-2 border-[#e8e3f3]/80 bg-white/40 text-[#7c7291] text-sm hover:bg-white/70 hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all duration-300"
-              >
-                {libraryLabel}
-              </button>
-              <button
-                onClick={() => handleDiscovery('something_new')}
-                className="py-4 px-6 rounded-2xl border-2 border-[#e8e3f3]/80 bg-white/40 text-[#7c7291] text-sm hover:bg-white/70 hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all duration-300"
-              >
-                {newLabel}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Screen 3: Vibe input */}
+        {/* Screen 2: Vibe input */}
         {screen === 'vibe' && (
           <div className="w-full flex flex-col items-center gap-8 animate-[fadeIn_0.4s_ease-out]">
             <button
-              onClick={() => setScreen('discover')}
+              onClick={() => setScreen('pick')}
               className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

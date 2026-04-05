@@ -159,7 +159,7 @@ export default function Header() {
               )}
             </div>
 
-            <Link href="/progress" onClick={navClick} className={linkClass}>Progress</Link>
+            <Link href="/progress" onClick={navClick} className={linkClass}>Current</Link>
             <Link href="/interests" onClick={navClick} className={linkClass}>Interests</Link>
             <Link href="/people" onClick={navClick} className={linkClass}>People</Link>
             <Link href="/settings" onClick={navClick} className={linkClass}>Settings</Link>

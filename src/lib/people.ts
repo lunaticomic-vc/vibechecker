@@ -35,11 +35,12 @@ interface BravePersonResult {
   photo_url: string | null;
   role: string;
   description: string;
+  fixedName: string | null;
 }
 
 export async function searchPersonBrave(name: string): Promise<BravePersonResult> {
   const apiKey = process.env.BRAVE_API_KEY;
-  if (!apiKey) return { photo_url: null, role: 'unknown', description: '' };
+  if (!apiKey) return { photo_url: null, role: 'unknown', description: '', fixedName: null };
 
   try {
     const res = await fetch(
@@ -50,7 +51,7 @@ export async function searchPersonBrave(name: string): Promise<BravePersonResult
       }
     );
 
-    if (!res.ok) return { photo_url: null, role: 'unknown', description: '' };
+    if (!res.ok) return { photo_url: null, role: 'unknown', description: '', fixedName: null };
 
     const data = await res.json();
     const results = data?.web?.results ?? [];
@@ -95,10 +96,30 @@ export async function searchPersonBrave(name: string): Promise<BravePersonResult
 
     const description = (results[0] as Record<string, unknown>)?.description as string ?? '';
 
+    // Extract canonical name from infobox or first result title
+    let fixedName: string | null = null;
+    if (infobox?.title && typeof infobox.title === 'string') {
+      fixedName = infobox.title.trim();
+    } else if (results[0]) {
+      const resultTitle = ((results[0] as Record<string, unknown>).title as string) ?? '';
+      const cleaned = resultTitle
+        .replace(/\s*[\(\[].*?[\)\]]\s*/g, ' ')
+        .replace(/\s*[-–—|:].*(imdb|wiki|tmdb|youtube|instagram|twitter).*/i, '')
+        .replace(/\s*[-–—|].*$/i, '')
+        .trim();
+      if (cleaned && cleaned.length > 1 && cleaned.length < 100) {
+        fixedName = cleaned;
+      }
+    }
+
+    if (fixedName && fixedName.toLowerCase() !== name.toLowerCase()) {
+      log.success('Person name fixed', `"${name}" -> "${fixedName}"`);
+    }
+
     log.success(`Brave person search: ${name}`, `role=${role} photo=${!!photo_url}`);
-    return { photo_url, role, description: description.slice(0, 300) };
+    return { photo_url, role, description: description.slice(0, 300), fixedName };
   } catch (err) {
     log.warn('Brave person search error', String(err));
-    return { photo_url: null, role: 'unknown', description: '' };
+    return { photo_url: null, role: 'unknown', description: '', fixedName: null };
   }
 }

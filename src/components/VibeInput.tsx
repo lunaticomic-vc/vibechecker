@@ -3,12 +3,12 @@
 import { useState } from 'react';
 
 const EXAMPLE_VIBES = [
-  'relaxing',
-  'eating',
-  'deep focus',
-  'can\'t sleep',
-  'binge',
-  'need a cry',
+  'eating, something light and ~20 mins',
+  'sleepover binge with the girls',
+  'can\'t sleep, something cozy',
+  'need a good cry',
+  'procrastinating, make it unhinged',
+  'rainy day, slow and pretty',
 ];
 
 interface Props {
@@ -26,14 +26,25 @@ export default function VibeInput({ onSubmit, loading }: Props) {
 
   return (
     <div className="flex flex-col gap-4 items-center">
-      <textarea
-        value={vibe}
-        onChange={(e) => setVibe(e.target.value)}
-        rows={3}
-        autoFocus
-        placeholder="describe your vibe..."
-        className="w-full resize-none rounded-2xl border-2 border-[#e9e4f5] bg-white/80 backdrop-blur-sm px-4 py-3 text-[#2d2640] placeholder-[#c4b5fd] focus:border-[#c4b5fd] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]/20 transition-all text-sm text-center"
-      />
+      <div className="w-full flex flex-col gap-1.5">
+        <label className="flex items-center gap-2 cursor-pointer select-none self-end">
+          <input
+            type="checkbox"
+            checked={useInterests}
+            onChange={(e) => setUseInterests(e.target.checked)}
+            className="w-4 h-4 rounded border-[#e9e4f5] text-[#8b5cf6] focus:ring-[#c4b5fd] focus:ring-offset-0 cursor-pointer accent-[#8b5cf6]"
+          />
+          <span className="text-[12px] text-[#7c7291]">use my interests</span>
+        </label>
+        <textarea
+          value={vibe}
+          onChange={(e) => setVibe(e.target.value)}
+          rows={3}
+          autoFocus
+          placeholder="describe your vibe..."
+          className="w-full resize-none rounded-2xl border-2 border-[#e9e4f5] bg-white/80 backdrop-blur-sm px-4 py-3 text-[#2d2640] placeholder-[#c4b5fd] focus:border-[#c4b5fd] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]/20 transition-all text-sm text-center"
+        />
+      </div>
 
       <div className="flex flex-wrap justify-center gap-1.5">
         {EXAMPLE_VIBES.map((example) => (
@@ -46,16 +57,6 @@ export default function VibeInput({ onSubmit, loading }: Props) {
           </button>
         ))}
       </div>
-
-      <label className="flex items-center gap-2 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={useInterests}
-          onChange={(e) => setUseInterests(e.target.checked)}
-          className="w-4 h-4 rounded border-[#e9e4f5] text-[#8b5cf6] focus:ring-[#c4b5fd] focus:ring-offset-0 cursor-pointer accent-[#8b5cf6]"
-        />
-        <span className="text-[12px] text-[#7c7291]">use my interests</span>
-      </label>
 
       <button
         onClick={handleSubmit}

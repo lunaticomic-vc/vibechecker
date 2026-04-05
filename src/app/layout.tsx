@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
-import { Inter, Playfair_Display } from 'next/font/google';
+import { Inter, Playfair_Display, Caveat } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import Particles from '@/components/Particles';
 
 const inter = Inter({ subsets: ['latin'] });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
+const caveat = Caveat({ subsets: ['latin'], weight: ['700'], variable: '--font-caveat' });
 
 export const metadata: Metadata = {
   title: 'VibeChecker',
@@ -25,7 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} ${playfair.variable} min-h-screen`}>
+      <body className={`${inter.className} ${playfair.variable} ${caveat.variable} min-h-screen`}>
         <Particles />
         <Header />
         {children}

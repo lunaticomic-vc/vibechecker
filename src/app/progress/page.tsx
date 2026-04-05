@@ -35,8 +35,8 @@ export default function ProgressPage() {
     <div className="min-h-screen overflow-y-auto relative z-10">
       <div className="max-w-5xl mx-auto px-4 pt-20 pb-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-[#2d2640]">In Progress</h1>
-          <p className="text-xs text-[#7c7291] mt-0.5">Hold and drag to change status.</p>
+          <h1 className="text-2xl font-semibold text-[#2d2640]">Current</h1>
+          <p className="text-xs text-[#7c7291] mt-0.5">pick up where you left off</p>
         </div>
 
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-4" />
