@@ -98,88 +98,26 @@ export default function GuestCat() {
       className="fixed bottom-3 left-3 z-50 cursor-pointer select-none"
     >
       <div className="flex flex-col items-center gap-0.5 relative">
-        <svg width="120" height="150" viewBox="0 0 100 120" fill="none" stroke="#b0a8c4" strokeLinecap="round" strokeLinejoin="round">
-
-          {/* Single outline — sitting cat silhouette, looking up-right */}
-          <path d="
-            M 58 105
-            C 62 95, 65 80, 62 65
-            C 60 55, 55 45, 52 38
-            C 50 33, 50 28, 52 22
-            C 53 18, 56 14, 58 10
-            C 59 8, 58 8, 56 10
-            C 53 14, 50 18, 48 22
-            C 46 18, 43 14, 40 10
-            C 38 8, 37 8, 38 10
-            C 40 14, 43 18, 44 22
-            C 46 28, 46 33, 44 38
-            C 40 45, 34 50, 30 58
-            C 26 66, 28 78, 30 85
-            C 31 90, 32 95, 32 100
-            C 32 104, 34 106, 38 105
-            C 42 104, 42 100, 42 96
-            C 44 92, 48 90, 52 92
-            C 54 94, 54 98, 54 102
-            C 54 106, 56 107, 58 105
-            Z
-          " strokeWidth="2.5" />
-
-          {/* Tail — elegant curve sweeping right */}
-          <motion.path
-            strokeWidth="2.8"
-            animate={{ d: [
-              'M 60 100 C 68 90, 75 78, 72 68 C 70 62, 66 58, 62 56',
-              'M 60 100 C 65 88, 64 74, 58 66 C 54 60, 50 58, 48 60',
-              'M 60 100 C 68 90, 75 78, 72 68 C 70 62, 66 58, 62 56',
-            ]}}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          />
-
-          {/* Eye — single dot, side profile */}
-          <motion.circle
-            cx={48 + eyeOffset.x * 0.6}
-            cy={30 + eyeOffset.y * 0.6}
-            r={attacking ? 3 : 2}
-            fill="#7c6f94"
-            stroke="none"
-            animate={{ r: attacking ? 3 : 2 }}
-            transition={{ duration: 0.12 }}
-          />
-
-          {/* Paw swipe toward mouse */}
-          <AnimatePresence>
-            {attacking && (
-              <motion.g
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <motion.path
-                  initial={{ d: 'M 32 85 C 30 80, 28 76, 26 72' }}
-                  animate={{ d: `M 32 85 C ${28 + pawTarget.x * 0.3} ${76 + pawTarget.y * 0.3}, ${24 + pawTarget.x * 0.5} ${68 + pawTarget.y * 0.5}, ${20 + pawTarget.x * 0.6} ${62 + pawTarget.y * 0.6}` }}
-                  transition={{ duration: 0.15, ease: 'easeOut' }}
-                  strokeWidth="2.5"
-                />
-                {[[-2, -4], [-4, -1], [-4, 2]].map(([dx, dy], i) => (
-                  <motion.line
-                    key={i}
-                    initial={{ x1: 26, y1: 72, x2: 26, y2: 72 }}
-                    animate={{
-                      x1: 20 + pawTarget.x * 0.6,
-                      y1: 62 + pawTarget.y * 0.6,
-                      x2: 20 + pawTarget.x * 0.6 + (dx ?? 0) * 1.5,
-                      y2: 62 + pawTarget.y * 0.6 + (dy ?? 0) * 1.5,
-                    }}
-                    transition={{ duration: 0.12, ease: 'easeOut' }}
-                    strokeWidth="1.5"
-                    stroke="#b0a0c8"
-                  />
-                ))}
-              </motion.g>
-            )}
-          </AnimatePresence>
-        </svg>
+        <pre className="text-[#b0a8c4] text-[14px] leading-[1.1] font-mono select-none" style={{ fontFamily: 'monospace' }}>
+{attacking
+? ` /\\_/\\
+( o.o )
+ > ^ <
+/|   |\\
+  |___|`
+: ` /\\_/\\
+( ${eyeOffset.x > 0.5 ? 'o' : eyeOffset.x < -0.5 ? 'o' : '•'}.${eyeOffset.x > 0.5 ? 'o' : eyeOffset.x < -0.5 ? 'o' : '•'} )
+ > ^ <`}
+        </pre>
+        {/* Animated tail */}
+        <motion.div
+          className="text-[#b0a8c4] text-[14px] font-mono select-none -mt-1 ml-3"
+          animate={{ rotate: [0, 20, -20, 0] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ transformOrigin: 'left center', display: 'inline-block' }}
+        >
+          ~
+        </motion.div>
 
         {/* Speech bubble */}
         <AnimatePresence>
