@@ -201,7 +201,7 @@ export async function getRecommendation(
   }
   // Gradient fallbacks if no images found
   if (imageUrls.length === 0) {
-    imageUrls = [0, 1, 2, 3].map(i => `gradient:${i}:${encodeURIComponent(title)}`);
+    imageUrls = [0, 1, 2].map(i => `gradient:${i}:${encodeURIComponent(title)}`);
   }
 
   // Fetch Reddit insights for non-YouTube content

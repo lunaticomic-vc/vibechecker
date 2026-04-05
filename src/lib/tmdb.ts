@@ -35,9 +35,9 @@ export async function searchTMDB(
     if (imagesRes.ok) {
       const imagesData = await imagesRes.json();
       const backdrops = imagesData.backdrops ?? [];
-      // Get up to 6 screencap backdrops (skip the first which is often a title card)
+      // Get 3 screencap backdrops (poster is the 4th image)
       backdropUrls = backdrops
-        .slice(0, 7)
+        .slice(0, 3)
         .map((b: { file_path: string }) => `${IMG_BASE}/w780${b.file_path}`);
     }
 

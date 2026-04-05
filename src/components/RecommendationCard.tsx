@@ -19,15 +19,12 @@ type AccordionSection = 'description' | 'vibe' | 'reddit' | null;
 
 // Positions for floating circles — spread around the page, not overlapping center card
 // Using viewport-relative positioning
+// 4 images: 2 on left, 2 on right — big, filling their half
 const CIRCLE_LAYOUT = [
-  // Poster — top left, big
-  { top: '3%', left: '3%', size: 160 },
-  // Screencaps — scattered around edges
-  { top: '5%', right: '5%', size: 140 },
-  { bottom: '15%', left: '5%', size: 130 },
-  { bottom: '10%', right: '3%', size: 145 },
-  { top: '40%', left: '2%', size: 120 },
-  { top: '35%', right: '2%', size: 125 },
+  { top: '10%', left: '4%', size: 180 },
+  { bottom: '10%', left: '6%', size: 170 },
+  { top: '8%', right: '4%', size: 175 },
+  { bottom: '12%', right: '5%', size: 180 },
 ];
 
 export default function RecommendationCard({ recommendation }: Props) {
