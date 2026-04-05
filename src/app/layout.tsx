@@ -3,13 +3,14 @@ import { Inter, Playfair_Display, Caveat } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import Particles from '@/components/Particles';
+import GuestCat from '@/components/GuestCat';
 
 const inter = Inter({ subsets: ['latin'] });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
 const caveat = Caveat({ subsets: ['latin'], weight: ['700'], variable: '--font-caveat' });
 
 export const metadata: Metadata = {
-  title: 'VibeChecker',
+  title: 'Consumption Corner',
   description: 'Your personal vibe-based recommendation engine',
 };
 
@@ -30,6 +31,7 @@ export default function RootLayout({
         <Particles />
         <Header />
         {children}
+        <GuestCat />
       </body>
     </html>
   );
