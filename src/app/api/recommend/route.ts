@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRecommendation } from '@/lib/recommendation-engine';
 import { db } from '@/lib/db';
 import { verifyAuthCookie } from '@/lib/auth';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { consumeRateLimit } from '@/lib/rate-limit';
 import { log } from '@/lib/logger';
-import type { ContentType } from '@/types/index';
-
-const VALID_CONTENT_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama'];
+import { CONTENT_TYPES, type ContentType } from '@/types/index';
 
 export async function POST(req: NextRequest) {
   log.api('POST', '/api/recommend');
@@ -20,7 +18,7 @@ export async function POST(req: NextRequest) {
   const isOwner = verifyAuthCookie(req.cookies.get('cc_auth')?.value);
   if (!isOwner) {
     const ip = req.headers.get('x-real-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const { allowed } = await checkRateLimit(ip);
+    const { allowed } = await consumeRateLimit(ip);
     if (!allowed) {
       return NextResponse.json({ error: 'You\'ve used all 3 free recommendations. Thanks for trying Consumption Corner!' }, { status: 429 });
     }
@@ -37,10 +35,10 @@ export async function POST(req: NextRequest) {
   const { contentType, vibe, discoveryMode, useInterests = true } = body;
   log.ai('Recommendation request', `type=${contentType} vibe="${vibe}" mode=${discoveryMode ?? 'something_new'}`);
 
-  if (!contentType || !VALID_CONTENT_TYPES.includes(contentType as ContentType)) {
+  if (!contentType || !CONTENT_TYPES.includes(contentType as ContentType)) {
     log.warn('Invalid contentType', String(contentType));
     return NextResponse.json(
-      { error: `contentType must be one of: ${VALID_CONTENT_TYPES.join(', ')}` },
+      { error: `contentType must be one of: ${CONTENT_TYPES.join(', ')}` },
       { status: 400 }
     );
   }

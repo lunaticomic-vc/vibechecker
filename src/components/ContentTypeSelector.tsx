@@ -7,7 +7,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
     type: 'movie',
     label: 'movie',
     icon: (
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
         {/* Film reel with decorative flourishes */}
         <circle cx="36" cy="36" r="22" />
         <circle cx="36" cy="36" r="7" />
@@ -39,7 +39,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
     type: 'tv',
     label: 'tv show',
     icon: (
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
         {/* Ornate TV/mirror frame */}
         <rect x="12" y="14" width="48" height="34" rx="4" />
         <rect x="16" y="18" width="40" height="26" rx="2" strokeWidth="0.8" opacity="0.4" />
@@ -67,7 +67,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
     type: 'youtube',
     label: 'youtube',
     icon: (
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
         {/* Ornate play button */}
         <circle cx="36" cy="36" r="22" />
         <circle cx="36" cy="36" r="26" strokeWidth="0.6" opacity="0.2" strokeDasharray="3 4" />
@@ -96,7 +96,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
     type: 'anime',
     label: 'anime',
     icon: (
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
         {/* Crescent moon with star — celestial/ethereal */}
         <path d="M42 12 Q 22 18, 22 36 Q 22 54, 42 60 Q 30 54, 30 36 Q 30 18, 42 12 Z" />
         {/* Main star */}
@@ -122,7 +122,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
     type: 'substack' as ContentType,
     label: 'substack',
     icon: (
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
         {/* Open book/letter with pages */}
         <path d="M16 18 L36 24 L56 18" />
         <path d="M16 18 L16 52 L36 58 L56 52 L56 18" />
@@ -147,7 +147,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
     type: 'kdrama' as ContentType,
     label: 'k-drama',
     icon: (
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
         {/* Heart with Korean-style flourish */}
         <path d="M36 56 C 20 42, 8 30, 16 20 C 22 14, 30 16, 36 24 C 42 16, 50 14, 56 20 C 64 30, 52 42, 36 56 Z" />
         {/* Inner detail */}

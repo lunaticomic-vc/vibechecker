@@ -10,15 +10,24 @@ const SCOPES = [
   'https://www.googleapis.com/auth/youtube.readonly',
 ].join(' ');
 
-export function getGoogleAuthUrl(): string {
+function requireEnv(name: string): string {
+  const val = process.env[name];
+  if (!val) throw new Error(`${name} is required for YouTube features. Set it in your environment.`);
+  return val;
+}
+
+export function getGoogleAuthUrl(state?: string): string {
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID!,
+    client_id: requireEnv('GOOGLE_CLIENT_ID'),
     redirect_uri: REDIRECT_URI,
     response_type: 'code',
     scope: SCOPES,
     access_type: 'offline',
     prompt: 'consent',
   });
+  if (state) {
+    params.set('state', state);
+  }
   return `${GOOGLE_AUTH_URL}?${params}`;
 }
 
@@ -33,8 +42,8 @@ export async function exchangeCodeForTokens(code: string): Promise<{
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code,
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      client_id: requireEnv('GOOGLE_CLIENT_ID'),
+      client_secret: requireEnv('GOOGLE_CLIENT_SECRET'),
       redirect_uri: REDIRECT_URI,
       grant_type: 'authorization_code',
     }),
@@ -54,8 +63,8 @@ export async function refreshAccessToken(refreshToken: string): Promise<string> 
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       refresh_token: refreshToken,
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      client_id: requireEnv('GOOGLE_CLIENT_ID'),
+      client_secret: requireEnv('GOOGLE_CLIENT_SECRET'),
       grant_type: 'refresh_token',
     }),
   });

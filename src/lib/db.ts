@@ -175,4 +175,4 @@ export async function db() {
   return initDb();
 }
 
-export default getDb();
+export default getDb;

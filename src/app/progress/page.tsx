@@ -5,10 +5,12 @@ import useSWR, { mutate } from 'swr';
 import ProgressCard from '@/components/progress/ProgressCard';
 import StatusDragProvider from '@/components/StatusDragOverlay';
 import type { ProgressWithFavorite } from '@/lib/progress';
+import { useIsOwner } from '@/lib/useIsOwner';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function ProgressPage() {
+  const isOwner = useIsOwner();
   const [search, setSearch] = useState('');
   const { data: items = [], isLoading } = useSWR<ProgressWithFavorite[]>('/api/progress', fetcher, {
     revalidateOnFocus: true,
@@ -61,7 +63,7 @@ export default function ProgressPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {filtered.map((item) => (
-              <ProgressCard key={item.id} item={item} onUpdate={handleUpdate} />
+              <ProgressCard key={item.id} item={item} isGuest={!isOwner} onUpdate={handleUpdate} />
             ))}
           </div>
         )}

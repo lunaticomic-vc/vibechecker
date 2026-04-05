@@ -30,11 +30,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} ${playfair.variable} ${caveat.variable} min-h-screen`}>
         <Particles />
-        <Header />
         <AuthProvider>
+          <Header />
           {children}
+          <GuestCat />
         </AuthProvider>
-        <GuestCat />
       </body>
     </html>
   );

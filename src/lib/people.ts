@@ -18,12 +18,19 @@ export async function getAllPeople(): Promise<Person[]> {
 
 export async function addPerson(data: { name: string; photo_url?: string; role?: string; metadata?: string }): Promise<Person> {
   const client = await db();
-  await client.execute({
+  const result = await client.execute({
     sql: 'INSERT INTO people (name, photo_url, role, metadata) VALUES (?, ?, ?, ?)',
     args: [data.name, data.photo_url ?? null, data.role ?? null, data.metadata ?? null],
   });
-  const result = await client.execute({ sql: 'SELECT * FROM people WHERE name = ?', args: [data.name] });
-  return result.rows[0] as unknown as Person;
+  const id = Number(result.lastInsertRowid);
+  return {
+    id,
+    name: data.name,
+    photo_url: data.photo_url ?? null,
+    role: data.role ?? null,
+    metadata: data.metadata ?? null,
+    created_at: new Date().toISOString(),
+  };
 }
 
 export async function removePerson(id: number): Promise<void> {

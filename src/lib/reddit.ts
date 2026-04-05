@@ -22,7 +22,7 @@ export async function searchRedditForTitle(title: string, type: string): Promise
       const query = encodeURIComponent(`"${title}"`);
       const res = await fetch(
         `https://www.reddit.com/r/${sub}/search.json?q=${query}&restrict_sr=on&sort=relevance&limit=3`,
-        { headers: { 'User-Agent': 'VibeChecker/1.0' } }
+        { headers: { 'User-Agent': 'VibeChecker/1.0' }, signal: AbortSignal.timeout(5000) }
       );
 
       if (!res.ok) continue;
@@ -41,7 +41,7 @@ export async function searchRedditForTitle(title: string, type: string): Promise
         try {
           const commentsRes = await fetch(
             `https://www.reddit.com${postData.permalink}.json?sort=top&limit=5`,
-            { headers: { 'User-Agent': 'VibeChecker/1.0' } }
+            { headers: { 'User-Agent': 'VibeChecker/1.0' }, signal: AbortSignal.timeout(5000) }
           );
 
           if (!commentsRes.ok) continue;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RATING_OPTIONS } from '@/types/index';
 import type { RatingValue } from '@/types/index';
 
@@ -23,6 +23,8 @@ export default function RatingSelector({ favoriteId, currentRating, currentReaso
   const [selected, setSelected] = useState<RatingValue | undefined>(currentRating);
   const [reasoning, setReasoning] = useState(currentReasoning ?? '');
   const [showReasoning, setShowReasoning] = useState(false);
+
+  useEffect(() => { setSelected(currentRating); }, [currentRating]);
 
   const needsReasoning = selected === 'felt_things' || selected === 'not_my_thing';
 

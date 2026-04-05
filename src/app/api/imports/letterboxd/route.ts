@@ -1,8 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { parseLetterboxdCSV } from '@/lib/letterboxd';
 import { addFavorite, getAllFavorites } from '@/lib/favorites';
+import { verifyAuthCookie } from '@/lib/auth';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const cookie = req.cookies.get('cc_auth')?.value;
+  if (!verifyAuthCookie(cookie)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { csv } = await req.json();
 

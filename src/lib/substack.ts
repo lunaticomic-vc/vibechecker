@@ -78,12 +78,12 @@ export async function searchSubstackMulti(queries: string[]): Promise<SubstackSe
 export async function verifyUrl(url: string): Promise<boolean> {
   try {
     const res = await fetch(url, {
-      method: 'HEAD',
+      method: 'GET',
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VibeChecker/1.0)' },
       redirect: 'follow',
       signal: AbortSignal.timeout(5000),
     });
-    return res.ok;
+    return res.ok || res.status === 301 || res.status === 302;
   } catch {
     return false;
   }

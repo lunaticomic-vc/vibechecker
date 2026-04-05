@@ -1,15 +1,30 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { verifyAuthCookie } from '@/lib/auth';
 import { log } from '@/lib/logger';
 
 export async function GET() {
-  const client = await db();
-  const result = await client.execute('SELECT * FROM interests ORDER BY name');
-  return NextResponse.json(result.rows);
+  try {
+    const client = await db();
+    const result = await client.execute('SELECT * FROM interests ORDER BY name');
+    return NextResponse.json(result.rows);
+  } catch (err) {
+    log.error('Failed to fetch interests', err);
+    return NextResponse.json({ error: 'Failed to fetch interests' }, { status: 500 });
+  }
 }
 
-export async function POST(req: Request) {
-  const { name } = await req.json();
+export async function POST(req: NextRequest) {
+  const cookie = req.cookies.get('cc_auth')?.value;
+  if (!verifyAuthCookie(cookie)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  let parsed;
+  try { parsed = await req.json(); } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+  const { name } = parsed;
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return NextResponse.json({ error: 'Name required' }, { status: 400 });
   }
@@ -24,13 +39,23 @@ export async function POST(req: Request) {
   return NextResponse.json(result.rows);
 }
 
-export async function DELETE(req: Request) {
-  const url = new URL(req.url);
-  const id = url.searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-  const client = await db();
-  log.db('REMOVE interest', `id=${id}`);
-  await client.execute({ sql: 'DELETE FROM interests WHERE id = ?', args: [Number(id)] });
-  const result = await client.execute('SELECT * FROM interests ORDER BY name');
-  return NextResponse.json(result.rows);
+export async function DELETE(req: NextRequest) {
+  const cookie = req.cookies.get('cc_auth')?.value;
+  if (!verifyAuthCookie(cookie)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const id = url.searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    const client = await db();
+    log.db('REMOVE interest', `id=${id}`);
+    await client.execute({ sql: 'DELETE FROM interests WHERE id = ?', args: [Number(id)] });
+    const result = await client.execute('SELECT * FROM interests ORDER BY name');
+    return NextResponse.json(result.rows);
+  } catch (err) {
+    log.error('Failed to delete interest', err);
+    return NextResponse.json({ error: 'Failed to delete interest' }, { status: 500 });
+  }
 }

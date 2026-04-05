@@ -50,7 +50,7 @@ export default function StatusDragProvider({ children, onStatusChange }: Props) 
     position: { x: 0, y: 0 },
   });
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
-  const zoneRefs = useRef<Record<string, DOMRect>>({});
+  const zoneRefs = useRef<Record<string, HTMLDivElement>>({});
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
 
   const startDrag = useCallback((favoriteId: number, title: string, currentStatus: string, x: number, y: number) => {
@@ -64,7 +64,8 @@ export default function StatusDragProvider({ children, onStatusChange }: Props) 
 
     // Check which zone we're over
     let found: string | null = null;
-    for (const [status, rect] of Object.entries(zoneRefs.current)) {
+    for (const [status, el] of Object.entries(zoneRefs.current)) {
+      const rect = el.getBoundingClientRect();
       if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
         found = status;
         break;
@@ -109,7 +110,7 @@ export default function StatusDragProvider({ children, onStatusChange }: Props) 
   const dropZones = ALL_STATUSES.filter(s => s.value !== drag.currentStatus);
 
   const registerZone = useCallback((status: string, el: HTMLDivElement | null) => {
-    if (el) zoneRefs.current[status] = el.getBoundingClientRect();
+    if (el) zoneRefs.current[status] = el;
   }, []);
 
   return (

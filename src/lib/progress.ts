@@ -32,23 +32,21 @@ export async function updateProgress(
   favoriteId: number,
   data: { current_season?: number; current_episode?: number; status?: string; stopped_at?: string | null }
 ): Promise<WatchProgress> {
-  const existing = await getProgressForFavorite(favoriteId);
-  if (!existing) {
-    return createProgress(favoriteId, data);
-  }
-
   const client = await db();
-  const fields: string[] = [];
-  const values: (string | number | null)[] = [];
+  const season = data.current_season ?? 1;
+  const episode = data.current_episode ?? 1;
+  const status = data.status ?? 'watching';
 
-  if (data.current_season !== undefined) { fields.push('current_season = ?'); values.push(data.current_season); }
-  if (data.current_episode !== undefined) { fields.push('current_episode = ?'); values.push(data.current_episode); }
-  if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
-  if (data.stopped_at !== undefined) { fields.push('stopped_at = ?'); values.push(data.stopped_at); }
-  fields.push('updated_at = CURRENT_TIMESTAMP');
-  values.push(favoriteId);
-
-  await client.execute({ sql: `UPDATE watch_progress SET ${fields.join(', ')} WHERE favorite_id = ?`, args: values });
+  await client.execute({
+    sql: `INSERT INTO watch_progress (favorite_id, current_season, current_episode, status, updated_at)
+          VALUES (?, ?, ?, ?, datetime('now'))
+          ON CONFLICT(favorite_id) DO UPDATE SET
+            current_season = excluded.current_season,
+            current_episode = excluded.current_episode,
+            status = excluded.status,
+            updated_at = datetime('now')`,
+    args: [favoriteId, season, episode, status],
+  });
   return (await getProgressForFavorite(favoriteId)) as WatchProgress;
 }
 

@@ -6,6 +6,7 @@ import { useDragStatus } from '@/components/StatusDragOverlay';
 
 interface ProgressCardProps {
   item: ProgressWithFavorite;
+  isGuest?: boolean;
   onUpdate: () => void;
 }
 
@@ -26,7 +27,7 @@ const TYPE_COLORS: Record<string, string> = {
   kdrama: 'bg-[#fdf2f8] text-[#db2777]',
 };
 
-export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
+export default function ProgressCard({ item, isGuest, onUpdate }: ProgressCardProps) {
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
   const { startDrag } = useDragStatus();
   const [editingTimestamp, setEditingTimestamp] = useState(false);
@@ -114,7 +115,7 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
                     autoFocus
                   />
                 ) : (
-                  <div className="text-xl font-bold text-[#2d2640] cursor-pointer hover:text-[#7c3aed] transition-colors" onClick={() => setEditingSeason(true)}>{item.current_season}</div>
+                  <div className={`text-xl font-bold text-[#2d2640] ${!isGuest ? 'cursor-pointer hover:text-[#7c3aed]' : ''} transition-colors`} onClick={!isGuest ? () => setEditingSeason(true) : undefined}>{item.current_season}</div>
                 )}
                 <div className="text-[10px] text-[#7c7291]">Season</div>
               </div>
@@ -131,7 +132,7 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
                     autoFocus
                   />
                 ) : (
-                  <div className="text-xl font-bold text-[#2d2640] cursor-pointer hover:text-[#7c3aed] transition-colors" onClick={() => setEditingEpisode(true)}>{item.current_episode}</div>
+                  <div className={`text-xl font-bold text-[#2d2640] ${!isGuest ? 'cursor-pointer hover:text-[#7c3aed]' : ''} transition-colors`} onClick={!isGuest ? () => setEditingEpisode(true) : undefined}>{item.current_episode}</div>
                 )}
                 <div className="text-[10px] text-[#7c7291]">Episode</div>
               </div>
@@ -148,7 +149,7 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
         )}
 
         {/* Stopped at timestamp for movies/youtube */}
-        {(item.favorite_type === 'movie' || item.favorite_type === 'youtube') && (
+        {!isGuest && (item.favorite_type === 'movie' || item.favorite_type === 'youtube') && (
           <div className="text-xs text-[#7c7291]">
             {editingTimestamp ? (
               <div className="flex gap-1 items-center">
@@ -171,6 +172,7 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
           </div>
         )}
 
+        {!isGuest && (
         <div className="flex gap-1.5 mt-auto pt-1">
           {(item.favorite_type === 'tv' || item.favorite_type === 'anime') && (
             <button onClick={() => patch({ current_episode: item.current_episode + 1 })} className="flex-1 text-[10px] bg-[#f5f3ff] hover:bg-[#e9e4f5] text-[#7c3aed] font-medium px-2 py-1.5 rounded-lg transition-colors">
@@ -184,6 +186,7 @@ export default function ProgressCard({ item, onUpdate }: ProgressCardProps) {
             Drop
           </button>
         </div>
+        )}
       </div>
     </div>
   );

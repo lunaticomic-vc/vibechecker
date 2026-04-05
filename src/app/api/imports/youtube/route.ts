@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getValidAccessToken } from '@/lib/google-auth';
 import { addFavorite, getAllFavorites } from '@/lib/favorites';
+import { verifyAuthCookie } from '@/lib/auth';
 
 const YT_API = 'https://www.googleapis.com/youtube/v3';
 
@@ -84,9 +85,21 @@ async function fetchSubscriptions(accessToken: string, maxResults = 50): Promise
   return subs.slice(0, maxResults);
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const cookie = req.cookies.get('cc_auth')?.value;
+  if (!verifyAuthCookie(cookie)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const { mode } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    const { mode } = body;
     const accessToken = await getValidAccessToken();
 
     const existing = await getAllFavorites('youtube');

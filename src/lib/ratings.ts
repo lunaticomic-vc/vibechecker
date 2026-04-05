@@ -24,7 +24,12 @@ export async function setRating(favoriteId: number, rating: RatingValue, reasoni
             created_at = CURRENT_TIMESTAMP`,
     args: [favoriteId, rating, reasoning ?? null],
   });
-  return (await getRating(favoriteId))!;
+  return {
+    favorite_id: favoriteId,
+    rating,
+    reasoning: reasoning ?? null,
+    created_at: new Date().toISOString(),
+  } as Rating;
 }
 
 export async function removeRating(favoriteId: number): Promise<void> {

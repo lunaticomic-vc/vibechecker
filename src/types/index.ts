@@ -1,4 +1,5 @@
-export type ContentType = 'movie' | 'tv' | 'anime' | 'youtube' | 'substack' | 'kdrama';
+export const CONTENT_TYPES = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama'] as const;
+export type ContentType = (typeof CONTENT_TYPES)[number];
 
 export type FavoriteMetadata =
   | { source: 'recommendation'; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; year?: string }

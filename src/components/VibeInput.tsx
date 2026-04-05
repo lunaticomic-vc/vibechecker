@@ -42,6 +42,12 @@ export default function VibeInput({ onSubmit, loading, isOwner = false }: Props)
         <textarea
           value={vibe}
           onChange={(e) => setVibe(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
           rows={3}
           autoFocus
           placeholder="describe your vibe..."

@@ -2,20 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function Header() {
+  const { isAuthed } = useAuth();
   const [open, setOpen] = useState(false);
   const [contentOpen, setContentOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
-  const [authed, setAuthed] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    fetch('/api/auth/status').then(r => r.json()).then(data => {
-      if (data.role !== 'anonymous') setAuthed(true);
-    }).catch(() => {});
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -36,8 +31,10 @@ export default function Header() {
     if (!ctx) return;
 
     const size = 52;
-    canvas.width = size;
-    canvas.height = size;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
     let animId: number;
     let time = 0;
 
@@ -50,8 +47,8 @@ export default function Header() {
       time += 0.015;
       const isActive = hovering || open;
 
-      for (let y = 0; y < s; y += 2) {
-        for (let x = 0; x < s; x += 2) {
+      for (let y = 0; y < s; y += 1) {
+        for (let x = 0; x < s; x += 1) {
           const dx = x - cx;
           const dy = y - cy;
           const dist = Math.sqrt(dx * dx + dy * dy);
@@ -65,7 +62,7 @@ export default function Header() {
           const lightFade = (Math.cos(lightAngle + 2.4) + 1) * 0.5;
           const base = 0.6 + lightFade * 0.3 + crescentFade * 0.1 + wave;
           const glow = isActive ? 0.15 : 0;
-          const dither = (Math.random() - 0.5) * 0.12;
+          const dither = (Math.random() - 0.5) * 0.08;
           const val = Math.max(0, Math.min(1, base + dither + glow));
           const edgeFade = dist > r - 1.5 ? Math.max(0, (r + 1 - dist) / 2.5) : 1;
 
@@ -75,14 +72,14 @@ export default function Header() {
           const alpha = edgeFade * (isActive ? 1 : 0.85);
 
           ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${alpha})`;
-          ctx!.fillRect(x, y, 2, 2);
+          ctx!.fillRect(x, y, 1, 1);
 
           const c1 = Math.sqrt((x - cx + 4) ** 2 + (y - cy - 5) ** 2);
           const c2 = Math.sqrt((x - cx - 6) ** 2 + (y - cy + 3) ** 2);
           const c3 = Math.sqrt((x - cx + 2) ** 2 + (y - cy + 8) ** 2);
           if ((c1 < 4 || c2 < 3 || c3 < 2.5) && Math.random() > 0.5) {
             ctx!.fillStyle = `rgba(170, 160, 195, ${0.15 * edgeFade})`;
-            ctx!.fillRect(x, y, 2, 2);
+            ctx!.fillRect(x, y, 1, 1);
           }
         }
       }
@@ -101,7 +98,7 @@ export default function Header() {
 
     draw();
     return () => cancelAnimationFrame(animId);
-  }, [hovering, open]);
+  }, [hovering, open, isAuthed]);
 
   function navClick() {
     setOpen(false);
@@ -110,7 +107,7 @@ export default function Header() {
 
   const linkClass = "px-3 py-1.5 rounded-lg text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors whitespace-nowrap";
 
-  if (!authed) return null;
+  if (!isAuthed) return null;
 
   return (
     <div ref={menuRef} className="fixed top-0 left-0 right-0 z-[60] pointer-events-none">

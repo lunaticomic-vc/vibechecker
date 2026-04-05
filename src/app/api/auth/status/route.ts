@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthCookie, verifyGuestCookie } from '@/lib/auth';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { getRateLimit } from '@/lib/rate-limit';
 
 export async function GET(req: NextRequest) {
   // No password set = local dev, treat as owner
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const isGuest = verifyGuestCookie(req.cookies.get('cc_guest')?.value);
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
-  const { remaining } = await checkRateLimit(ip);
+  const { remaining } = await getRateLimit(ip);
 
   if (isGuest) {
     return NextResponse.json({ role: 'guest', remaining });

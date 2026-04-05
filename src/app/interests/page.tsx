@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
+import { useIsOwner } from '@/lib/useIsOwner';
 
 interface Interest {
   id: number;
@@ -11,6 +12,7 @@ interface Interest {
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function InterestsPage() {
+  const isOwner = useIsOwner();
   const { data: interests = [], isLoading } = useSWR<Interest[]>('/api/interests', fetcher, {
     revalidateOnFocus: true,
     dedupingInterval: 5000,
@@ -19,13 +21,15 @@ export default function InterestsPage() {
 
   async function addInterest() {
     if (!input.trim()) return;
-    await fetch('/api/interests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: input.trim() }) });
+    const res = await fetch('/api/interests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: input.trim() }) });
+    if (!res.ok) return;
     setInput('');
     mutate('/api/interests');
   }
 
   async function removeInterest(id: number) {
-    await fetch(`/api/interests?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/interests?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) return;
     mutate('/api/interests');
   }
 
@@ -37,6 +41,7 @@ export default function InterestsPage() {
           <p className="text-xs text-[#7c7291] mt-0.5">These shape all your recommendations.</p>
         </div>
 
+        {isOwner && (
         <div className="flex gap-2 mb-8 max-w-lg">
           <input
             type="text"
@@ -50,6 +55,7 @@ export default function InterestsPage() {
             Add
           </button>
         </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-16">
@@ -65,9 +71,11 @@ export default function InterestsPage() {
             {interests.map(interest => (
               <span key={interest.id} className="group flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-[#e9e4f5] rounded-full text-sm text-[#5a5270] hover:border-[#c4b5fd] transition-colors">
                 {interest.name}
+                {isOwner && (
                 <button onClick={() => removeInterest(interest.id)} className="w-4 h-4 flex items-center justify-center rounded-full text-[#c8c2d6] hover:text-red-400 hover:bg-red-50 transition-colors text-xs">
                   ×
                 </button>
+                )}
               </span>
             ))}
           </div>

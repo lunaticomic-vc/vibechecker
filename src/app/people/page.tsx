@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
+import { useIsOwner } from '@/lib/useIsOwner';
 
 interface Person {
   id: number;
@@ -26,6 +27,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function PeoplePage() {
+  const isOwner = useIsOwner();
   const { data: people = [], isLoading } = useSWR<Person[]>('/api/people', fetcher, {
     revalidateOnFocus: true,
     dedupingInterval: 5000,
@@ -68,6 +70,7 @@ export default function PeoplePage() {
           <p className="text-xs text-[#7c7291] mt-0.5">Creators, actors, and writers you love. Shapes your recommendations.</p>
         </div>
 
+        {isOwner && (
         <div className="flex gap-2 mb-6 max-w-lg">
           <input
             type="text"
@@ -81,6 +84,7 @@ export default function PeoplePage() {
             {adding ? 'Adding...' : 'Add'}
           </button>
         </div>
+        )}
 
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-6" />
 
@@ -119,12 +123,14 @@ export default function PeoplePage() {
                           {person.role ?? 'unknown'}
                         </span>
                       </div>
+                      {isOwner && (
                       <button
                         onClick={() => removePerson(person.id)}
                         className="absolute top-2 right-2 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 text-[#7c7291] hover:bg-red-500 hover:text-white"
                       >
                         ×
                       </button>
+                      )}
                     </div>
                   ))}
                 </div>

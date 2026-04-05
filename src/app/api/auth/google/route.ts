@@ -9,6 +9,16 @@ export async function GET() {
     );
   }
 
-  const authUrl = getGoogleAuthUrl();
-  return NextResponse.redirect(authUrl);
+  const state = crypto.randomUUID();
+  const authUrl = getGoogleAuthUrl(state);
+
+  const response = NextResponse.redirect(authUrl);
+  response.cookies.set('oauth_state', state, {
+    maxAge: 300,
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+  });
+
+  return response;
 }

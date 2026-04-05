@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import type { ContentType } from '@/types/index';
+import { useIsOwner } from '@/lib/useIsOwner';
 
 export default function SettingsPage() {
+  const isOwner = useIsOwner();
   const [bulkText, setBulkText] = useState('');
   const [bulkType, setBulkType] = useState<ContentType>('movie');
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -130,6 +132,9 @@ export default function SettingsPage() {
           <p className="text-xs text-[#7c7291] mt-0.5">Manage integrations and imports</p>
         </div>
 
+        {!isOwner ? (
+          <p className="text-sm text-[#7c7291] py-16 text-center">only danichka can change settings~</p>
+        ) : (
         <div className="space-y-6 max-w-2xl">
           <h2 className="text-base font-semibold text-[#2d2640]">Import</h2>
 
@@ -264,6 +269,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

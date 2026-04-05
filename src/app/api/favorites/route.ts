@@ -3,13 +3,14 @@ import { getAllFavorites, addFavorite, removeFavorite, countFavorites, getFavori
 import { autofixTitle } from '@/lib/autofix-title';
 import { searchTMDBDetailed } from '@/lib/tmdb';
 import { searchAnimeJikan } from '@/lib/mal';
+import { verifyAuthCookie } from '@/lib/auth';
 import { log } from '@/lib/logger';
-import type { ContentType } from '@/types/index';
+import { CONTENT_TYPES, type ContentType } from '@/types/index';
 
 export async function GET(request: NextRequest) {
   const type = request.nextUrl.searchParams.get('type') as ContentType | null;
   const status = request.nextUrl.searchParams.get('status');
-  const limit = parseInt(request.nextUrl.searchParams.get('limit') ?? '25');
+  const limit = Math.min(Math.max(parseInt(request.nextUrl.searchParams.get('limit') ?? '25') || 25, 1), 100);
   const offset = parseInt(request.nextUrl.searchParams.get('offset') ?? '0');
   log.api('GET', '/api/favorites', `type=${type ?? 'all'} status=${status ?? 'all'} limit=${limit} offset=${offset}`);
   try {
@@ -35,6 +36,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   log.api('POST', '/api/favorites');
+  const cookie = request.cookies.get('cc_auth')?.value;
+  if (!verifyAuthCookie(cookie)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const body = await request.json();
     const { type, title, external_id, metadata, image_url } = body;
@@ -45,8 +50,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'type and title are required' }, { status: 400 });
     }
 
-    const validTypes: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama'];
-    if (!validTypes.includes(type)) {
+    if (!CONTENT_TYPES.includes(type)) {
       log.warn('Invalid content type', type);
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
@@ -58,34 +62,34 @@ export async function POST(request: NextRequest) {
     // Auto-enrich manually added records (no metadata yet) for movie/tv/anime/kdrama
     const enrichableTypes: ContentType[] = ['movie', 'tv', 'anime', 'kdrama'];
     if (!metadata && !image_url && enrichableTypes.includes(type)) {
-      (async () => {
-        try {
-          let detail: { posterUrl: string | null; year: string | null; description: string | null; actors: string[] } | null = null;
+      try {
+        let detail: { posterUrl: string | null; year: string | null; description: string | null; actors: string[] } | null = null;
 
-          if (type === 'anime') {
-            detail = await searchAnimeJikan(fixedTitle);
-          }
-          if (!detail) {
-            const tmdbType = type === 'movie' ? 'movie' : 'tv';
-            detail = await searchTMDBDetailed(fixedTitle, tmdbType);
-          }
-          if (!detail) return;
+        if (type === 'anime') {
+          detail = await searchAnimeJikan(fixedTitle);
+        }
+        if (!detail) {
+          const tmdbType = type === 'movie' ? 'movie' : 'tv';
+          detail = await searchTMDBDetailed(fixedTitle, tmdbType);
+        }
 
+        if (detail) {
           const enriched: Record<string, unknown> = {};
           if (detail.year) enriched.year = detail.year;
           if (detail.description) enriched.description = detail.description;
           if (detail.actors?.length) enriched.actors = detail.actors;
           enriched.source = 'manual';
 
-          await updateFavorite(favorite.id, {
+          const enrichedFavorite = await updateFavorite(favorite.id, {
             image_url: detail.posterUrl ?? undefined,
             metadata: JSON.stringify(enriched),
           });
           log.success(`Enriched favorite #${favorite.id}`, `"${fixedTitle}" — year=${detail.year} actors=${detail.actors?.length ?? 0}`);
-        } catch (err) {
-          log.warn('Failed to enrich favorite', String(err));
+          return NextResponse.json(enrichedFavorite, { status: 201 });
         }
-      })();
+      } catch (err) {
+        log.warn('Failed to enrich favorite', String(err));
+      }
     }
 
     return NextResponse.json(favorite, { status: 201 });
@@ -98,10 +102,17 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id');
   log.api('DELETE', '/api/favorites', `id=${id}`);
+  const cookie = request.cookies.get('cc_auth')?.value;
+  if (!verifyAuthCookie(cookie)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     if (!id) {
       log.warn('Missing id param');
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+    if (isNaN(Number(id))) {
+      return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
     await removeFavorite(Number(id));
     log.success(`Deleted favorite #${id}`);

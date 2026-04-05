@@ -1,36 +1,65 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { verifyAuthCookie } from '@/lib/auth';
 import { log } from '@/lib/logger';
 
-// GET - check if MAL account is linked
 export async function GET() {
-  const client = await db();
-  const result = await client.execute({ sql: "SELECT username FROM accounts WHERE platform = 'myanimelist' LIMIT 1", args: [] });
-  const username = result.rows[0] ? (result.rows[0] as unknown as { username: string }).username : null;
-  return NextResponse.json({ username });
+  try {
+    const client = await db();
+    const result = await client.execute({ sql: "SELECT username FROM accounts WHERE platform = 'myanimelist' LIMIT 1", args: [] });
+    const username = result.rows[0] ? (result.rows[0] as unknown as { username: string }).username : null;
+    return NextResponse.json({ username });
+  } catch (err) {
+    log.error('Failed to fetch MAL account', err);
+    return NextResponse.json({ error: 'Failed to fetch MAL account' }, { status: 500 });
+  }
 }
 
-// POST - save MAL username
-export async function POST(req: Request) {
-  const { username } = await req.json();
-  if (!username) return NextResponse.json({ error: 'Username required' }, { status: 400 });
+export async function POST(req: NextRequest) {
+  const cookie = req.cookies.get('cc_auth')?.value;
+  if (!verifyAuthCookie(cookie)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  const client = await db();
-  log.db('SAVE MAL account', username);
-  await client.execute({ sql: "DELETE FROM accounts WHERE platform = 'myanimelist'", args: [] });
-  await client.execute({ sql: "INSERT INTO accounts (platform, username) VALUES ('myanimelist', ?)", args: [username] });
-  return NextResponse.json({ username });
+  try {
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    const { username } = body;
+    if (!username) return NextResponse.json({ error: 'Username required' }, { status: 400 });
+
+    const client = await db();
+    log.db('SAVE MAL account', username);
+    await client.execute({ sql: "DELETE FROM accounts WHERE platform = 'myanimelist'", args: [] });
+    await client.execute({ sql: "INSERT INTO accounts (platform, username) VALUES ('myanimelist', ?)", args: [username] });
+    return NextResponse.json({ username });
+  } catch (err) {
+    log.error('Failed to save MAL account', err);
+    return NextResponse.json({ error: 'Failed to save MAL account' }, { status: 500 });
+  }
 }
 
-// DELETE - remove MAL account and all MAL-imported anime
-export async function DELETE() {
-  const client = await db();
-  log.db('REMOVE MAL account + all MAL anime');
+export async function DELETE(req: NextRequest) {
+  const cookie = req.cookies.get('cc_auth')?.value;
+  if (!verifyAuthCookie(cookie)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  // Delete all anime that came from MAL (have mal: external_id)
-  const deleted = await client.execute("DELETE FROM favorites WHERE type = 'anime' AND external_id LIKE 'mal:%'");
-  await client.execute("DELETE FROM accounts WHERE platform = 'myanimelist'");
+  try {
+    const client = await db();
+    log.db('REMOVE MAL account + all MAL anime');
 
-  log.success(`Removed MAL account and ${deleted.rowsAffected} anime`);
-  return NextResponse.json({ removed: Number(deleted.rowsAffected) });
+    const deleted = await client.execute("DELETE FROM favorites WHERE type = 'anime' AND external_id LIKE 'mal:%'");
+    await client.execute("DELETE FROM accounts WHERE platform = 'myanimelist'");
+
+    log.success(`Removed MAL account and ${deleted.rowsAffected} anime`);
+    return NextResponse.json({ removed: Number(deleted.rowsAffected) });
+  } catch (err) {
+    log.error('Failed to remove MAL account', err);
+    return NextResponse.json({ error: 'Failed to remove MAL account' }, { status: 500 });
+  }
 }

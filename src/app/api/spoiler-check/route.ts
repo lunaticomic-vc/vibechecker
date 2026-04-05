@@ -3,12 +3,24 @@ import { getOpenAI } from '@/lib/openai';
 
 export async function POST(req: NextRequest) {
   try {
-    const { comments } = await req.json();
+    let parsed;
+    try { parsed = await req.json(); } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+    const { comments } = parsed;
     if (!Array.isArray(comments) || comments.length === 0) {
       return NextResponse.json({ results: [] });
     }
 
-    const numbered = comments.map((c: string, i: number) => `${i + 1}. "${c}"`).join('\n');
+    if (comments.length > 100) {
+      return NextResponse.json({ error: 'Too many comments (max 100)' }, { status: 400 });
+    }
+
+    const truncated = comments.map((c: string) =>
+      typeof c === 'string' && c.length > 500 ? c.slice(0, 500) : c
+    );
+
+    const numbered = truncated.map((c: string, i: number) => `${i + 1}. "${c}"`).join('\n');
 
     const res = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
@@ -36,7 +48,8 @@ Respond with ONLY a JSON array of booleans, one per comment. Example: [false, tr
     }
 
     return NextResponse.json({ results });
-  } catch {
+  } catch (err) {
+    console.error('Spoiler check failed:', err);
     return NextResponse.json({ results: [] });
   }
 }

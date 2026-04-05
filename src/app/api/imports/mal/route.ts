@@ -1,10 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { fetchMALAnimeList } from '@/lib/mal';
 import { addFavorite, getAllFavorites } from '@/lib/favorites';
+import { verifyAuthCookie } from '@/lib/auth';
 import { log } from '@/lib/logger';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   log.api('POST', '/api/imports/mal');
+
+  const cookie = req.cookies.get('cc_auth')?.value;
+  if (!verifyAuthCookie(cookie)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { username } = await req.json();
 

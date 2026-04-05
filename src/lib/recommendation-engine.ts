@@ -127,6 +127,7 @@ NEVER recommend any of these rejected titles: ${[...favorites.map(f => f.title)]
     `Your task: ${instructions[contentType]}`,
     '',
     'CRITICAL: The user\'s vibe/prompt is your #1 priority. NEVER ignore what they asked for. The vibe IS the assignment — everything else (interests, taste profile, library) exists to ENHANCE your understanding of what they want, not to override it.',
+    'CONTEXT vs TOPIC: If the user mentions an activity (eating, cooking, commuting, working out, in bed, etc.), that describes their SITUATION — not what they want content about. "I\'m eating" means suggest something light and engaging to watch while eating, NOT recipes or food content. Treat activities as format hints (easy to follow, not too intense) and use the rest of the vibe for topic.',
     'If the vibe is specific (e.g. "feminist mythology"), recommend something that is DIRECTLY about that topic. Use their interests to pick the BEST match within that topic, not to change the topic.',
     'IMPORTANT: Prioritize content similar to what the user LOVED. AVOID anything similar to what they DISLIKED, paying attention to their stated reasons.',
     'Always explain WHY this specific recommendation fits the vibe.',
@@ -164,6 +165,7 @@ Rules:
 - First, unpack what the prompt means: themes, emotions, aesthetics, ideas
 - ONLY include user interests that DIRECTLY relate to the prompt topic. If an interest doesn't connect, drop it completely.
 - If the prompt is specific (e.g. "feminist mythology"), every word of your expansion must be about that exact topic
+- Activity words like "eating", "cooking", "commuting", "working out", "in bed" describe what the user is DOING right now — they are NOT requesting content about that activity. Treat them as context for the FORMAT (light, engaging, easy background watch) not the TOPIC. Never recommend recipes, workout videos, etc. just because they mentioned an activity.
 - Return 2-3 sentences, no JSON`,
       },
       {
@@ -255,8 +257,8 @@ async function getYouTubeRecommendation(
   // Step 2: Search YouTube for real videos (excludes Shorts via duration filter)
   const allResults: YouTubeResult[] = [];
   const seen = new Set<string>();
-  for (const q of queries) {
-    const results = await searchYouTube(q, true);
+  const searchResults = await Promise.all(queries.map(q => searchYouTube(q, true)));
+  for (const results of searchResults) {
     for (const r of results) {
       if (!seen.has(r.videoId)) { seen.add(r.videoId); allResults.push(r); }
     }
@@ -333,8 +335,8 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
 
       const retryResults: YouTubeResult[] = [];
       const retrySeen = new Set(seen);
-      for (const q of retryQueries) {
-        const results = await searchYouTube(q, true);
+      const retrySearchResults = await Promise.all(retryQueries.map(q => searchYouTube(q, true)));
+      for (const results of retrySearchResults) {
         for (const r of results) {
           if (!retrySeen.has(r.videoId)) { retrySeen.add(r.videoId); retryResults.push(r); }
         }

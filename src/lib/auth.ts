@@ -1,41 +1,23 @@
+import crypto from 'crypto';
+
 const COOKIE_NAME = 'cc_auth';
 
-function getSecret(): string {
-  return process.env.APP_SECRET ?? 'dev-secret-change-me';
+const secret = process.env.APP_SECRET ?? 'dev-secret-change-me';
+
+if (process.env.NODE_ENV === 'production' && secret === 'dev-secret-change-me') {
+  console.warn('WARNING: Using default APP_SECRET in production! Set APP_SECRET env var.');
 }
 
-// Simple sync hash — no crypto import needed, works in Edge + Node
 function sign(value: string): string {
-  const secret = getSecret();
-  const input = value + ':' + secret;
-  // FNV-1a inspired hash, produces a 64-char hex string
-  let h1 = 0x811c9dc5 >>> 0;
-  let h2 = 0x01000193 >>> 0;
-  let h3 = 0xdeadbeef >>> 0;
-  let h4 = 0xcafebabe >>> 0;
-  for (let i = 0; i < input.length; i++) {
-    const c = input.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
-    h2 = Math.imul(h2 ^ c, 0x27d4eb2d) >>> 0;
-    h3 = Math.imul(h3 ^ c, 0x1b873593) >>> 0;
-    h4 = Math.imul(h4 ^ c, 0xcc9e2d51) >>> 0;
-  }
-  // Multiple rounds for avalanche
-  for (let r = 0; r < 100; r++) {
-    h1 = Math.imul(h1 ^ h4, 0x01000193) >>> 0;
-    h2 = Math.imul(h2 ^ h1, 0x27d4eb2d) >>> 0;
-    h3 = Math.imul(h3 ^ h2, 0x1b873593) >>> 0;
-    h4 = Math.imul(h4 ^ h3, 0xcc9e2d51) >>> 0;
-  }
-  const hex = (n: number) => n.toString(16).padStart(8, '0');
-  return hex(h1) + hex(h2) + hex(h3) + hex(h4) + hex(h1 ^ h2) + hex(h2 ^ h3) + hex(h3 ^ h4) + hex(h4 ^ h1);
+  return crypto.createHmac('sha256', secret).update(value).digest('hex');
 }
 
 export function createAuthCookie(): { name: string; value: string; options: Record<string, unknown> } {
-  const signature = sign('authenticated');
+  const value = 'authenticated';
+  const signature = sign(value);
   return {
     name: COOKIE_NAME,
-    value: signature,
+    value: `${value}.${signature}`,
     options: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -48,35 +30,34 @@ export function createAuthCookie(): { name: string; value: string; options: Reco
 
 export function verifyAuthCookie(cookieValue: string | undefined): boolean {
   if (!cookieValue) return false;
-  const expected = sign('authenticated');
-  // Constant-time comparison
-  if (cookieValue.length !== expected.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < cookieValue.length; i++) {
-    mismatch |= cookieValue.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return mismatch === 0;
+  const [value, sig] = cookieValue.split('.');
+  if (!value || !sig) return false;
+  const expected = sign(value);
+  if (sig.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
 }
 
-export function checkPassword(input: string): boolean {
-  const password = process.env.APP_PASSWORD;
-  if (!password) return false;
-  // Constant-time comparison
-  if (input.length !== password.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < input.length; i++) {
-    mismatch |= input.charCodeAt(i) ^ password.charCodeAt(i);
+export function checkPassword(input: string, password?: string): boolean {
+  const pwd = password ?? process.env.APP_PASSWORD;
+  if (!pwd) return false;
+  const inputBuf = Buffer.from(input);
+  const passBuf = Buffer.from(pwd);
+  if (inputBuf.length !== passBuf.length) {
+    // Still compare to avoid timing leak, but return false
+    crypto.timingSafeEqual(Buffer.alloc(passBuf.length), passBuf);
+    return false;
   }
-  return mismatch === 0;
+  return crypto.timingSafeEqual(inputBuf, passBuf);
 }
 
 const GUEST_COOKIE_NAME = 'cc_guest';
 
 export function createGuestCookie(): { name: string; value: string; options: Record<string, unknown> } {
-  const signature = sign('guest');
+  const value = 'guest';
+  const signature = sign(value);
   return {
     name: GUEST_COOKIE_NAME,
-    value: signature,
+    value: `${value}.${signature}`,
     options: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -89,13 +70,11 @@ export function createGuestCookie(): { name: string; value: string; options: Rec
 
 export function verifyGuestCookie(cookieValue: string | undefined): boolean {
   if (!cookieValue) return false;
-  const expected = sign('guest');
-  if (cookieValue.length !== expected.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < cookieValue.length; i++) {
-    mismatch |= cookieValue.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return mismatch === 0;
+  const [value, sig] = cookieValue.split('.');
+  if (!value || !sig) return false;
+  const expected = sign(value);
+  if (sig.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
 }
 
 export function isOwner(cookieValue: string | undefined): boolean {
