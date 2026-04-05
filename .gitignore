@@ -36,6 +36,9 @@ next-env.d.ts
 # database
 *.db
 
+# user data
+userpreferences.md
+
 # omc
 .omc
 

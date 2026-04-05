@@ -150,6 +150,13 @@ export async function getRecommendation(
     interests = intResult.rows.map((r: unknown) => (r as { name: string }).name);
   } catch { /* ignore */ }
 
+  // Load user preferences (condensed taste profile)
+  let tasteProfile: string | null = null;
+  try {
+    const { getUserPreferences } = await import('@/lib/user-preferences');
+    tasteProfile = await getUserPreferences();
+  } catch { /* ignore */ }
+
   const watchProgress: WatchProgress[] = allProgress.map((p) => ({
     id: p.id,
     favorite_id: p.favorite_id,
@@ -161,7 +168,24 @@ export async function getRecommendation(
     updated_at: p.updated_at,
   }));
 
-  const userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode, interests);
+  // If we have a taste profile, use it instead of the full library for efficiency
+  let userPrompt: string;
+  if (tasteProfile) {
+    userPrompt = [
+      `The user's current vibe: "${vibe}"`,
+      `They want a recommendation for: ${contentType}`,
+      interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : '',
+      `\n--- USER TASTE PROFILE ---\n${tasteProfile}\n--- END PROFILE ---`,
+      '',
+      discoveryMode === 'from_library'
+        ? `Recommend something from their existing library.`
+        : `Recommend something NEW they haven't seen.`,
+      '',
+      buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode, interests).split('Your task:').pop() ?? '',
+    ].join('\n');
+  } else {
+    userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode, interests);
+  }
 
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o-mini',

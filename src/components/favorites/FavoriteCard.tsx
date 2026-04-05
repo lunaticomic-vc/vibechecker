@@ -100,15 +100,19 @@ export default function FavoriteCard({ favorite, rating, currentStatus, onDelete
           {TYPE_LABELS[favorite.type]}
         </span>
         <p className="text-xs font-medium text-[#2d2640] leading-snug line-clamp-2">{favorite.title}</p>
-        {rating && (
-          <div className="mt-1.5">
-            <RatingSelector favoriteId={favorite.id} currentRating={rating.rating} currentReasoning={rating.reasoning} onRate={onRate} compact />
-          </div>
-        )}
-        {!rating && (
-          <div className="mt-1.5">
-            <RatingSelector favoriteId={favorite.id} onRate={onRate} />
-          </div>
+        {currentStatus !== 'todo' && (
+          <>
+            {rating && (
+              <div className="mt-1.5">
+                <RatingSelector favoriteId={favorite.id} currentRating={rating.rating} currentReasoning={rating.reasoning} onRate={onRate} compact />
+              </div>
+            )}
+            {!rating && (
+              <div className="mt-1.5">
+                <RatingSelector favoriteId={favorite.id} onRate={onRate} />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
