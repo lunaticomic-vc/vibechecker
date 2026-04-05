@@ -28,7 +28,7 @@ export default function Header() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const size = 48;
+    const size = 52;
     canvas.width = size;
     canvas.height = size;
     let animId: number;
@@ -106,19 +106,19 @@ export default function Header() {
   return (
     <div ref={menuRef} className="fixed top-0 left-0 right-0 z-[60] flex flex-col items-center pointer-events-none">
       {/* Moon — always at top */}
-      <div className={`transition-all duration-500 ease-out ${open ? 'pt-2' : 'pt-4'}`}>
+      <div className={`transition-all duration-500 ease-out ${open ? 'pt-3' : 'pt-5'}`}>
         <button
           onClick={() => { setOpen(v => !v); setContentOpen(false); }}
           onMouseEnter={() => setHovering(true)}
           onMouseLeave={() => setHovering(false)}
-          className="pointer-events-auto relative w-[48px] h-[48px] rounded-full focus:outline-none"
+          className="pointer-events-auto relative w-[52px] h-[52px] rounded-full focus:outline-none"
           aria-label="Menu"
           style={{
             filter: hovering || open ? 'drop-shadow(0 0 20px rgba(196,181,253,0.5))' : 'drop-shadow(0 0 8px rgba(196,181,253,0.15))',
             transition: 'filter 0.7s ease',
           }}
         >
-          <canvas ref={canvasRef} className="w-full h-full rounded-full" />
+          <canvas ref={canvasRef} className="w-full h-full rounded-full" style={{ background: 'radial-gradient(circle at 35% 35%, #e0d6f5, #c4bbd8)' }} />
         </button>
       </div>
 
