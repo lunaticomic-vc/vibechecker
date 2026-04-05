@@ -117,7 +117,8 @@ export function buildRecommendationPrompt(
     '',
     `Your task: ${instructions[contentType]}`,
     '',
-    'IMPORTANT: The recommendation MUST match the vibe — consider duration, intensity, genre, and mood.',
+    'CRITICAL: The user\'s vibe/prompt is your #1 priority. NEVER ignore what they asked for. The vibe IS the assignment — everything else (interests, taste profile, library) exists to ENHANCE your understanding of what they want, not to override it.',
+    'If the vibe is specific (e.g. "feminist mythology"), recommend something that is DIRECTLY about that topic. Use their interests to pick the BEST match within that topic, not to change the topic.',
     'IMPORTANT: Prioritize content similar to what the user LOVED. AVOID anything similar to what they DISLIKED, paying attention to their stated reasons.',
     'Always explain WHY this specific recommendation fits the vibe.',
     '',
@@ -143,7 +144,8 @@ async function getYouTubeRecommendation(
   vibe: string,
   userPrompt: string,
   interests: string[],
-  tasteProfile: string | null = null
+  tasteProfile: string | null = null,
+  existingTitles: string[] = []
 ): Promise<Recommendation> {
   const openai = getOpenAI();
 
@@ -158,7 +160,7 @@ async function getYouTubeRecommendation(
       },
       {
         role: 'user',
-        content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${tasteProfile ? `\nTaste: ${tasteProfile.slice(0, 400)}` : ''}\n\nGenerate 3-4 YouTube search queries. Think about video essays, deep dives, niche creators. Be specific.`,
+        content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${tasteProfile ? `\nTaste: ${tasteProfile.slice(0, 400)}` : ''}\n\nGenerate 3-4 YouTube search queries. The vibe/prompt is the #1 priority — ALL queries must be directly relevant to "${vibe}". Use interests to refine the search within that topic, not to change it. Think about video essays, deep dives, niche creators. Be specific.`,
       },
     ],
   });
@@ -192,7 +194,7 @@ async function getYouTubeRecommendation(
         },
         {
           role: 'user',
-          content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}\n\nPick the best match:\n\n${videoList}`,
+          content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\nPick the video that best matches the vibe "${vibe}":\n\n${videoList}`,
         },
       ],
     });
@@ -236,7 +238,8 @@ async function getSubstackRecommendation(
   vibe: string,
   _userPrompt: string,
   interests: string[],
-  tasteProfile: string | null = null
+  tasteProfile: string | null = null,
+  existingTitles: string[] = []
 ): Promise<Recommendation> {
   const openai = getOpenAI();
 
@@ -255,11 +258,11 @@ Return ONLY a JSON array of 4-5 search strings. No markdown.`,
         role: 'user',
         content: `Vibe: "${vibe}"${interests.length > 0 ? `\nTheir interests/passions: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\n--- TASTE PROFILE ---\n${tasteProfile.slice(0, 800)}\n--- END ---` : ''}
 
-Generate 4-5 search queries to find Substack articles. Rules:
-- 2 queries should directly match the vibe (highest priority)
-- 2 queries should creatively blend the vibe with their interests and taste profile (e.g. if vibe is "melancholy" and they love dark humor + philosophy, try "existential absurdism modern loneliness essay")
-- 1 query should be a wild card — an unexpected angle based on their personality that could surprise and delight them
-- Be specific and descriptive, not generic. Use rich keywords.`,
+Generate 4-5 search queries to find Substack articles. The vibe/prompt "${vibe}" is the ABSOLUTE #1 priority — never drift from it. Rules:
+- 3 queries should directly match the vibe (highest priority — the vibe IS the topic)
+- 1 query should creatively blend the vibe with their interests (e.g. if vibe is "feminist mythology" and they like philosophy, try "feminist mythology philosophy ancient goddesses essay")
+- 1 query should be a creative angle ON THE SAME TOPIC that could surprise them
+- ALL queries must be directly about "${vibe}". Interests refine, never replace.`,
       },
     ],
   });
@@ -290,7 +293,7 @@ Generate 4-5 search queries to find Substack articles. Rules:
         },
         {
           role: 'user',
-          content: `Vibe: "${vibe}"\n${interests.length > 0 ? `Interests: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\nUser taste: ${tasteProfile.slice(0, 400)}` : ''}\n\nPick the article that best matches their vibe AND resonates with their personality:\n\n${articleList}`,
+          content: `Vibe: "${vibe}"\n${interests.length > 0 ? `Interests: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\nUser taste: ${tasteProfile.slice(0, 400)}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\nPick the article that best matches the vibe "${vibe}" AND resonates with their personality:\n\n${articleList}`,
         },
       ],
     });
@@ -443,14 +446,16 @@ export async function getRecommendation(
     userPrompt = buildRecommendationPrompt(vibe, contentType, favorites, watchProgress, ratings, discoveryMode, interests);
   }
 
+  const existingTitles = favorites.map(f => f.title);
+
   // --- YOUTUBE: two-pass approach with real videos ---
   if (contentType === 'youtube') {
-    return getYouTubeRecommendation(vibe, userPrompt, interests, tasteProfile);
+    return getYouTubeRecommendation(vibe, userPrompt, interests, tasteProfile, existingTitles);
   }
 
   // --- SUBSTACK: two-pass approach with real articles ---
   if (contentType === 'substack') {
-    return getSubstackRecommendation(vibe, userPrompt, interests, tasteProfile);
+    return getSubstackRecommendation(vibe, userPrompt, interests, tasteProfile, existingTitles);
   }
 
   const response = await getOpenAI().chat.completions.create({
@@ -460,7 +465,7 @@ export async function getRecommendation(
       {
         role: 'system',
         content:
-          'You are a personal entertainment recommendation engine. You know the user\'s taste deeply and recommend content that matches their current vibe perfectly.',
+          'You are a personal entertainment recommendation engine. The user\'s vibe/prompt is your ABSOLUTE #1 priority — never ignore or drift from what they asked for. Their interests and taste profile help you find the BEST match within their requested topic, but they never override the vibe. If they say "feminist mythology", every recommendation must be directly about feminist mythology.',
       },
       {
         role: 'user',
