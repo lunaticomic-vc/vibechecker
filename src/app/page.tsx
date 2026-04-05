@@ -136,7 +136,7 @@ export default function Home() {
     <main className="min-h-screen h-screen relative overflow-hidden">
       <Particles />
 
-      <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen -mt-[70px]">
+      <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen">
 
         {/* Screen 1: Just the four squares */}
         {screen === 'pick' && (
