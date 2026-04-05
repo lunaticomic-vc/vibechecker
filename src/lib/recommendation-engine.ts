@@ -756,32 +756,38 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
     : `https://sflix.ps/search/${encodeURIComponent(title)}`;
   const actionLabel = contentType === 'kdrama' ? 'Watch on KissAsian' : contentType === 'anime' ? 'Watch on KissAnime' : 'Watch on sflix';
 
-  // Fetch poster and stills
+  // Fetch poster/stills and Reddit insights in parallel
   let imageUrls: string[] = [];
   let thumbnailUrl: string | undefined;
+  let redditInsights: { subreddit: string; comment: string; score: number }[] | undefined;
 
-  if (contentType === 'anime') {
-    const [jikan, tmdb] = await Promise.all([
-      searchAnimeJikan(title),
-      searchTMDB(title, 'tv', year),
-    ]);
-    thumbnailUrl = jikan?.posterUrl ?? tmdb?.posterUrl ?? undefined;
-    imageUrls = tmdb?.backdropUrls?.length ? tmdb.backdropUrls : (jikan?.backdropUrls ?? []);
-  } else {
-    const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
-    const tmdb = await searchTMDB(title, tmdbType, year);
-    if (tmdb?.posterUrl) thumbnailUrl = tmdb.posterUrl;
-    imageUrls = tmdb?.backdropUrls ?? [];
-  }
+  const imagePromise = (async () => {
+    if (contentType === 'anime') {
+      const [jikan, tmdb] = await Promise.all([
+        searchAnimeJikan(title!),
+        searchTMDB(title!, 'tv', year),
+      ]);
+      thumbnailUrl = jikan?.posterUrl ?? tmdb?.posterUrl ?? undefined;
+      imageUrls = tmdb?.backdropUrls?.length ? tmdb.backdropUrls : (jikan?.backdropUrls ?? []);
+    } else {
+      const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
+      const tmdb = await searchTMDB(title!, tmdbType, year);
+      if (tmdb?.posterUrl) thumbnailUrl = tmdb.posterUrl;
+      imageUrls = tmdb?.backdropUrls ?? [];
+    }
+  })();
+
+  const redditPromise = (async () => {
+    try {
+      redditInsights = await searchRedditForTitle(title!, contentType);
+    } catch (error) { log.warn('Failed to fetch Reddit insights', String(error)); }
+  })();
+
+  await Promise.all([imagePromise, redditPromise]);
 
   if (imageUrls.length === 0 && !thumbnailUrl) {
-    imageUrls = [0, 1, 2].map(i => `gradient:${i}:${encodeURIComponent(title)}`);
+    imageUrls = [0, 1, 2].map(i => `gradient:${i}:${encodeURIComponent(title!)}`);
   }
-
-  let redditInsights;
-  try {
-    redditInsights = await searchRedditForTitle(title, contentType);
-  } catch (error) { log.warn('Failed to fetch Reddit insights', String(error)); }
 
   return {
     title,
