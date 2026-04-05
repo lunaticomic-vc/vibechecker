@@ -50,7 +50,7 @@ export default function SettingsPage() {
       added++;
     }
     setBulkText(''); setBulkLoading(false);
-    setBulkMessage(`Added ${added} favorite${added !== 1 ? 's' : ''}.`);
+    setBulkMessage(`Added ${added} item${added !== 1 ? 's' : ''} to library.`);
     setTimeout(() => setBulkMessage(''), 3000);
   }
 

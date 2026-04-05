@@ -32,6 +32,7 @@ export default function ProgressCard({ item, isGuest, onUpdate }: ProgressCardPr
   const { startDrag } = useDragStatus();
   const [editingTimestamp, setEditingTimestamp] = useState(false);
   const [timestampVal, setTimestampVal] = useState(item.stopped_at ?? '');
+  const [fading, setFading] = useState<string | null>(null);
   const [editingSeason, setEditingSeason] = useState(false);
   const [editingEpisode, setEditingEpisode] = useState(false);
   const [seasonVal, setSeasonVal] = useState(String(item.current_season));
@@ -55,6 +56,11 @@ export default function ProgressCard({ item, isGuest, onUpdate }: ProgressCardPr
       : null;
 
   async function patch(body: Record<string, unknown>) {
+    const isStatusChange = body.status === 'dropped' || body.status === 'completed';
+    if (isStatusChange) {
+      setFading(body.status as string);
+      await new Promise(r => setTimeout(r, 400));
+    }
     await fetch(`/api/progress?id=${item.favorite_id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -65,7 +71,8 @@ export default function ProgressCard({ item, isGuest, onUpdate }: ProgressCardPr
 
   return (
     <div
-      className="bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden flex flex-col hover:border-[#c4b5fd] hover:shadow-sm transition-all select-none"
+      className={`bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden flex flex-col hover:border-[#c4b5fd] hover:shadow-sm transition-all select-none ${fading ? 'opacity-0 scale-95 duration-400' : 'opacity-100 scale-100'}`}
+      style={fading ? { transition: 'opacity 0.4s, transform 0.4s' } : undefined}
       onMouseDown={handlePointerDown}
       onMouseUp={handlePointerUp}
       onMouseLeave={handlePointerUp}

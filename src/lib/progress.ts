@@ -33,20 +33,30 @@ export async function updateProgress(
   data: { current_season?: number; current_episode?: number; status?: string; stopped_at?: string | null }
 ): Promise<WatchProgress> {
   const client = await db();
-  const season = data.current_season ?? 1;
-  const episode = data.current_episode ?? 1;
-  const status = data.status ?? 'watching';
 
-  await client.execute({
-    sql: `INSERT INTO watch_progress (favorite_id, current_season, current_episode, status, updated_at)
-          VALUES (?, ?, ?, ?, datetime('now'))
-          ON CONFLICT(favorite_id) DO UPDATE SET
-            current_season = excluded.current_season,
-            current_episode = excluded.current_episode,
-            status = excluded.status,
-            updated_at = datetime('now')`,
-    args: [favoriteId, season, episode, status],
-  });
+  // Only update the fields that were actually provided, preserving existing values
+  const sets: string[] = ['updated_at = datetime(\'now\')'];
+  const args: (string | number | null)[] = [];
+
+  if (data.current_season !== undefined) { sets.push('current_season = ?'); args.push(data.current_season); }
+  if (data.current_episode !== undefined) { sets.push('current_episode = ?'); args.push(data.current_episode); }
+  if (data.status !== undefined) { sets.push('status = ?'); args.push(data.status); }
+  if (data.stopped_at !== undefined) { sets.push('stopped_at = ?'); args.push(data.stopped_at); }
+
+  const existing = await getProgressForFavorite(favoriteId);
+  if (existing) {
+    args.push(favoriteId);
+    await client.execute({
+      sql: `UPDATE watch_progress SET ${sets.join(', ')} WHERE favorite_id = ?`,
+      args,
+    });
+  } else {
+    await client.execute({
+      sql: `INSERT INTO watch_progress (favorite_id, current_season, current_episode, status, updated_at)
+            VALUES (?, ?, ?, ?, datetime('now'))`,
+      args: [favoriteId, data.current_season ?? 1, data.current_episode ?? 1, data.status ?? 'watching'],
+    });
+  }
   return (await getProgressForFavorite(favoriteId)) as WatchProgress;
 }
 

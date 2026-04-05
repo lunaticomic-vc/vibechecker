@@ -6,6 +6,7 @@ import type { ContentType } from '@/types/index';
 import FavoriteCard from '@/components/favorites/FavoriteCard';
 import AddFavoriteForm from '@/components/favorites/AddFavoriteForm';
 import StatusDragProvider from '@/components/StatusDragOverlay';
+import LoadingMouse from '@/components/LoadingMouse';
 import GlassTabs from '@/components/GlassTabs';
 import { useIsOwner } from '@/lib/useIsOwner';
 import {
@@ -90,7 +91,11 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
   }
 
   useEffect(() => {
-    Promise.all([fetchFavorites(0), fetchRatings(), fetchProgress()]).finally(() => setLoading(false));
+    window.dispatchEvent(new CustomEvent('cat-chase', { detail: true }));
+    Promise.all([fetchFavorites(0), fetchRatings(), fetchProgress()]).finally(() => {
+      setLoading(false);
+      window.dispatchEvent(new CustomEvent('cat-chase', { detail: false }));
+    });
   }, []);
 
   function getGroup(fav: Favorite): StatusGroup {
@@ -125,8 +130,10 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
     if (!res.ok) { setAddError('Failed to add. Please try again.'); return; }
     setShowAddForm(false);
     setLoading(true);
+    window.dispatchEvent(new CustomEvent('cat-chase', { detail: true }));
     await fetchFavorites(0);
     setLoading(false);
+    window.dispatchEvent(new CustomEvent('cat-chase', { detail: false }));
   }
 
   async function handleDelete(id: number) {
@@ -263,7 +270,7 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="w-6 h-6 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" />
+            <LoadingMouse />
           </div>
         ) : (
           <div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
 import { useIsOwner } from '@/lib/useIsOwner';
+import LoadingMouse from '@/components/LoadingMouse';
 
 interface Person {
   id: number;
@@ -90,7 +91,7 @@ export default function PeoplePage() {
 
         {isLoading ? (
           <div className="flex justify-center py-16">
-            <div className="w-6 h-6 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" />
+            <LoadingMouse />
           </div>
         ) : people.length === 0 ? (
           <div className="text-center py-16 text-[#7c7291]">

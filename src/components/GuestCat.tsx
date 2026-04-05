@@ -83,12 +83,10 @@ export default function GuestCat() {
   const [pawPrint, setPawPrint] = useState<{ x: number; y: number } | null>(null);
   const [bubble, setBubble] = useState<string | null>(null);
   const [chasing, setChasing] = useState(false);
-  const [mouseIconPos, setMouseIconPos] = useState({ x: 0, y: 0 });
+  const [chasePos, setChasePos] = useState({ x: 0, y: 0, rotation: 0 });
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mousePos = useRef({ x: 0, y: 0 });
   const catRef = useRef<HTMLDivElement>(null);
-  const chaseAngle = useRef(0);
-  const chaseAnim = useRef<number>(0);
   const pathname = usePathname();
   const prevPath = useRef(pathname);
 
@@ -127,30 +125,31 @@ export default function GuestCat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Orbiting mouse animation
+  // Follow the loading mouse — cat trails behind on the same circle
   useEffect(() => {
-    if (!chasing) {
-      cancelAnimationFrame(chaseAnim.current);
-      return;
-    }
-    const radius = 120;
-    const speed = 0.03;
-    function animate() {
-      chaseAngle.current += speed;
-      const x = Math.cos(chaseAngle.current) * radius;
-      const y = Math.sin(chaseAngle.current) * radius;
-      setMouseIconPos({ x, y });
-      // Update eye offset to follow the orbiting mouse
-      const max = 4;
-      const dist = Math.sqrt(x * x + y * y);
-      setEyeOffset({
-        x: dist > 0 ? (x / dist) * max : 0,
-        y: dist > 0 ? Math.min((y / dist) * max, max * 0.6) : 0,
+    if (!chasing) return;
+    function handleMouseAngle(e: Event) {
+      const angle = (e as CustomEvent).detail as number;
+      // Cat trails behind the mouse (offset by ~0.8 radians)
+      const catAngle = angle - 0.8;
+      const radius = 32;
+      setChasePos({
+        x: Math.cos(catAngle) * radius,
+        y: Math.sin(catAngle) * radius,
+        rotation: catAngle * (180 / Math.PI) + 90,
       });
-      chaseAnim.current = requestAnimationFrame(animate);
+      // Eyes look toward the mouse (ahead on the circle)
+      const dx = Math.cos(angle) - Math.cos(catAngle);
+      const dy = Math.sin(angle) - Math.sin(catAngle);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const max = 4;
+      setEyeOffset({
+        x: dist > 0 ? (dx / dist) * max : 0,
+        y: dist > 0 ? Math.min((dy / dist) * max, max * 0.6) : 0,
+      });
     }
-    chaseAnim.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(chaseAnim.current);
+    window.addEventListener('loading-mouse-angle', handleMouseAngle);
+    return () => window.removeEventListener('loading-mouse-angle', handleMouseAngle);
   }, [chasing]);
 
   function showBubble(msg: string, duration = 3000) {
@@ -181,7 +180,7 @@ export default function GuestCat() {
   }, []);
 
   useEffect(() => {
-    if (isOwner || pathname === prevPath.current) return;
+    if (pathname === prevPath.current) return;
     prevPath.current = pathname;
     if (pathname === '/login' || pathname === '/') return;
 
@@ -210,10 +209,23 @@ export default function GuestCat() {
   if (remaining === null && !isOwner) return null;
 
   return (
-    <div
+    <motion.div
       ref={catRef}
       onClick={handleClick}
-      className="fixed bottom-3 left-3 z-50 cursor-pointer select-none"
+      className="fixed z-50 cursor-pointer select-none"
+      animate={chasing
+        ? {
+            left: '50%',
+            bottom: '50%',
+            x: chasePos.x - 100,
+            y: -chasePos.y + 100,
+          }
+        : { left: 12, bottom: 12, x: 0, y: 0 }
+      }
+      transition={chasing
+        ? { left: { duration: 0.6 }, bottom: { duration: 0.6 }, x: { duration: 0 }, y: { duration: 0 } }
+        : { duration: 0.6, ease: 'easeInOut' }
+      }
     >
       <div className="relative">
         {/* Ethereal glow */}
@@ -303,48 +315,6 @@ export default function GuestCat() {
           </motion.svg>
         </motion.div>
 
-        {/* Orbiting mouse during loading */}
-        <AnimatePresence>
-          {chasing && (
-            <motion.div
-              className="absolute pointer-events-none z-0"
-              style={{
-                left: '50%',
-                top: '40%',
-                marginLeft: -8,
-                marginTop: -8,
-              }}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{
-                opacity: 1,
-                scale: 1,
-                x: mouseIconPos.x,
-                y: mouseIconPos.y,
-              }}
-              exit={{ opacity: 0, scale: 0 }}
-              transition={{ x: { duration: 0 }, y: { duration: 0 }, opacity: { duration: 0.3 }, scale: { duration: 0.3 } }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="drop-shadow-[0_0_4px_rgba(196,181,253,0.4)]">
-                {/* Mouse body */}
-                <ellipse cx="12" cy="13" rx="6" ry="7" fill="#d4cce6" stroke="#b0a8c4" strokeWidth="1"/>
-                {/* Ears */}
-                <circle cx="8" cy="7" r="3" fill="#e8e0f4" stroke="#b0a8c4" strokeWidth="0.8"/>
-                <circle cx="16" cy="7" r="3" fill="#e8e0f4" stroke="#b0a8c4" strokeWidth="0.8"/>
-                {/* Inner ears */}
-                <circle cx="8" cy="7" r="1.5" fill="#d4b8e8"/>
-                <circle cx="16" cy="7" r="1.5" fill="#d4b8e8"/>
-                {/* Eyes */}
-                <circle cx="10" cy="12" r="1" fill="#2d2640"/>
-                <circle cx="14" cy="12" r="1" fill="#2d2640"/>
-                {/* Nose */}
-                <circle cx="12" cy="14" r="0.8" fill="#c4a0d0"/>
-                {/* Tail */}
-                <path d="M12 20 Q8 24 5 22" stroke="#b0a8c4" strokeWidth="1" fill="none" strokeLinecap="round"/>
-              </svg>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Speech bubble */}
         <AnimatePresence>
           {bubble && (
@@ -379,6 +349,6 @@ export default function GuestCat() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

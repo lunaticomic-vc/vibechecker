@@ -6,6 +6,7 @@ import VibeInput from '@/components/VibeInput';
 import RecommendationCard from '@/components/RecommendationCard';
 import { ContentType, Recommendation } from '@/types/index';
 import { useIsOwner } from '@/lib/useIsOwner';
+import LoadingMouse from '@/components/LoadingMouse';
 
 type Screen = 'pick' | 'vibe' | 'result';
 
@@ -109,7 +110,7 @@ export default function Home() {
           <div className="w-full flex flex-col items-center gap-4 animate-[fadeIn_0.4s_ease-out] py-16">
             {loading ? (
               <div className="flex flex-col items-center gap-3 py-16">
-                <div className="w-8 h-8 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" />
+                <LoadingMouse />
                 <p className="text-xs text-[#b0a8c4]">Finding something new...</p>
               </div>
             ) : (
@@ -129,6 +130,7 @@ export default function Home() {
                     body: JSON.stringify({
                       type: recommendation.type,
                       title: recommendation.title,
+                      external_id: recommendation.actionUrl,
                       image_url: recommendation.thumbnailUrl ?? recommendation.imageUrls?.[0],
                       metadata: JSON.stringify({ year: recommendation.year, source: 'recommendation', description: recommendation.description, reasoning: recommendation.reasoning, interests: recommendation.interests, actors: recommendation.actors }),
                     }),

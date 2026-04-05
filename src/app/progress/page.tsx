@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
 import ProgressCard from '@/components/progress/ProgressCard';
+import LoadingMouse from '@/components/LoadingMouse';
 import StatusDragProvider from '@/components/StatusDragOverlay';
 import type { ProgressWithFavorite } from '@/lib/progress';
 import { useIsOwner } from '@/lib/useIsOwner';
@@ -44,10 +45,8 @@ export default function ProgressPage() {
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full bg-transparent rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none mb-4" />
 
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white border-2 border-[#e9e4f5] rounded-xl h-64 animate-pulse" />
-            ))}
+          <div className="flex justify-center py-16">
+            <LoadingMouse />
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-24 text-[#7c7291]">

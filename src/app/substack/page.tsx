@@ -6,6 +6,7 @@ import RatingSelector from '@/components/RatingSelector';
 import StatusDragProvider, { useDragStatus } from '@/components/StatusDragOverlay';
 import GlassTabs from '@/components/GlassTabs';
 import { useIsOwner } from '@/lib/useIsOwner';
+import LoadingMouse from '@/components/LoadingMouse';
 
 type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
 
@@ -338,7 +339,7 @@ export default function SubstackPage() {
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="w-6 h-6 border-2 border-[#c4b5fd] border-t-transparent rounded-full animate-spin" />
+            <LoadingMouse />
           </div>
         ) : (
           <div>

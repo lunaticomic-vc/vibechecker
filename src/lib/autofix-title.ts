@@ -30,39 +30,12 @@ export async function autofixTitle(title: string, type: string): Promise<string>
 
     const data = await res.json();
 
-    // Check if Brave suggests a correction
+    // Only use Brave's explicit spell-correction — don't extract from search result headings
+    // which can match completely wrong titles
     const altered = data?.query?.altered;
-    if (altered) {
+    if (altered && altered.length > 1 && altered.length < 200) {
       log.success('Title autocorrected', `"${title}" -> "${altered}"`);
-    }
-
-    // Try to extract the canonical title from the first result
-    const firstResult = data?.web?.results?.[0];
-    if (!firstResult) return title;
-
-    const resultTitle = (firstResult.title as string) ?? '';
-
-    // Extract the actual name from the search result title
-    // e.g. "Breaking Bad (TV Series 2008–2013) - IMDb" -> "Breaking Bad"
-    // e.g. "Spirited Away (2001) - IMDb" -> "Spirited Away"
-    const cleaned = resultTitle
-      // Remove prefixes like "Watch", "Stream", "Watch, Rent or Buy ... Online"
-      .replace(/^(watch|stream|rent|buy|download|view)[\s,]+((rent|buy|stream|watch|or)\s*)*/i, '')
-      .replace(/\s+online\s*$/i, '')  // Remove trailing "Online"
-      .replace(/\s*[\(\[].*?[\)\]]\s*/g, ' ')  // Remove parentheticals
-      .replace(/\s*[-–—|:].*(imdb|wiki|rotten|tmdb|mal|anilist|youtube|substack|amazon|apple|netflix|hulu|streaming).*/i, '')  // Remove site suffixes
-      .replace(/\s*[-–—|].*$/i, '')  // Remove any remaining suffix after dash
-      .trim();
-
-    // Skip if the result is just a generic term
-    const genericTerms = ['youtube', 'movie', 'tv show', 'anime', 'substack', 'imdb', 'wikipedia', 'watch', 'search', 'stream', 'online', 'buy', 'rent'];
-    const isGeneric = genericTerms.some(t => cleaned.toLowerCase() === t) || cleaned.toLowerCase().startsWith('watch ') || cleaned.toLowerCase().startsWith('stream ');
-
-    if (cleaned && cleaned.length > 1 && cleaned.length < 200 && !isGeneric) {
-      if (cleaned.toLowerCase() !== title.toLowerCase()) {
-        log.success('Title fixed', `"${title}" -> "${cleaned}"`);
-      }
-      return cleaned;
+      return altered;
     }
 
     return title;

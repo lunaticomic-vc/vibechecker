@@ -22,6 +22,7 @@ async function autoAddToProgress(rec: Recommendation) {
       body: JSON.stringify({
         type: rec.type,
         title: rec.title,
+        external_id: rec.actionUrl,
         image_url: rec.thumbnailUrl ?? rec.imageUrls?.[0],
         metadata: JSON.stringify({ year: rec.year, source: 'recommendation', description: rec.description, reasoning: rec.reasoning, interests: rec.interests, actors: rec.actors }),
       }),

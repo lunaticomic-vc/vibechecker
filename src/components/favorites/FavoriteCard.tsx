@@ -70,8 +70,8 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
   }
 
   const meta = parseFavoriteMetadata(favorite.metadata);
-  const isRec = meta !== null && 'source' in meta && meta.source === 'recommendation';
-  const recMeta = isRec ? (meta as Extract<typeof meta, { source: 'recommendation' }>) : null;
+  const isEnriched = meta !== null && 'source' in meta && (meta.source === 'recommendation' || meta.source === 'manual');
+  const recMeta = isEnriched ? (meta as { source: string; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; year?: string }) : null;
   const plainNotes = meta !== null && 'notes' in meta ? meta.notes : undefined;
 
   const chevron = (open: boolean) => (
@@ -110,13 +110,26 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
         ) : (
           /* Card front */
           <div className="group bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden hover:border-[#c4b5fd] hover:shadow-sm transition-colors cursor-pointer relative">
-            <div className={landscape ? 'aspect-video bg-[#f5f3ff] overflow-hidden' : 'aspect-[2/3] bg-[#f5f3ff] overflow-hidden'}>
+            <div className={landscape ? 'aspect-video bg-[#f5f3ff] overflow-hidden relative' : 'aspect-[2/3] bg-[#f5f3ff] overflow-hidden relative'}>
               {favorite.image_url ? (
                 <img src={favorite.image_url} alt={favorite.title} draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[#c4b5fd]">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
+              {/* Crown for "felt things" rated items */}
+              {rating?.rating === 'felt_things' && (
+                <div className="absolute top-1.5 left-1.5 z-10">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
+                    <path d="M2 8l4 10h12l4-10-5 4-5-8-5 8-5-4z" fill="#b0a8c4" />
+                    <circle cx="2" cy="8" r="1.5" fill="#b0a8c4" />
+                    <circle cx="22" cy="8" r="1.5" fill="#b0a8c4" />
+                    <circle cx="12" cy="4" r="1.5" fill="#b0a8c4" />
+                    <circle cx="7" cy="12" r="1.5" fill="#b0a8c4" />
+                    <circle cx="17" cy="12" r="1.5" fill="#b0a8c4" />
                   </svg>
                 </div>
               )}
@@ -247,7 +260,7 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
               )}
 
               {/* No info fallback */}
-              {!isRec && !plainNotes && !rating?.reasoning && (
+              {!isEnriched && !plainNotes && !rating?.reasoning && (
                 <p className="text-[10px] text-[#b0a8c4]">No notes yet</p>
               )}
 

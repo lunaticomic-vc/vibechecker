@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllFavorites, addFavorite, removeFavorite, countFavorites, getFavoritesByStatus, countFavoritesByStatus, updateFavorite } from '@/lib/favorites';
-import { autofixTitle } from '@/lib/autofix-title';
-import { searchTMDBDetailed } from '@/lib/tmdb';
-import { searchAnimeJikan } from '@/lib/mal';
+import { enrichManualAdd } from '@/lib/enrich';
 import { verifyAuthCookie } from '@/lib/auth';
 import { log } from '@/lib/logger';
 import { CONTENT_TYPES, type ContentType } from '@/types/index';
@@ -55,40 +53,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
 
-    const fixedTitle = await autofixTitle(title, type);
-    const favorite = await addFavorite({ type, title: fixedTitle, external_id, metadata, image_url });
+    const favorite = await addFavorite({ type, title, external_id, metadata, image_url });
     log.success(`Added favorite #${favorite.id}`, `"${title}" (${type})`);
 
-    // Auto-enrich manually added records (no metadata yet) for movie/tv/anime/kdrama
-    const enrichableTypes: ContentType[] = ['movie', 'tv', 'anime', 'kdrama'];
-    if (!metadata && !image_url && enrichableTypes.includes(type)) {
-      try {
-        let detail: { posterUrl: string | null; year: string | null; description: string | null; actors: string[] } | null = null;
-
-        if (type === 'anime') {
-          detail = await searchAnimeJikan(fixedTitle);
-        }
-        if (!detail) {
-          const tmdbType = type === 'movie' ? 'movie' : 'tv';
-          detail = await searchTMDBDetailed(fixedTitle, tmdbType);
-        }
-
-        if (detail) {
-          const enriched: Record<string, unknown> = {};
-          if (detail.year) enriched.year = detail.year;
-          if (detail.description) enriched.description = detail.description;
-          if (detail.actors?.length) enriched.actors = detail.actors;
-          enriched.source = 'manual';
-
-          const enrichedFavorite = await updateFavorite(favorite.id, {
-            image_url: detail.posterUrl ?? undefined,
-            metadata: JSON.stringify(enriched),
-          });
-          log.success(`Enriched favorite #${favorite.id}`, `"${fixedTitle}" — year=${detail.year} actors=${detail.actors?.length ?? 0}`);
-          return NextResponse.json(enrichedFavorite, { status: 201 });
-        }
-      } catch (err) {
+    // Auto-enrich manually added records (no metadata yet) for all content types
+    if (!metadata) {
+      const enriched = await enrichManualAdd(title, type, image_url).catch(err => {
         log.warn('Failed to enrich favorite', String(err));
+        return null;
+      });
+
+      if (enriched) {
+        const enrichedFavorite = await updateFavorite(favorite.id, {
+          title: enriched.title,
+          image_url: enriched.image_url,
+          external_id: enriched.external_id || external_id,
+          metadata: JSON.stringify(enriched.metadata),
+        });
+        return NextResponse.json(enrichedFavorite, { status: 201 });
       }
     }
 

@@ -3,7 +3,7 @@ export type ContentType = (typeof CONTENT_TYPES)[number];
 
 export type FavoriteMetadata =
   | { source: 'recommendation'; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; year?: string }
-  | { source: 'manual'; year?: string; description?: string; actors?: string[] }
+  | { source: 'manual'; year?: string; description?: string; reasoning?: string; interests?: string[]; actors?: string[] }
   | { status?: string }
   | { notes: string };
 
