@@ -36,7 +36,7 @@ export async function initDb(): Promise<Client> {
   await db.batch([
     `CREATE TABLE IF NOT EXISTS favorites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama')),
+      type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'poetry', 'short_story', 'book', 'essay', 'podcast')),
       title TEXT NOT NULL,
       external_id TEXT,
       metadata TEXT,
@@ -150,12 +150,12 @@ export async function initDb(): Promise<Client> {
   const tableInfo = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='favorites'");
   const tableSql = (tableInfo.rows[0] as unknown as { sql: string })?.sql ?? '';
 
-  if (!tableSql.includes("'substack'") || !tableSql.includes("'kdrama'")) {
+  if (!tableSql.includes("'substack'") || !tableSql.includes("'kdrama'") || !tableSql.includes("'podcast'")) {
     dbLog('Migrating favorites table to update type CHECK constraint...');
     await db.batch([
       `CREATE TABLE favorites_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama')),
+        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'poetry', 'short_story', 'book', 'essay', 'podcast')),
         title TEXT NOT NULL,
         external_id TEXT,
         metadata TEXT,

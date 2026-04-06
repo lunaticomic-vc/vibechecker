@@ -146,6 +146,15 @@ const OWNER_GENERAL = [
   "your taste keeps getting better. must be my influence",
 ];
 
+const PURR_PHRASES = [
+  'prrrrrrr...',
+  'prrr~ prrr~',
+  'mrrrrrr...',
+  'purrrrr...',
+  '*purrs contentedly*',
+  'prrr... don\'t stop...',
+];
+
 export default function GuestCat() {
   const { isOwner, remaining, isLoading } = useAuth();
   const [attacking, setAttacking] = useState(false);
@@ -154,15 +163,83 @@ export default function GuestCat() {
   const [bubble, setBubble] = useState<string | null>(null);
   const [chasing, setChasing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [purring, setPurring] = useState(false);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mousePos = useRef({ x: 0, y: 0 });
   const catRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const prevPath = useRef(pathname);
 
+  // Purring state refs
+  const holding = useRef(false);
+  const purrXHistory = useRef<number[]>([]);
+  const purrDirectionChanges = useRef(0);
+  const purrLastDirection = useRef<'left' | 'right' | null>(null);
+  const purrTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
   }, []);
+
+  // Purring — hold cat and move mouse back and forth
+  useEffect(() => {
+    if (isMobile) return;
+
+    function handlePurrMove(e: MouseEvent) {
+      if (!holding.current) return;
+      const history = purrXHistory.current;
+      history.push(e.clientX);
+      // Keep only recent positions
+      if (history.length > 30) history.shift();
+      if (history.length < 3) return;
+
+      const prev = history[history.length - 2];
+      const curr = history[history.length - 1];
+      const diff = curr - prev;
+      if (Math.abs(diff) < 2) return; // ignore tiny movements
+
+      const dir: 'left' | 'right' = diff > 0 ? 'right' : 'left';
+      if (purrLastDirection.current && dir !== purrLastDirection.current) {
+        purrDirectionChanges.current++;
+      }
+      purrLastDirection.current = dir;
+
+      // 3+ direction changes = petting back and forth
+      if (purrDirectionChanges.current >= 3 && !purring) {
+        setPurring(true);
+        const phrase = PURR_PHRASES[Math.floor(Math.random() * PURR_PHRASES.length)];
+        showBubble(phrase, 10000);
+      }
+
+      // Reset the stop timer on each move
+      if (purrTimeout.current) clearTimeout(purrTimeout.current);
+      purrTimeout.current = setTimeout(() => {
+        if (holding.current) {
+          // Stopped moving but still holding — keep purring gently
+        } else {
+          setPurring(false);
+        }
+      }, 600);
+    }
+
+    function handleMouseUp() {
+      holding.current = false;
+      purrXHistory.current = [];
+      purrDirectionChanges.current = 0;
+      purrLastDirection.current = null;
+      if (purrTimeout.current) clearTimeout(purrTimeout.current);
+      // Gentle fade out of purring
+      setTimeout(() => setPurring(false), 300);
+    }
+
+    window.addEventListener('mousemove', handlePurrMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handlePurrMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, purring]);
 
   // Eye tracking — follows real cursor or orbiting mouse (skip on mobile)
   useEffect(() => {
@@ -261,8 +338,15 @@ export default function GuestCat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, isOwner]);
 
+  function handleMouseDown() {
+    holding.current = true;
+    purrXHistory.current = [];
+    purrDirectionChanges.current = 0;
+    purrLastDirection.current = null;
+  }
+
   function handleClick() {
-    if (attacking) return;
+    if (attacking || purring) return;
     setAttacking(true);
     setPawPrint({ x: mousePos.current.x, y: mousePos.current.y });
     showBubble('meow!', 1500);
@@ -277,93 +361,141 @@ export default function GuestCat() {
   return (
     <div
       ref={catRef}
+      onMouseDown={handleMouseDown}
       onClick={handleClick}
       className="fixed bottom-3 left-3 z-50 cursor-pointer select-none"
     >
       <div className="relative">
-        {/* Ethereal glow */}
+        {/* Ethereal glow — warmer when purring */}
         <motion.div
           className="absolute inset-0 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(196,181,253,0.15) 0%, transparent 70%)', filter: 'blur(20px)', transform: 'scale(2)' }}
-          animate={{ opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            background: purring
+              ? 'radial-gradient(circle, rgba(220,196,253,0.3) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(196,181,253,0.15) 0%, transparent 70%)',
+            filter: 'blur(20px)',
+            transform: 'scale(2)',
+          }}
+          animate={{ opacity: purring ? [0.5, 0.8, 0.5] : [0.3, 0.6, 0.3] }}
+          transition={{ duration: purring ? 1.5 : 4, repeat: Infinity, ease: 'easeInOut' }}
         />
 
         {/* Cat from SVG Repo — split into body + eyes for animation */}
         <motion.div
           className="relative z-10"
-          animate={{ y: [0, -3, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ filter: 'drop-shadow(0 0 10px rgba(196,181,253,0.25))' }}
+          animate={purring
+            ? { y: [0, -1, 0], x: [-0.5, 0.5, -0.5] }
+            : { y: [0, -3, 0] }
+          }
+          transition={purring
+            ? { duration: 0.15, repeat: Infinity, ease: 'easeInOut' }
+            : { duration: 4, repeat: Infinity, ease: 'easeInOut' }
+          }
+          style={{ filter: purring
+            ? 'drop-shadow(0 0 14px rgba(220,196,253,0.4))'
+            : 'drop-shadow(0 0 10px rgba(196,181,253,0.25))'
+          }}
         >
           <motion.svg
             width="200" height="200" viewBox="0 0 32 32"
             animate={attacking
               ? { rotate: [0, -6, 4, 0] }
-              : { rotate: [0, -1.5, 0, 1, 0], originX: '50%', originY: '70%' }
+              : purring
+                ? { rotate: [0, -0.5, 0, 0.5, 0], originX: '50%', originY: '70%' }
+                : { rotate: [0, -1.5, 0, 1, 0], originX: '50%', originY: '70%' }
             }
             transition={attacking
               ? { duration: 0.4, ease: 'easeInOut' }
-              : { duration: 6, repeat: Infinity, ease: 'easeInOut' }
+              : purring
+                ? { duration: 0.3, repeat: Infinity, ease: 'easeInOut' }
+                : { duration: 6, repeat: Infinity, ease: 'easeInOut' }
             }
             className="overflow-visible"
           >
             {/* Body — everything except eyes */}
             <path
               d="M28.926 1.17l-2.182 3.608c-1.876-0.608-4.669-0.489-6.426 0l-2.102-3.557c-3.452 6.448-2.475 10.523 0.159 12.549-0.403 0.252-0.818 0.529-1.247 0.833-10.979-8.759-20.863 1.106-14.379 9.92h0.050c1.163 1.687 2.503 2.731 3.95 3.277 2.050 0.773 4.159 0.551 6.236 0.257s4.109-0.663 6.046-0.525c1.937 0.138 3.874 0.635 5.647 2.569 1.209 1.318 2.926-0.101 1.486-1.507-2.185-2.134-4.525-2.959-6.825-3.122s-4.505 0.293-6.502 0.576c-1.997 0.283-3.761 0.409-5.276-0.163-0.711-0.268-1.403-0.69-2.070-1.36h22.51c1.064-3.756 1.177-7.73-0.033-10.237 3.635-1.897 5.097-6.376 0.958-13.116z"
-              fill={attacking ? 'rgba(180,140,220,0.4)' : 'rgba(176,168,196,0.25)'}
+              fill={attacking ? 'rgba(180,140,220,0.4)' : purring ? 'rgba(200,180,230,0.35)' : 'rgba(176,168,196,0.25)'}
               className="transition-[fill] duration-300"
             />
 
-            {/* Left eye — follows mouse */}
-            <motion.path
-              d="M22.176 10.872c-2.316 1.117-3.367 0.212-3.817-1.656 2.273-1.41 3.626-0.278 3.817 1.656z"
-              fill={attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.6)'}
-              className="transition-[fill] duration-200"
-              animate={{
-                x: eyeOffset.x * 0.3,
-                y: eyeOffset.y * 0.3,
-              }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-            />
+            {/* Eyes — squinted when purring, normal otherwise */}
+            {purring ? (
+              <>
+                {/* Squinted left eye — happy line */}
+                <motion.path
+                  d="M19.5 10.2 Q20.5 9 21.8 10.2"
+                  fill="none"
+                  stroke="rgba(180,150,220,0.7)"
+                  strokeWidth="0.5"
+                  strokeLinecap="round"
+                  animate={{ opacity: [0.7, 0.9, 0.7] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                {/* Squinted right eye — happy line */}
+                <motion.path
+                  d="M25.5 10.2 Q26.5 9 27.8 10.2"
+                  fill="none"
+                  stroke="rgba(180,150,220,0.7)"
+                  strokeWidth="0.5"
+                  strokeLinecap="round"
+                  animate={{ opacity: [0.7, 0.9, 0.7] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
+                />
+              </>
+            ) : (
+              <>
+                {/* Left eye — follows mouse */}
+                <motion.path
+                  d="M22.176 10.872c-2.316 1.117-3.367 0.212-3.817-1.656 2.273-1.41 3.626-0.278 3.817 1.656z"
+                  fill={attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.6)'}
+                  className="transition-[fill] duration-200"
+                  animate={{
+                    x: eyeOffset.x * 0.3,
+                    y: eyeOffset.y * 0.3,
+                  }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                />
 
-            {/* Right eye — follows mouse */}
-            <motion.path
-              d="M25.067 10.872c0.191-1.934 1.544-3.067 3.817-1.656-0.45 1.868-1.502 2.774-3.817 1.656z"
-              fill={attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.6)'}
-              className="transition-[fill] duration-200"
-              animate={{
-                x: eyeOffset.x * 0.3,
-                y: eyeOffset.y * 0.3,
-              }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-            />
+                {/* Right eye — follows mouse */}
+                <motion.path
+                  d="M25.067 10.872c0.191-1.934 1.544-3.067 3.817-1.656-0.45 1.868-1.502 2.774-3.817 1.656z"
+                  fill={attacking ? 'rgba(200,160,240,0.9)' : 'rgba(140,120,180,0.6)'}
+                  className="transition-[fill] duration-200"
+                  animate={{
+                    x: eyeOffset.x * 0.3,
+                    y: eyeOffset.y * 0.3,
+                  }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                />
 
-            {/* Eye glow */}
-            <motion.circle
-              cx={21} cy={10} r={2}
-              fill="none"
-              stroke="rgba(196,181,253,0.3)"
-              strokeWidth="0.3"
-              animate={{
-                opacity: [0.1, 0.4, 0.1],
-                x: eyeOffset.x * 0.3,
-                y: eyeOffset.y * 0.3,
-              }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <motion.circle
-              cx={27} cy={10} r={2}
-              fill="none"
-              stroke="rgba(196,181,253,0.3)"
-              strokeWidth="0.3"
-              animate={{
-                opacity: [0.1, 0.4, 0.1],
-                x: eyeOffset.x * 0.3,
-                y: eyeOffset.y * 0.3,
-              }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-            />
+                {/* Eye glow */}
+                <motion.circle
+                  cx={21} cy={10} r={2}
+                  fill="none"
+                  stroke="rgba(196,181,253,0.3)"
+                  strokeWidth="0.3"
+                  animate={{
+                    opacity: [0.1, 0.4, 0.1],
+                    x: eyeOffset.x * 0.3,
+                    y: eyeOffset.y * 0.3,
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                <motion.circle
+                  cx={27} cy={10} r={2}
+                  fill="none"
+                  stroke="rgba(196,181,253,0.3)"
+                  strokeWidth="0.3"
+                  animate={{
+                    opacity: [0.1, 0.4, 0.1],
+                    x: eyeOffset.x * 0.3,
+                    y: eyeOffset.y * 0.3,
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                />
+              </>
+            )}
 
           </motion.svg>
         </motion.div>

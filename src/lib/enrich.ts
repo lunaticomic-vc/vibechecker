@@ -23,6 +23,13 @@ const CONTENT_LABELS: Record<ContentType, string> = {
   substack: 'Substack article',
   kdrama: 'Korean drama',
   research: 'research topic',
+  poetry: 'poem',
+  short_story: 'short story',
+  book: 'book',
+  essay: 'essay',
+  podcast: 'podcast',
+  manga: 'manga',
+  comic: 'comic',
 };
 
 /** Look up external metadata (poster, year, actors, canonical title) from type-specific APIs */
@@ -54,6 +61,59 @@ async function lookupExternal(title: string, type: ContentType) {
     }
   }
 
+  // Books — pull the actual book cover from Open Library
+  if (type === 'book') {
+    let posterUrl: string | null = null;
+    try {
+      const res = await fetch(
+        `https://openlibrary.org/search.json?q=${encodeURIComponent(title)}&limit=1`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const coverId = data.docs?.[0]?.cover_i;
+        if (coverId) posterUrl = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
+      }
+    } catch { /* best effort */ }
+
+    return {
+      ...base,
+      posterUrl,
+      external_id: `https://z-library.bz/s/${encodeURIComponent(title)}`,
+    };
+  }
+
+  // Other read types — vibe image from Brave
+  if (['poetry', 'short_story', 'essay', 'podcast', 'substack', 'research', 'manga', 'comic'].includes(type)) {
+    let posterUrl: string | null = null;
+    const braveKey = process.env.BRAVE_API_KEY;
+    if (braveKey) {
+      try {
+        const res = await fetch(
+          `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(`${title} ${type} aesthetic`)}&count=3&safesearch=moderate`,
+          { headers: { 'Accept': 'application/json', 'X-Subscription-Token': braveKey }, signal: AbortSignal.timeout(5000) }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const result = data?.results?.[0];
+          posterUrl = (result?.properties as Record<string, unknown>)?.url as string ?? result?.url as string ?? null;
+        }
+      } catch { /* best effort */ }
+    }
+
+    const externalIds: Record<string, string> = {
+      poetry: `https://www.poetryfoundation.org/search?query=${encodeURIComponent(title)}`,
+      podcast: `https://open.spotify.com/search/${encodeURIComponent(title)}/podcasts`,
+      research: `https://scholar.google.com/scholar?q=${encodeURIComponent(title)}`,
+    };
+
+    return {
+      ...base,
+      posterUrl,
+      external_id: externalIds[type],
+    };
+  }
+
   return null;
 }
 
@@ -70,14 +130,16 @@ async function gptEnrich(title: string, type: ContentType, context: { year?: str
     messages: [
       {
         role: 'system',
-        content: `You enrich a manually-added ${label} with two fields. Return ONLY JSON, no markdown.
+        content: `You enrich a manually-added ${label} with metadata. Return ONLY JSON, no markdown.
 
 REQUIRED fields:
 - "description": A compelling 2-3 sentence summary of "${title}". ${externalDesc ? `Use your knowledge and this reference: "${externalDesc}". Do NOT just copy — write something engaging.` : 'Use your knowledge to write something engaging.'}
 - "reasoning": 2-3 sentences explaining why this ${label} fits the user's taste based on their profile below. Be specific — reference themes, tropes, or titles they love.
+- "author": The creator/author/artist name. For books/poems/essays/short stories, the writer. For podcasts, the host. For research, the primary author or institution. Return the most well-known name. If unknown, return null.
+- "canonicalTitle": The correct, properly formatted title. Fix any typos, capitalization, or abbreviations. Return the standard title as it would appear in a library catalog or official source.
 ${tasteProfile ? `\nUser taste profile:\n${tasteProfile.slice(0, 1500)}` : '\nNo taste profile available — write a general appeal instead.'}
 
-Return: {"description": "...", "reasoning": "...", "interests": ["tag1", "tag2", "tag3"]}`,
+Return: {"description": "...", "reasoning": "...", "interests": ["tag1", "tag2", "tag3"], "author": "...", "canonicalTitle": "..."}`,
       },
       {
         role: 'user',
@@ -90,6 +152,8 @@ Return: {"description": "...", "reasoning": "...", "interests": ["tag1", "tag2",
     description?: string;
     reasoning?: string;
     interests?: string[];
+    author?: string;
+    canonicalTitle?: string;
   };
 }
 
@@ -137,12 +201,24 @@ export async function enrichManualAdd(
   if (gpt?.reasoning) metadata.reasoning = gpt.reasoning;
   if (gpt?.interests?.length) metadata.interests = gpt.interests;
 
+  // Use canonical title from GPT if available
+  let finalTitle = gpt?.canonicalTitle || title;
+
+  // Format as "Title - Author" if we have an author
+  if (gpt?.author) {
+    metadata.author = gpt.author;
+    // Only append author if not already in the title
+    if (!finalTitle.toLowerCase().includes(gpt.author.toLowerCase())) {
+      finalTitle = `${finalTitle} - ${gpt.author}`;
+    }
+  }
+
   log.success(
-    `Enriched "${title}" (${type})`,
+    `Enriched "${finalTitle}" (${type})`,
     `year=${metadata.year ?? '?'} actors=${(metadata.actors as string[] | undefined)?.length ?? 0} hasReasoning=${!!metadata.reasoning}`,
   );
 
-  return { title, image_url: imageUrl, external_id: externalId, metadata };
+  return { title: finalTitle, image_url: imageUrl, external_id: externalId, metadata };
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Recommendation, ResearchLink, KnowledgeChecklistItem } from '@/types/index';
-import { TYPE_COLORS as BASE_TYPE_COLORS } from '@/lib/constants';
+import { TYPE_COLORS as BASE_TYPE_COLORS, TYPE_LABELS } from '@/lib/constants';
 
 // RecommendationCard needs border colors in addition to bg/text — extend with borders
 const TYPE_COLORS: Record<string, string> = {
@@ -13,6 +13,11 @@ const TYPE_COLORS: Record<string, string> = {
   substack: `${BASE_TYPE_COLORS.substack} border-[#fdba74]`,
   kdrama: `${BASE_TYPE_COLORS.kdrama} border-[#f9a8d4]`,
   research: `bg-[#f0f4ff] text-[#3b5bdb] border-[#a5b4fc]`,
+  poetry: `${BASE_TYPE_COLORS.poetry} border-[#f9a8d4]`,
+  short_story: `${BASE_TYPE_COLORS.short_story} border-[#fcd34d]`,
+  book: `${BASE_TYPE_COLORS.book} border-[#99f6e4]`,
+  essay: `${BASE_TYPE_COLORS.essay} border-[#cbd5e1]`,
+  podcast: `${BASE_TYPE_COLORS.podcast} border-[#fda4af]`,
 };
 
 const SOURCE_TYPE_ICONS: Record<ResearchLink['sourceType'], React.ReactNode> = {
@@ -330,9 +335,11 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
 
   const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights, interests, tropes, channelName } = recommendation;
 
+  const READING_TYPES = ['poetry', 'short_story', 'book', 'essay', 'podcast'];
+  const isReadingType = READING_TYPES.includes(type);
   const isYouTube = type === 'youtube';
   const isSubstack = type === 'substack';
-  const showImages = !isSubstack;
+  const showImages = !isSubstack && !isReadingType;
 
   // Poster = thumbnailUrl (first), screencaps = imageUrls (rest)
   const screencaps = showImages ? (imageUrls ?? []).filter(u => !u.startsWith('gradient:')) : [];
@@ -352,6 +359,24 @@ export default function RecommendationCard({ recommendation, onAccept }: Props) 
     await autoAddToProgress(recommendation);
     if (onAccept) onAccept();
     window.open(actionUrl, '_blank');
+  }
+
+  // Reading types (poetry, short_story, book, essay, podcast): simple card, no images
+  if (isReadingType) {
+    return (
+      <div className="relative z-10 rounded-2xl border-2 border-[#e9e4f5] bg-white/92 backdrop-blur-sm p-5 flex flex-col gap-3 max-w-[360px] mx-auto">
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-medium ${TYPE_COLORS[type] ?? ''}`}>{TYPE_LABELS[type] ?? type}</span>
+        </div>
+        <h2 className="text-lg font-bold text-[#2d2640] leading-tight font-mono">{title}</h2>
+        {description && <p className="text-xs text-[#5a5270] leading-relaxed">{description}</p>}
+        {reasoning && <p className="text-xs italic text-[#4a7044] leading-relaxed">{reasoning}</p>}
+        <button onClick={handleWatch} className="flex items-center justify-center gap-2 rounded-xl bg-[#8b5cf6] px-5 py-2.5 font-semibold text-white transition-all hover:bg-[#7c3aed] active:scale-[0.98] text-xs">
+          {actionLabel}
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+        </button>
+      </div>
+    );
   }
 
   // YouTube: stacked with thumbnail

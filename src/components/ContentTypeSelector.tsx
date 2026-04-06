@@ -2,9 +2,8 @@
 
 import { ContentType } from '@/types/index';
 
-const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }[] = [
-  {
-    type: 'movie',
+const CONTENT_TYPE_MAP: Record<ContentType, { label: string; icon: React.ReactNode }> = {
+  movie: {
     label: 'movie',
     icon: (
       <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
@@ -35,8 +34,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
       </svg>
     ),
   },
-  {
-    type: 'tv',
+  tv: {
     label: 'tv show',
     icon: (
       <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
@@ -63,8 +61,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
       </svg>
     ),
   },
-  {
-    type: 'youtube',
+  youtube: {
     label: 'youtube',
     icon: (
       <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
@@ -92,8 +89,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
       </svg>
     ),
   },
-  {
-    type: 'anime',
+  anime: {
     label: 'anime',
     icon: (
       <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
@@ -118,8 +114,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
       </svg>
     ),
   },
-  {
-    type: 'substack' as ContentType,
+  substack: {
     label: 'substack',
     icon: (
       <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
@@ -143,8 +138,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
       </svg>
     ),
   },
-  {
-    type: 'research' as ContentType,
+  research: {
     label: 'research',
     icon: (
       <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
@@ -166,8 +160,7 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
       </svg>
     ),
   },
-  {
-    type: 'kdrama' as ContentType,
+  kdrama: {
     label: 'k-drama',
     icon: (
       <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
@@ -184,22 +177,233 @@ const CONTENT_TYPES: { type: ContentType; label: string; icon: React.ReactNode }
       </svg>
     ),
   },
-];
+  poetry: {
+    label: 'poetry',
+    icon: (
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Quill feather */}
+        <path d="M54 10 Q 62 8, 60 18 Q 52 36, 36 50 L32 54" />
+        <path d="M54 10 Q 46 12, 42 20 Q 38 32, 36 50" strokeWidth="0.9" opacity="0.5" />
+        {/* Quill spine */}
+        <path d="M54 10 L32 54" strokeWidth="0.7" opacity="0.35" />
+        {/* Ink drop at nib */}
+        <path d="M32 54 Q 30 58, 32 62 Q 34 58, 32 54" fill="currentColor" stroke="none" opacity="0.3" />
+        <path d="M32 54 Q 30 58, 32 62 Q 34 58, 32 54" />
+        {/* Decorative barbs on feather */}
+        <path d="M50 16 Q 54 18, 52 22" strokeWidth="0.8" opacity="0.25" />
+        <path d="M46 22 Q 50 24, 48 28" strokeWidth="0.8" opacity="0.25" />
+        <path d="M42 28 Q 46 30, 44 34" strokeWidth="0.8" opacity="0.25" />
+        {/* Ink flourish lines — like written verse */}
+        <line x1="10" y1="42" x2="24" y2="42" strokeWidth="0.8" opacity="0.2" />
+        <line x1="10" y1="48" x2="20" y2="48" strokeWidth="0.8" opacity="0.2" />
+        <line x1="10" y1="54" x2="22" y2="54" strokeWidth="0.8" opacity="0.2" />
+        {/* Small accent dots */}
+        <circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" opacity="0.2" />
+        <circle cx="18" cy="10" r="0.8" fill="currentColor" stroke="none" opacity="0.15" />
+        <path d="M8 28 Q 6 34, 8 40" strokeWidth="0.7" opacity="0.15" />
+      </svg>
+    ),
+  },
+  short_story: {
+    label: 'short story',
+    icon: (
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Scroll / manuscript */}
+        <path d="M18 16 Q 18 10, 24 10 L52 10 Q 58 10, 58 16 L58 56 Q 58 62, 52 62 L24 62 Q 18 62, 18 56 Z" />
+        {/* Scroll curl at top */}
+        <path d="M18 16 Q 14 16, 14 20 Q 14 24, 18 24" strokeWidth="1" />
+        <path d="M58 16 Q 62 16, 62 20 Q 62 24, 58 24" strokeWidth="1" />
+        {/* Scroll curl at bottom */}
+        <path d="M18 56 Q 14 56, 14 52 Q 14 48, 18 48" strokeWidth="1" />
+        <path d="M58 56 Q 62 56, 62 52 Q 62 48, 58 48" strokeWidth="1" />
+        {/* Text lines */}
+        <line x1="26" y1="22" x2="50" y2="22" strokeWidth="0.8" opacity="0.35" />
+        <line x1="26" y1="29" x2="50" y2="29" strokeWidth="0.8" opacity="0.35" />
+        <line x1="26" y1="36" x2="50" y2="36" strokeWidth="0.8" opacity="0.35" />
+        <line x1="26" y1="43" x2="44" y2="43" strokeWidth="0.8" opacity="0.3" />
+        <line x1="26" y1="50" x2="48" y2="50" strokeWidth="0.8" opacity="0.25" />
+        {/* Decorative initial capital flourish */}
+        <path d="M26 18 Q 22 14, 26 10" strokeWidth="0.7" opacity="0.2" />
+        {/* Corner flourish */}
+        <path d="M50 62 Q 56 60, 58 56" strokeWidth="0.7" opacity="0.2" />
+        <circle cx="54" cy="8" r="1" fill="currentColor" stroke="none" opacity="0.2" />
+      </svg>
+    ),
+  },
+  book: {
+    label: 'book',
+    icon: (
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Book cover */}
+        <rect x="14" y="10" width="44" height="54" rx="3" />
+        {/* Spine */}
+        <line x1="22" y1="10" x2="22" y2="64" strokeWidth="1.5" />
+        {/* Pages edge — subtle layering */}
+        <rect x="23" y="12" width="33" height="50" rx="1" strokeWidth="0.7" opacity="0.3" />
+        <rect x="24" y="13" width="31" height="48" rx="1" strokeWidth="0.5" opacity="0.15" />
+        {/* Cover title lines */}
+        <line x1="30" y1="28" x2="50" y2="28" strokeWidth="0.9" opacity="0.35" />
+        <line x1="30" y1="34" x2="46" y2="34" strokeWidth="0.9" opacity="0.3" />
+        {/* Decorative cover emblem */}
+        <circle cx="40" cy="48" r="8" strokeWidth="0.8" opacity="0.25" />
+        <path d="M36 48 Q 40 44, 44 48 Q 40 52, 36 48 Z" strokeWidth="0.8" opacity="0.3" />
+        {/* Spine decorations */}
+        <line x1="15" y1="20" x2="21" y2="20" strokeWidth="0.7" opacity="0.2" />
+        <line x1="15" y1="54" x2="21" y2="54" strokeWidth="0.7" opacity="0.2" />
+        {/* Corner flourishes */}
+        <path d="M10 14 Q 8 18, 10 22" strokeWidth="0.7" opacity="0.15" />
+        <path d="M62 14 Q 64 18, 62 22" strokeWidth="0.7" opacity="0.15" />
+      </svg>
+    ),
+  },
+  essay: {
+    label: 'essay',
+    icon: (
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Document / paper */}
+        <path d="M16 8 L48 8 L58 18 L58 64 L16 64 Z" />
+        {/* Folded corner */}
+        <path d="M48 8 L48 18 L58 18" strokeWidth="1" />
+        <path d="M48 8 L58 18" strokeWidth="0.6" opacity="0.3" />
+        {/* Text lines */}
+        <line x1="24" y1="28" x2="50" y2="28" strokeWidth="0.9" opacity="0.35" />
+        <line x1="24" y1="35" x2="50" y2="35" strokeWidth="0.9" opacity="0.35" />
+        <line x1="24" y1="42" x2="50" y2="42" strokeWidth="0.9" opacity="0.35" />
+        <line x1="24" y1="49" x2="42" y2="49" strokeWidth="0.9" opacity="0.3" />
+        {/* Pen nib resting on document */}
+        <path d="M46 56 L56 46 L60 50 L50 60 Z" />
+        <path d="M50 60 Q 48 64, 46 62 Q 44 60, 46 58 Z" fill="currentColor" stroke="none" opacity="0.2" />
+        <path d="M50 60 Q 48 64, 46 62 Q 44 60, 46 58 Z" />
+        <line x1="56" y1="46" x2="60" y2="50" strokeWidth="0.8" opacity="0.4" />
+        {/* Decorative corner marks */}
+        <path d="M12 12 Q 10 18, 12 24" strokeWidth="0.7" opacity="0.15" />
+        <circle cx="52" cy="12" r="1" fill="currentColor" stroke="none" opacity="0.2" />
+        <path d="M20 8 Q 16 4, 12 8" strokeWidth="0.7" opacity="0.15" />
+      </svg>
+    ),
+  },
+  podcast: {
+    label: 'podcast',
+    icon: (
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Headphones band */}
+        <path d="M18 36 Q 18 18, 36 18 Q 54 18, 54 36" />
+        {/* Left ear cup */}
+        <rect x="12" y="34" width="12" height="16" rx="4" />
+        {/* Right ear cup */}
+        <rect x="48" y="34" width="12" height="16" rx="4" />
+        {/* Sound waves — emanating outward */}
+        <path d="M8 28 Q 4 36, 8 44" strokeWidth="0.9" opacity="0.3" />
+        <path d="M4 22 Q -2 36, 4 50" strokeWidth="0.7" opacity="0.2" />
+        <path d="M64 28 Q 68 36, 64 44" strokeWidth="0.9" opacity="0.3" />
+        <path d="M68 22 Q 74 36, 68 50" strokeWidth="0.7" opacity="0.2" />
+        {/* Decorative band detail */}
+        <path d="M28 20 Q 36 16, 44 20" strokeWidth="0.8" opacity="0.25" />
+        {/* Accent dots on ear cups */}
+        <circle cx="18" cy="42" r="2.5" strokeWidth="0.8" opacity="0.3" />
+        <circle cx="54" cy="42" r="2.5" strokeWidth="0.8" opacity="0.3" />
+        {/* Cord suggestion */}
+        <path d="M24 50 Q 24 58, 36 60 Q 48 58, 48 50" strokeWidth="0.8" opacity="0.2" />
+        {/* Small sparkle above */}
+        <path d="M36 10 L36 6 M34 8 L38 8" strokeWidth="0.7" opacity="0.2" />
+      </svg>
+    ),
+  },
+  manga: {
+    label: 'manga',
+    icon: (
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Book spine — right-to-left binding */}
+        <rect x="14" y="10" width="44" height="54" rx="3" />
+        <line x1="50" y1="10" x2="50" y2="64" strokeWidth="1.5" />
+        {/* Pages edge */}
+        <rect x="15" y="12" width="33" height="50" rx="1" strokeWidth="0.7" opacity="0.3" />
+        {/* Speed lines — manga action feel */}
+        <line x1="20" y1="22" x2="34" y2="22" strokeWidth="0.8" opacity="0.3" />
+        <line x1="22" y1="28" x2="38" y2="28" strokeWidth="0.8" opacity="0.25" />
+        <line x1="20" y1="34" x2="36" y2="34" strokeWidth="0.8" opacity="0.3" />
+        {/* Panel divider lines */}
+        <line x1="30" y1="18" x2="30" y2="42" strokeWidth="0.7" opacity="0.2" />
+        <line x1="20" y1="38" x2="44" y2="38" strokeWidth="0.7" opacity="0.2" />
+        {/* Starburst accent — manga emphasis */}
+        <path d="M26 50 L28 46 L30 50 L32 46 L34 50" strokeWidth="0.9" opacity="0.35" />
+        {/* Sparkle accents */}
+        <path d="M56 16 L56 12 M54 14 L58 14" strokeWidth="0.8" opacity="0.2" />
+        <circle cx="10" cy="20" r="1" fill="currentColor" stroke="none" opacity="0.2" />
+        {/* Decorative flourish */}
+        <path d="M10 44 Q 8 50, 10 56" strokeWidth="0.7" opacity="0.15" />
+        <path d="M62 44 Q 64 50, 62 56" strokeWidth="0.7" opacity="0.15" />
+      </svg>
+    ),
+  },
+  comic: {
+    label: 'comic',
+    icon: (
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Speech bubble — main shape */}
+        <path d="M14 14 L58 14 Q 62 14, 62 18 L62 40 Q 62 44, 58 44 L32 44 L22 56 L24 44 L16 44 Q 12 44, 12 40 L12 18 Q 12 14, 16 14 Z" />
+        {/* Inner panel border */}
+        <rect x="18" y="20" width="38" height="18" rx="2" strokeWidth="0.7" opacity="0.3" />
+        {/* Comic dots — halftone pattern */}
+        <circle cx="22" cy="26" r="1.5" fill="currentColor" stroke="none" opacity="0.15" />
+        <circle cx="28" cy="24" r="1" fill="currentColor" stroke="none" opacity="0.12" />
+        <circle cx="26" cy="30" r="1.2" fill="currentColor" stroke="none" opacity="0.1" />
+        {/* ZAP text lines */}
+        <line x1="34" y1="26" x2="50" y2="26" strokeWidth="0.9" opacity="0.35" />
+        <line x1="34" y1="32" x2="46" y2="32" strokeWidth="0.9" opacity="0.3" />
+        {/* Starburst accent — comic pow */}
+        <path d="M54 8 L56 12 L60 10 L58 14" strokeWidth="0.8" opacity="0.25" />
+        <path d="M8 8 L10 12 L14 10 L12 14" strokeWidth="0.8" opacity="0.2" />
+        {/* Small sparkle */}
+        <path d="M48 52 L48 48 M46 50 L50 50" strokeWidth="0.7" opacity="0.2" />
+        {/* Motion lines */}
+        <line x1="8" y1="28" x2="12" y2="28" strokeWidth="0.7" opacity="0.15" />
+        <line x1="62" y1="28" x2="66" y2="28" strokeWidth="0.7" opacity="0.15" />
+        {/* Decorative flourish */}
+        <path d="M36 58 Q 40 62, 44 58" strokeWidth="0.7" opacity="0.15" />
+      </svg>
+    ),
+  },
+};
 
 interface Props {
+  types: ContentType[];
   selected: ContentType | null;
   onSelect: (type: ContentType) => void;
 }
 
-export default function ContentTypeSelector({ selected, onSelect }: Props) {
+export default function ContentTypeSelector({ types, selected, onSelect }: Props) {
   return (
-    <div className="relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px] mx-auto">
-      {CONTENT_TYPES.map(({ type, label, icon }, index) => {
+    <div className="relative w-[360px] h-[360px] sm:w-[420px] sm:h-[420px] mx-auto">
+      {/* Surprise me — ? in the center */}
+      <button
+        onClick={() => onSelect(types[Math.floor(Math.random() * types.length)])}
+        className="group absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[80px] h-[80px] flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#d4cee6] hover:shadow-lg hover:shadow-purple-50/40 transition-all duration-500 active:scale-95 z-10"
+        title="Surprise me"
+      >
+        {/* Sparkles around the ? */}
+        <svg className="absolute w-[100px] h-[100px] text-[#c4b5fd]" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+          <path className="opacity-40 group-hover:opacity-80 transition-opacity duration-500" d="M14 14 L14 8 M11 11 L17 11" />
+          <path className="opacity-35 group-hover:opacity-75 transition-opacity duration-500" d="M86 14 L86 8 M83 11 L89 11" />
+          <path className="opacity-30 group-hover:opacity-70 transition-opacity duration-500" d="M14 86 L14 80 M11 83 L17 83" />
+          <path className="opacity-35 group-hover:opacity-75 transition-opacity duration-500" d="M86 86 L86 80 M83 83 L89 83" />
+          <circle cx="6" cy="50" r="1.5" fill="currentColor" className="opacity-30 group-hover:opacity-60 transition-opacity duration-500" />
+          <circle cx="94" cy="50" r="1.5" fill="currentColor" className="opacity-30 group-hover:opacity-60 transition-opacity duration-500" />
+          <circle cx="50" cy="6" r="1.5" fill="currentColor" className="opacity-30 group-hover:opacity-60 transition-opacity duration-500" />
+          <circle cx="50" cy="94" r="1.5" fill="currentColor" className="opacity-30 group-hover:opacity-60 transition-opacity duration-500" />
+        </svg>
+        <span className="text-[24px] font-light text-[#b0a8c4] group-hover:text-[#8b5cf6] transition-colors duration-300">?</span>
+      </button>
+
+      {types.map((type, index) => {
+        const entry = CONTENT_TYPE_MAP[type];
+        if (!entry) return null;
+        const { label, icon } = entry;
         const isSelected = selected === type;
-        const total = CONTENT_TYPES.length;
+        const total = types.length;
         // Arrange in circle: start from top (-90deg), distribute evenly
         const angle = ((index / total) * 360 - 90) * (Math.PI / 180);
-        const radius = 42; // percentage from center
+        const radius = 46; // percentage from center
         const cx = 50 + Math.cos(angle) * radius;
         const cy = 50 + Math.sin(angle) * radius;
 
@@ -230,39 +434,6 @@ export default function ContentTypeSelector({ selected, onSelect }: Props) {
           </button>
         );
       })}
-
-      {/* Choose for me — center orb */}
-      <button
-        onClick={() => {
-          const randomType = CONTENT_TYPES[Math.floor(Math.random() * CONTENT_TYPES.length)].type;
-          onSelect(randomType);
-        }}
-        className="choose-orb absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[84px] h-[84px] sm:w-[96px] sm:h-[96px] flex flex-col items-center justify-center gap-1.5 rounded-full border border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#c4b5fd] hover:shadow-lg hover:shadow-purple-100/60 transition-all duration-500 active:scale-95"
-      >
-        <span className="text-[#c8c2d6] transition-colors duration-500">
-          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-            {/* 4-point sparkle */}
-            <path d="M14 3 L15.2 11.4 L23 14 L15.2 16.6 L14 25 L12.8 16.6 L5 14 L12.8 11.4 Z" />
-            {/* Tiny accent dots */}
-            <circle cx="5.5" cy="5.5" r="0.8" fill="currentColor" stroke="none" opacity="0.35" />
-            <circle cx="22.5" cy="5.5" r="0.8" fill="currentColor" stroke="none" opacity="0.35" />
-            <circle cx="22.5" cy="22.5" r="0.6" fill="currentColor" stroke="none" opacity="0.25" />
-          </svg>
-        </span>
-        <span className="text-[8px] sm:text-[9px] tracking-[0.12em] uppercase font-light text-[#d0cadc]">
-          choose
-        </span>
-      </button>
-
-      <style jsx>{`
-        .choose-orb {
-          animation: choose-pulse 3.5s ease-in-out infinite;
-        }
-        @keyframes choose-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(196, 181, 253, 0); }
-          50% { box-shadow: 0 0 14px 4px rgba(196, 181, 253, 0.22); }
-        }
-      `}</style>
     </div>
   );
 }

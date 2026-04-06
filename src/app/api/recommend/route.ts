@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRecommendation } from '@/lib/recommendation-engine';
 import { getResearchRecommendation } from '@/lib/research-recommendation';
+import {
+  getPoetryRecommendation,
+  getShortStoryRecommendation,
+  getBookRecommendation,
+  getEssayRecommendation,
+  getPodcastRecommendation,
+} from '@/lib/reading-recommendation';
 import { enrichRecommendation } from '@/lib/enrich';
 import { db } from '@/lib/db';
 import { verifyAuthCookie } from '@/lib/auth';
 import { consumeRateLimit } from '@/lib/rate-limit';
 import { log } from '@/lib/logger';
-import { CONTENT_TYPES, type ContentType } from '@/types/index';
+import { CONTENT_TYPES, type ContentType, type Recommendation } from '@/types/index';
 
 export async function POST(req: NextRequest) {
   log.api('POST', '/api/recommend');
@@ -59,10 +66,27 @@ export async function POST(req: NextRequest) {
 
   try {
     log.ai('Calling OpenAI gpt-4o-mini...');
-    const raw = contentType === 'research'
-      ? await getResearchRecommendation(vibe.trim())
-      : await getRecommendation(vibe.trim(), contentType as ContentType, (discoveryMode as 'from_library' | 'something_new') ?? 'something_new', useInterests);
-    const recommendation = contentType === 'research' ? raw : await enrichRecommendation(raw);
+
+    const READING_TYPES: Record<string, (vibe: string) => Promise<Recommendation>> = {
+      poetry: getPoetryRecommendation,
+      short_story: getShortStoryRecommendation,
+      book: getBookRecommendation,
+      essay: getEssayRecommendation,
+      podcast: getPodcastRecommendation,
+    };
+
+    let raw: Recommendation;
+    let isSimpleType = false;
+    if (contentType === 'research') {
+      raw = await getResearchRecommendation(vibe.trim());
+      isSimpleType = true;
+    } else if (contentType in READING_TYPES) {
+      raw = await READING_TYPES[contentType](vibe.trim());
+      isSimpleType = true;
+    } else {
+      raw = await getRecommendation(vibe.trim(), contentType as ContentType, (discoveryMode as 'from_library' | 'something_new') ?? 'something_new', useInterests);
+    }
+    const recommendation = isSimpleType ? raw : await enrichRecommendation(raw);
     log.success(`Got recommendation: "${recommendation.title}"`, `(${recommendation.type})`);
 
     // Save to recommendation history for anti-repetition (owner only)

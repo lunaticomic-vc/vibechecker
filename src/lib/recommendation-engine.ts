@@ -5,7 +5,7 @@ import { getAllRatings } from '@/lib/ratings';
 import { searchRedditForTitle } from '@/lib/reddit';
 import { searchTMDB, searchTMDBMulti } from '@/lib/tmdb';
 import type { TMDBSearchResult } from '@/lib/tmdb';
-import { searchSubstackMulti, verifyUrl } from '@/lib/substack';
+import { searchSubstackMulti } from '@/lib/substack';
 import type { SubstackSearchResult } from '@/lib/substack';
 import { searchYouTube, buildYouTubeWatchUrl, getVideoDetails, formatDuration } from '@/lib/youtube';
 import type { YouTubeResult } from '@/lib/youtube';
@@ -16,6 +16,20 @@ import { getDb } from '@/lib/db';
 import { getAllPeople } from '@/lib/people';
 import { getUserPreferences } from '@/lib/user-preferences';
 import { log } from '@/lib/logger';
+
+async function verifyUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VibeChecker/1.0)' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.ok || res.status === 301 || res.status === 302;
+  } catch {
+    return false;
+  }
+}
 
 type AIResponse = {
   title: string;
@@ -101,6 +115,13 @@ export function buildRecommendationPrompt(
     kdrama: 'Suggest a specific Korean drama (K-drama). Include the year and number of episodes. Focus on emotional depth, romance, character dynamics, and the unique storytelling style of Korean dramas.',
     substack: 'Suggest a SPECIFIC Substack article (NOT a newsletter or publication — a single article). Include the exact article title, the author/publication name, and most importantly a "substackUrl" field with the direct URL to the article (e.g. "https://authorname.substack.com/p/article-slug"). Also include a searchQuery as fallback. Focus on the user\'s interests for topic matching.',
     research: 'Suggest a focused research topic or learning path. Provide 3-5 curated links (articles, papers, videos) as a knowledge checklist. Include a clear starting point and a suggested order for exploring the topic.',
+    poetry: 'Suggest a specific poem or poet. Include the poem title, author, and a brief note on its themes and emotional tone. Provide a link to read it online.',
+    short_story: 'Suggest a specific short story. Include the title, author, and collection it appears in if applicable. Describe the mood and themes briefly.',
+    book: 'Suggest a specific book. Include the title, author, and year. Focus on why it matches the user\'s current vibe — themes, prose style, emotional resonance.',
+    essay: 'Suggest a specific essay. Include the title, author, and where it can be read. Focus on the intellectual or emotional angle that matches the user\'s mood.',
+    podcast: 'Suggest a specific podcast episode (NOT just a show). Include the episode title, podcast name, and a searchQuery to find it. Describe what makes this episode match the vibe.',
+    manga: 'Suggest a specific manga series. Include the title, author/mangaka, and number of volumes or chapters if relevant. Focus on art style, story depth, and emotional resonance with the user\'s vibe.',
+    comic: 'Suggest a specific comic book series or graphic novel. Include the title, writer/artist, and publisher. Focus on art style, narrative tone, and thematic depth that matches the user\'s mood.',
   };
 
   return [
@@ -160,7 +181,16 @@ async function expandVibe(openai: ReturnType<typeof getOpenAI>, vibe: string, in
     messages: [
       {
         role: 'system',
-        content: `You expand a user's prompt into a rich, evocative search concept. The prompt "${vibe}" is the ONLY topic — never drift from it.
+        content: `You expand a user's vibe description into a rich, evocative search concept for finding content recommendations.
+
+CRITICAL — VIBE vs LITERAL TOPIC:
+Most user inputs describe a MOOD, FEELING, or EXPERIENCE they want — NOT a literal subject to research.
+- "a rabbit hole I can get lost in" → they want something FASCINATING and DEEP to explore, not content about rabbit holes
+- "something that makes me question everything" → they want mind-bending, perspective-shifting content, not philosophy lectures
+- "cozy and warm" → they want content that FEELS comforting, not content about warmth
+- "unhinged and chaotic" → they want wild, unpredictable, entertaining content
+- "need a good cry" → they want emotionally devastating content
+Only interpret as a literal topic if the user clearly names a specific subject (e.g. "ancient Rome", "quantum physics", "feminism in mythology").
 
 Rules:
 - Unpack the prompt's specific emotions (go granular: not just "sad" but "bittersweet nostalgia", "anxious excitement", "quiet melancholy", "restless yearning"), energy level (low/medium/high), sensory qualities (dark/bright, slow/kinetic, sparse/lush), and core ideas
@@ -200,6 +230,7 @@ async function decomposeVibe(openai: ReturnType<typeof getOpenAI>, vibe: string)
           role: 'system',
           content: `Decompose a user's vibe into structured facets. Return ONLY JSON:
 {"mood": "granular emotional tone (e.g. 'bittersweet nostalgia', 'anxious excitement', 'cozy melancholy', 'restless wonder')", "genres": ["genre1", "genre2"], "themes": ["theme1", "theme2"], "aesthetic": "visual/tonal style description", "intensity": "low/medium/high", "pacing": "slow-burn/steady/fast-paced", "tone": "e.g. dry-wit/sincere/darkly-comic/earnest/sardonic", "surprise_openness": "low/medium/high"}
+CRITICAL — VIBE vs LITERAL: Most inputs are MOODS, not literal subjects. "a rabbit hole I can get lost in" = fascinating/deep/obsessive, NOT about rabbits. "something that makes me question everything" = mind-bending/perspective-shifting, NOT a philosophy lecture. "need a good cry" = emotionally devastating content. Only treat as literal topic if user names a specific subject (e.g. "ancient Rome", "quantum physics").
 IMPORTANT: Activity/situation words like "eating", "having lunch", "having dinner", "breakfast", "cooking", "commuting", "working out", "in bed", "on the bus" describe what the user is DOING — they are NOT the topic. Do NOT include food, meal, or cooking themes. Extract mood and themes from the REST of the vibe. Let activity context influence pacing/intensity only: "eating" → steady/low-medium; "commuting" → steady; "working out" → fast-paced/high; "in bed" → slow-burn/low.`,
         },
         { role: 'user', content: `Vibe: "${vibe}"` },
@@ -593,7 +624,12 @@ async function getScreenRecommendation(
 
   // Step 1: Decompose vibe into structured facets (#6)
   const facets = await decomposeVibe(openai, vibe);
-  const contentLabel = contentType === 'anime' ? 'anime' : contentType === 'kdrama' ? 'Korean dramas' : contentType === 'movie' ? 'movies' : 'TV shows';
+  const contentLabelMap: Record<string, string> = {
+    movie: 'movies', tv: 'TV shows', anime: 'anime', kdrama: 'Korean dramas',
+    book: 'books', poetry: 'poems', short_story: 'short stories', essay: 'essays',
+    podcast: 'podcasts', research: 'research topics', manga: 'manga', comic: 'comics',
+  };
+  const contentLabel = contentLabelMap[contentType] ?? contentType;
 
   // Step 2: Generate actual title suggestions from facets (TMDB needs titles, not vibes)
   const queryResponse = await openai.chat.completions.create({
@@ -603,6 +639,10 @@ async function getScreenRecommendation(
       {
         role: 'system',
         content: `You are a ${contentLabel} expert with deep knowledge of mainstream hits, cult classics, international gems, and obscure picks. Suggest 10-12 REAL ${contentLabel} TITLES that match the vibe. Return ONLY a JSON array of title strings. No markdown.
+
+CRITICAL: Every suggestion MUST be a ${contentLabel} — not a different content type. For example, if asked for books, do NOT suggest essays, articles, or films. If asked for poems, do NOT suggest song lyrics or novels. If asked for short stories, do NOT suggest novels or novellas. Be precise about the medium.
+
+VIBE INTERPRETATION: The user's vibe describes a MOOD or FEELING they want, not a literal subject. "a rabbit hole I can get lost in" means something fascinating and deep, not content about rabbit holes. "something that makes me question everything" means mind-bending content, not a philosophy textbook. Recommend ${contentLabel} that EVOKE the described feeling. Only treat as a literal topic if the user names a specific subject.
 
 DIVERSITY REQUIREMENTS — your list MUST include a mix of:
 - 2-3 well-known titles (crowd-pleasers the user might know but genuinely fit the vibe)
@@ -680,12 +720,17 @@ DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maxim
           role: 'system',
           content: `Pick the best ${contentLabel} from a list that GENUINELY matches the user's vibe.
 
+CONTENT TYPE VALIDATION — CRITICAL:
+The user specifically requested a ${contentLabel}. You MUST verify your pick is actually a ${contentLabel}.
+- If a candidate is a different content type (e.g. an essay when they asked for a book, a film when they asked for a short story, a TV show when they asked for a movie), SKIP IT and set "is_correct_type" to false.
+- Only pick candidates that are genuinely ${contentLabel}. Set "is_correct_type" to true for valid picks.
+
 SCORING — rate each candidate on THREE dimensions, then average for overall score:
 1. VIBE RELEVANCE (1-10): Does it directly match what the user asked for — thematically, tonally, emotionally?
 2. EMOTIONAL RESONANCE (1-10): Does it hit the specific emotional register being sought? The exact mood, not just the genre?
 3. NOVELTY (1-10): How likely is it the user HASN'T seen this? Obscure gems score higher, blockbusters everyone knows score lower.
 
-Only pick items with an AVERAGE score of 7+. If NONE average 7+, set "pick" to 0.
+Only pick items with an AVERAGE score of 7+ AND "is_correct_type" = true. If NONE qualify, set "pick" to 0.
 TIE-BREAKING: ${tastePatterns ? 'Use taste patterns to find what matches their emotional fingerprint.' : 'Favor higher novelty — the hidden gem over the obvious pick when relevance is equal.'}
 ${peopleSection ? 'BONUS: Prefer content featuring people the user loves.' : ''}
 
@@ -782,19 +827,54 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
     throw new Error('Could not find a good recommendation for this vibe. Try rephrasing or picking a different content type!');
   }
 
-  // Build action URL
-  const actionUrl = contentType === 'kdrama'
-    ? `https://kissasian.cam/series/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}/`
-    : contentType === 'anime'
-    ? `https://kissanime.ba/series/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}/`
-    : `https://sflix.ps/search/${encodeURIComponent(title)}`;
-  const actionLabel = contentType === 'kdrama' ? 'Watch on KissAsian' : contentType === 'anime' ? 'Watch on KissAnime' : 'Watch on sflix';
+  // Build action URL — verify direct links, fall back to search if dead
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+  let actionUrl: string;
+  let actionLabel: string;
+
+  if (contentType === 'kdrama') {
+    const directUrl = `https://kissasian.cam/series/${slug}/`;
+    const isValid = await verifyUrl(directUrl);
+    actionUrl = isValid ? directUrl : `https://kissasian.cam/search?keyword=${encodeURIComponent(title)}`;
+    actionLabel = 'Watch on KissAsian';
+  } else if (contentType === 'anime') {
+    actionUrl = `https://gogoanimes.cv/search?keyword=${encodeURIComponent(title)}`;
+    actionLabel = 'Watch on GoGoAnime';
+  } else if (contentType === 'poetry') {
+    actionUrl = `https://www.poetryfoundation.org/search?query=${encodeURIComponent(title)}`;
+    actionLabel = 'Find on Poetry Foundation';
+  } else if (contentType === 'book') {
+    actionUrl = `https://z-library.bz/s/${encodeURIComponent(title)}`;
+    actionLabel = 'Find on Z-Library';
+  } else if (contentType === 'short_story') {
+    actionUrl = `https://www.google.com/search?q=${encodeURIComponent(title + ' short story read online')}`;
+    actionLabel = 'Search online';
+  } else if (contentType === 'essay') {
+    actionUrl = `https://www.google.com/search?q=${encodeURIComponent(title + ' essay read online')}`;
+    actionLabel = 'Search online';
+  } else if (contentType === 'podcast') {
+    actionUrl = `https://open.spotify.com/search/${encodeURIComponent(title)}/podcasts`;
+    actionLabel = 'Find on Spotify';
+  } else if (contentType === 'research') {
+    actionUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(title)}`;
+    actionLabel = 'Search on Google Scholar';
+  } else if (contentType === 'manga') {
+    actionUrl = `https://mangadex.org/search?q=${encodeURIComponent(title)}`;
+    actionLabel = 'Find on MangaDex';
+  } else if (contentType === 'comic') {
+    actionUrl = `https://readcomiconline.li/Search/Comic?keyword=${encodeURIComponent(title)}`;
+    actionLabel = 'Find on ReadComicOnline';
+  } else {
+    actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
+    actionLabel = 'Watch on sflix';
+  }
 
   // Fetch poster/stills and Reddit insights in parallel
   let imageUrls: string[] = [];
   let thumbnailUrl: string | undefined;
   let redditInsights: { subreddit: string; comment: string; score: number }[] | undefined;
 
+  const readTypes: ContentType[] = ['book', 'poetry', 'short_story', 'essay', 'podcast', 'research', 'manga', 'comic'];
   const imagePromise = (async () => {
     if (contentType === 'anime') {
       const [jikan, tmdb] = await Promise.all([
@@ -803,6 +883,23 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
       ]);
       thumbnailUrl = jikan?.posterUrl ?? tmdb?.posterUrl ?? undefined;
       imageUrls = tmdb?.backdropUrls?.length ? tmdb.backdropUrls : (jikan?.backdropUrls ?? []);
+    } else if (readTypes.includes(contentType)) {
+      // Read types — vibe image from Brave
+      const braveKey = process.env.BRAVE_API_KEY;
+      if (braveKey) {
+        try {
+          const res = await fetch(
+            `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(`${title!} ${contentType} aesthetic`)}&count=3&safesearch=moderate`,
+            { headers: { 'Accept': 'application/json', 'X-Subscription-Token': braveKey }, signal: AbortSignal.timeout(5000) }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const result = data?.results?.[0];
+            const url = (result?.properties as Record<string, unknown>)?.url as string ?? result?.url as string;
+            if (url) thumbnailUrl = url;
+          }
+        } catch { /* best effort */ }
+      }
     } else {
       const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
       const tmdb = await searchTMDB(title!, tmdbType, year);

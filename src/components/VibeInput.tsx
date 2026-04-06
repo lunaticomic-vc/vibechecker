@@ -2,25 +2,113 @@
 
 import { useState } from 'react';
 import LoadingMouse from '@/components/LoadingMouse';
+import type { ContentType } from '@/types/index';
 
-const EXAMPLE_VIBES = [
-  'i\'m having lunch rn, something light and ~20 mins',
-  'sleepover binge with the girls',
+const DEFAULT_VIBES = [
   'can\'t sleep, something cozy',
   'need a good cry',
   'procrastinating, make it unhinged',
   'rainy day, slow and pretty',
 ];
 
+const VIBES_BY_TYPE: Partial<Record<ContentType, string[]>> = {
+  movie: [
+    'i\'m having lunch rn, something light',
+    'sleepover binge with the girls',
+    'need a good cry, something devastating',
+    'rainy day, slow and pretty',
+  ],
+  tv: [
+    'sleepover binge with the girls',
+    'background show while cooking',
+    'something addictive i can\'t stop watching',
+    'cozy and feel-good, no drama',
+  ],
+  anime: [
+    'need something with beautiful animation',
+    'unhinged and chaotic, surprise me',
+    'slow burn with deep characters',
+    'something emotional and bittersweet',
+  ],
+  youtube: [
+    'i\'m having lunch rn, something light and ~20 mins',
+    'deep dive into something niche',
+    'procrastinating, make it unhinged',
+    'calming background while i work',
+  ],
+  kdrama: [
+    'enemies to lovers, slow burn',
+    'something funny and lighthearted',
+    'need to cry, give me melodrama',
+    'cozy romance, nothing heavy',
+  ],
+  substack: [
+    'something that makes me think differently',
+    'personal essay, raw and honest',
+    'culture criticism, sharp and witty',
+    'something about art or creativity',
+  ],
+  book: [
+    'can\'t sleep, need something immersive',
+    'short and beautiful, under 200 pages',
+    'something that changes how i see things',
+    'cozy and comforting like a warm blanket',
+  ],
+  poetry: [
+    'heartbreak but make it beautiful',
+    'something about nature and stillness',
+    'angry and raw, no polished edges',
+    'soft and tender, like a whisper',
+  ],
+  short_story: [
+    'something surreal and dreamlike',
+    'twist ending that haunts me',
+    'quiet and melancholy',
+    'weird and wonderful, very strange',
+  ],
+  essay: [
+    'something philosophical and deep',
+    'personal essay, vulnerable and real',
+    'sharp cultural commentary',
+    'about love or loss or both',
+  ],
+  podcast: [
+    'true crime but thoughtful, not sensational',
+    'something funny while i commute',
+    'deep conversation about life',
+    'learn something weird and niche',
+  ],
+  research: [
+    'rabbit hole i can get lost in',
+    'something mind-blowing about the universe',
+    'curious about how things work',
+    'niche topic nobody talks about',
+  ],
+  manga: [
+    'something with beautiful art and slow pacing',
+    'dark and psychological, mess me up',
+    'wholesome slice of life, warm vibes',
+    'epic worldbuilding and complex power systems',
+  ],
+  comic: [
+    'gritty noir, morally grey characters',
+    'colorful and fun, classic superhero vibes',
+    'indie and artistic, something different',
+    'dark humor and sharp writing',
+  ],
+};
+
 interface Props {
   onSubmit: (vibe: string, useInterests: boolean) => void;
   loading: boolean;
   isOwner?: boolean;
+  contentType?: ContentType | null;
 }
 
-export default function VibeInput({ onSubmit, loading, isOwner = false }: Props) {
+export default function VibeInput({ onSubmit, loading, isOwner = false, contentType }: Props) {
   const [vibe, setVibe] = useState('');
   const [useInterests, setUseInterests] = useState(true);
+  const examples = (contentType && VIBES_BY_TYPE[contentType]) || DEFAULT_VIBES;
 
   const handleSubmit = () => {
     if (vibe.trim()) onSubmit(vibe.trim(), useInterests);
@@ -57,7 +145,7 @@ export default function VibeInput({ onSubmit, loading, isOwner = false }: Props)
       </div>
 
       <div className="flex flex-wrap justify-center gap-1.5">
-        {EXAMPLE_VIBES.map((example) => (
+        {examples.map((example) => (
           <button
             key={example}
             onClick={() => setVibe(example)}

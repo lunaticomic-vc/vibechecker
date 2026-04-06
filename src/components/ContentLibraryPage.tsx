@@ -23,6 +23,14 @@ const PAGE_TITLES: Record<string, string> = {
   tv: 'TV Shows',
   anime: 'Anime',
   kdrama: 'K-Drama',
+  research: 'Research',
+  poetry: 'Poetry',
+  short_story: 'Short Stories',
+  book: 'Books',
+  essay: 'Essays',
+  podcast: 'Podcasts',
+  manga: 'Manga',
+  comic: 'Comics',
 };
 
 const EMPTY_TODO_MESSAGES: Record<string, string> = {
@@ -30,6 +38,14 @@ const EMPTY_TODO_MESSAGES: Record<string, string> = {
   tv: 'Nothing in your todo list.',
   anime: 'Nothing in your todo list. Add some or import from MAL in Settings!',
   kdrama: 'Nothing in your list. Add some K-dramas!',
+  research: 'Nothing here yet. Add some research topics!',
+  poetry: 'Nothing here yet. Add some poems!',
+  short_story: 'Nothing here yet. Add some short stories!',
+  book: 'Nothing here yet. Add some books!',
+  essay: 'Nothing here yet. Add some essays!',
+  podcast: 'Nothing here yet. Add some podcasts!',
+  manga: 'Nothing here yet. Add some manga!',
+  comic: 'Nothing here yet. Add some comics!',
 };
 
 const IMAGE_LOOKUP_TYPE: Record<string, string> = {
@@ -37,6 +53,15 @@ const IMAGE_LOOKUP_TYPE: Record<string, string> = {
   tv: 'tv',
   anime: 'tv',
   kdrama: 'tv',
+  book: 'book',
+  poetry: 'poetry',
+  short_story: 'short_story',
+  essay: 'essay',
+  podcast: 'podcast',
+  research: 'research',
+  substack: 'substack',
+  manga: 'manga',
+  comic: 'comic',
 };
 
 interface ContentLibraryPageProps {
