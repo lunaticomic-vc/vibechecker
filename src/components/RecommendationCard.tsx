@@ -75,13 +75,13 @@ function ResearchCard({ recommendation }: { recommendation: Recommendation }) {
     {}
   );
 
-  const sourceOrder: ResearchLink['sourceType'][] = ['academic', 'video', 'article', 'community', 'book'];
+  const sourceOrder: ResearchLink['sourceType'][] = ['video', 'article', 'academic', 'community', 'book'];
   const presentSources = sourceOrder.filter(s => grouped[s]?.length);
 
   return (
-    <div className="relative z-10 rounded-2xl border-2 border-[#c7d2fe] bg-white/92 backdrop-blur-sm p-5 flex flex-col gap-4 max-w-[360px] mx-auto w-full">
-      {/* Header */}
-      <div>
+    <div className="relative z-10 flex flex-col gap-3 max-w-[360px] mx-auto w-full">
+      {/* Header card */}
+      <div className="rounded-2xl border-2 border-[#c7d2fe] bg-white/92 backdrop-blur-sm px-5 pt-5 pb-4">
         <div className="flex items-center gap-2 mb-1">
           <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-medium bg-[#f0f4ff] text-[#3b5bdb] border-[#a5b4fc]">research</span>
         </div>
@@ -89,10 +89,10 @@ function ResearchCard({ recommendation }: { recommendation: Recommendation }) {
         {description && <p className="mt-1.5 text-xs text-[#5a5270] leading-relaxed">{description}</p>}
       </div>
 
-      {/* Links */}
+      {/* Resources box */}
       {presentSources.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4]">Resources</p>
+        <div className="rounded-2xl border-2 border-[#c7d2fe] bg-white/92 backdrop-blur-sm p-5 flex flex-col gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#3b5bdb]">Resources</p>
           {presentSources.map(sourceType => (
             <div key={sourceType} className="flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-widest text-[#a5b4fc]">
@@ -116,10 +116,10 @@ function ResearchCard({ recommendation }: { recommendation: Recommendation }) {
         </div>
       )}
 
-      {/* Knowledge checklist */}
+      {/* Checklist box */}
       {knowledgeChecklist.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4]">Know your stuff</p>
+        <div className="rounded-2xl border-2 border-[#d4e6d1] bg-white/92 backdrop-blur-sm p-5 flex flex-col gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b9a65]">Know your stuff</p>
           <div className="flex flex-col gap-1.5">
             {knowledgeChecklist.map((item, i) => (
               <label
