@@ -1,4 +1,4 @@
-import type { WatchProgress } from '@/types/index';
+import type { WatchProgress, ContentType } from '@/types/index';
 
 export type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
 
@@ -26,6 +26,31 @@ export const TYPE_COLORS: Record<string, string> = {
   youtube: 'bg-[#fef2f2] text-[#dc2626]',
   substack: 'bg-[#fff7ed] text-[#c2410c]',
   kdrama: 'bg-[#fdf2f8] text-[#db2777]',
+  research: 'bg-[#f0f4ff] text-[#2563eb]',
+  poetry: 'bg-[#fdf2f8] text-[#be185d]',
+  short_story: 'bg-[#fffbeb] text-[#b45309]',
+  book: 'bg-[#f0fdfa] text-[#0f766e]',
+  essay: 'bg-[#f1f5f9] text-[#475569]',
+  podcast: 'bg-[#fff1f2] text-[#e11d48]',
+  manga: 'bg-[#fef3f2] text-[#c2410c]',
+  comic: 'bg-[#eff6ff] text-[#1d4ed8]',
+};
+
+export const TYPE_BORDER_COLORS: Record<string, string> = {
+  movie: 'border-[#c4b5fd]',
+  tv: 'border-[#a7c4a0]',
+  anime: 'border-[#c4b5fd]',
+  youtube: 'border-[#fca5a5]',
+  substack: 'border-[#fdba74]',
+  kdrama: 'border-[#f9a8d4]',
+  research: 'border-[#93c5fd]',
+  poetry: 'border-[#f9a8d4]',
+  short_story: 'border-[#fcd34d]',
+  book: 'border-[#99f6e4]',
+  essay: 'border-[#cbd5e1]',
+  podcast: 'border-[#fda4af]',
+  manga: 'border-[#fdba74]',
+  comic: 'border-[#93c5fd]',
 };
 
 export const TYPE_LABELS: Record<string, string> = {
@@ -35,7 +60,18 @@ export const TYPE_LABELS: Record<string, string> = {
   youtube: 'YouTube',
   substack: 'Substack',
   kdrama: 'K-Drama',
+  research: 'Research',
+  poetry: 'Poetry',
+  short_story: 'Short Story',
+  book: 'Book',
+  essay: 'Essay',
+  podcast: 'Podcast',
+  manga: 'Manga',
+  comic: 'Comic',
 };
+
+export const WATCH_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'kdrama', 'podcast', 'research'];
+export const READ_TYPES: ContentType[] = ['substack', 'book', 'manga', 'comic', 'poetry', 'short_story', 'essay', 'research'];
 
 export const RATING_ORDER: Record<string, number> = {
   felt_things: 0,

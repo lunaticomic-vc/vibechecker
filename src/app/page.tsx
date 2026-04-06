@@ -8,12 +8,14 @@ import { ContentType, Recommendation } from '@/types/index';
 import { useIsOwner } from '@/lib/useIsOwner';
 import { useAuth } from '@/components/AuthProvider';
 import LoadingMouse from '@/components/LoadingMouse';
+import { WATCH_TYPES, READ_TYPES } from '@/lib/constants';
 
-type Screen = 'pick' | 'vibe' | 'result';
+type Screen = 'pick' | 'type' | 'vibe' | 'result';
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>('pick');
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
+  const [activeTab, setActiveTab] = useState<'watch' | 'read'>('watch');
 
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
@@ -84,10 +86,41 @@ export default function Home() {
 
       <div className="relative z-10 mx-auto max-w-lg px-4 sm:px-6 flex flex-col items-center justify-center min-h-screen py-16">
 
-        {/* Screen 1: Just the four squares */}
+        {/* Screen 1: Watch or Read */}
         {screen === 'pick' && (
-          <div className="animate-[fadeIn_0.5s_ease-out] flex flex-col items-center gap-6">
-            <ContentTypeSelector selected={null} onSelect={handlePickType} />
+          <div className="animate-[fadeIn_0.5s_ease-out] flex flex-row items-center gap-10">
+            {(['watch', 'read'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => { setActiveTab(tab); setScreen('type'); }}
+                className="group w-[180px] h-[180px] sm:w-[200px] sm:h-[200px] flex items-center justify-center rounded-3xl border-2 border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#d4cee6] hover:shadow-lg hover:shadow-purple-50/40 transition-all duration-500 active:scale-95"
+              >
+                <span className="text-[10px] sm:text-[11px] tracking-[0.15em] uppercase font-light text-[#d0cadc] group-hover:text-[#b0a8c4] transition-colors duration-500">
+                  something to {tab}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Screen 2: Type selector */}
+        {screen === 'type' && (
+          <div className="animate-[fadeIn_0.5s_ease-out] flex flex-col items-center gap-6 relative">
+            <button
+              onClick={() => setScreen('pick')}
+              aria-label="Go back"
+              className="absolute -top-12 w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            <ContentTypeSelector
+              selected={null}
+              onSelect={handlePickType}
+              types={activeTab === 'watch' ? WATCH_TYPES : READ_TYPES}
+            />
           </div>
         )}
 
@@ -95,7 +128,7 @@ export default function Home() {
         {screen === 'vibe' && (
           <div className="w-full flex flex-col items-center gap-8 animate-[fadeIn_0.4s_ease-out]">
             <button
-              onClick={() => setScreen('pick')}
+              onClick={() => setScreen('type')}
               aria-label="Go back"
               className="w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
             >
@@ -105,7 +138,7 @@ export default function Home() {
             </button>
 
             <div className="w-full max-w-sm">
-              <VibeInput onSubmit={handleSubmit} loading={loading} isOwner={isOwner} />
+              <VibeInput onSubmit={handleSubmit} loading={loading} isOwner={isOwner} contentType={selectedType} />
             </div>
 
             {error && (

@@ -5,9 +5,10 @@ import Link from 'next/link';
 
 export default function Header() {
   const [open, setOpen] = useState(false);
-  const [contentOpen, setContentOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [watchOpen, setWatchOpen] = useState(false);
+  const [readOpen, setReadOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -19,7 +20,8 @@ export default function Header() {
     function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false);
-        setContentOpen(false);
+        setWatchOpen(false);
+        setReadOpen(false);
       }
     }
     if (open) {
@@ -30,6 +32,7 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Dithered moon canvas — static on mobile, animated on desktop
@@ -113,7 +116,6 @@ export default function Header() {
 
   function navClick() {
     setOpen(false);
-    setContentOpen(false);
   }
 
   const linkClass = "px-3 py-1.5 rounded-lg text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors whitespace-nowrap";
@@ -126,7 +128,7 @@ export default function Header() {
       {/* Moon — top left */}
       <div className={`transition-all duration-500 ease-out absolute left-4 sm:left-5 ${open ? 'top-3' : 'top-4 sm:top-5'}`}>
         <button
-          onClick={() => { setOpen(v => !v); setContentOpen(false); }}
+          onClick={() => setOpen(v => !v)}
           onMouseEnter={() => !isMobile && setHovering(true)}
           onMouseLeave={() => !isMobile && setHovering(false)}
           className="pointer-events-auto relative rounded-full focus:outline-none"
@@ -161,16 +163,43 @@ export default function Header() {
 
               <div className="mx-3 my-1 border-t border-[#e9e4f5]/40" />
 
-              {/* Content types — always visible as 2-col grid */}
-              <p className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-widest text-[#b0a8c4]">Content</p>
-              <div className="grid grid-cols-2">
-                <Link href="/movies" onClick={navClick} className={mobileLinkClass}>Movies</Link>
-                <Link href="/tv" onClick={navClick} className={mobileLinkClass}>TV Shows</Link>
-                <Link href="/anime" onClick={navClick} className={mobileLinkClass}>Anime</Link>
-                <Link href="/youtube" onClick={navClick} className={mobileLinkClass}>YouTube</Link>
-                <Link href="/substack" onClick={navClick} className={mobileLinkClass}>Substack</Link>
-                <Link href="/kdrama" onClick={navClick} className={mobileLinkClass}>K-Drama</Link>
-              </div>
+              {/* Watch — expandable */}
+              <button onClick={() => setWatchOpen(v => !v)} className={`${mobileLinkClass} flex items-center gap-1 text-left`}>
+                Watch
+                <svg className={`w-3 h-3 transition-transform duration-200 ${watchOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {watchOpen && (
+                <div className="grid grid-cols-2 pl-3">
+                  <Link href="/movies" onClick={navClick} className={mobileLinkClass}>Movies</Link>
+                  <Link href="/tv" onClick={navClick} className={mobileLinkClass}>TV Shows</Link>
+                  <Link href="/anime" onClick={navClick} className={mobileLinkClass}>Anime</Link>
+                  <Link href="/youtube" onClick={navClick} className={mobileLinkClass}>YouTube</Link>
+                  <Link href="/kdrama" onClick={navClick} className={mobileLinkClass}>K-Drama</Link>
+                  <Link href="/podcasts" onClick={navClick} className={mobileLinkClass}>Podcasts</Link>
+                </div>
+              )}
+
+              {/* Read — expandable */}
+              <button onClick={() => setReadOpen(v => !v)} className={`${mobileLinkClass} flex items-center gap-1 text-left`}>
+                Read
+                <svg className={`w-3 h-3 transition-transform duration-200 ${readOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {readOpen && (
+                <div className="grid grid-cols-2 pl-3">
+                  <Link href="/substack" onClick={navClick} className={mobileLinkClass}>Substack</Link>
+                  <Link href="/books" onClick={navClick} className={mobileLinkClass}>Books</Link>
+                  <Link href="/manga" onClick={navClick} className={mobileLinkClass}>Manga</Link>
+                  <Link href="/comics" onClick={navClick} className={mobileLinkClass}>Comics</Link>
+                  <Link href="/poetry" onClick={navClick} className={mobileLinkClass}>Poetry</Link>
+                  <Link href="/short-stories" onClick={navClick} className={mobileLinkClass}>Short Stories</Link>
+                  <Link href="/essays" onClick={navClick} className={mobileLinkClass}>Essays</Link>
+                  <Link href="/research" onClick={navClick} className={mobileLinkClass}>Research</Link>
+                </div>
+              )}
 
               <div className="mx-3 my-1 border-t border-[#e9e4f5]/40" />
 
@@ -186,18 +215,18 @@ export default function Header() {
             <div className="flex items-center justify-center gap-1 px-5 py-2.5">
               <Link href="/" onClick={navClick} className={linkClass}>Home</Link>
 
-              {/* Content dropdown */}
+              {/* Watch — expandable dropdown */}
               <div className="relative">
                 <button
-                  onClick={() => setContentOpen(v => !v)}
+                  onClick={() => { setWatchOpen(v => !v); setReadOpen(false); }}
                   className={`${linkClass} flex items-center gap-1`}
                 >
-                  Content
-                  <svg className={`w-3 h-3 transition-transform duration-200 ${contentOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  Watch
+                  <svg className={`w-3 h-3 transition-transform duration-200 ${watchOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                {contentOpen && (
+                {watchOpen && (
                   <div
                     className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border border-white/30 rounded-xl shadow-lg shadow-purple-200/15 py-1.5 min-w-[120px] z-[70]"
                     style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}
@@ -207,8 +236,37 @@ export default function Header() {
                     <Link href="/tv" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">TV Shows</Link>
                     <Link href="/anime" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Anime</Link>
                     <Link href="/youtube" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">YouTube</Link>
-                    <Link href="/substack" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Substack</Link>
                     <Link href="/kdrama" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">K-Drama</Link>
+                    <Link href="/podcasts" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Podcasts</Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Read — expandable dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => { setReadOpen(v => !v); setWatchOpen(false); }}
+                  className={`${linkClass} flex items-center gap-1`}
+                >
+                  Read
+                  <svg className={`w-3 h-3 transition-transform duration-200 ${readOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {readOpen && (
+                  <div
+                    className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border border-white/30 rounded-xl shadow-lg shadow-purple-200/15 py-1.5 min-w-[120px] z-[70]"
+                    style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}
+                    onMouseDown={e => e.stopPropagation()}
+                  >
+                    <Link href="/substack" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Substack</Link>
+                    <Link href="/books" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Books</Link>
+                    <Link href="/manga" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Manga</Link>
+                    <Link href="/comics" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Comics</Link>
+                    <Link href="/poetry" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Poetry</Link>
+                    <Link href="/short-stories" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Short Stories</Link>
+                    <Link href="/essays" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Essays</Link>
+                    <Link href="/research" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Research</Link>
                   </div>
                 )}
               </div>

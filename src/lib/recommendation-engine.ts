@@ -5,7 +5,7 @@ import { getAllRatings } from '@/lib/ratings';
 import { searchRedditForTitle } from '@/lib/reddit';
 import { searchTMDB, searchTMDBMulti } from '@/lib/tmdb';
 import type { TMDBSearchResult } from '@/lib/tmdb';
-import { searchSubstackMulti, verifyUrl } from '@/lib/substack';
+import { searchSubstackMulti } from '@/lib/substack';
 import type { SubstackSearchResult } from '@/lib/substack';
 import { searchYouTube, buildYouTubeWatchUrl, getVideoDetails, formatDuration } from '@/lib/youtube';
 import type { YouTubeResult } from '@/lib/youtube';
@@ -16,6 +16,20 @@ import { getDb } from '@/lib/db';
 import { getAllPeople } from '@/lib/people';
 import { getUserPreferences } from '@/lib/user-preferences';
 import { log } from '@/lib/logger';
+
+async function verifyUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VibeChecker/1.0)' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.ok || res.status === 301 || res.status === 302;
+  } catch {
+    return false;
+  }
+}
 
 type AIResponse = {
   title: string;
@@ -100,6 +114,14 @@ export function buildRecommendationPrompt(
     anime: 'Suggest a specific anime. Include episode count or arc recommendation in episodeInfo if helpful.',
     kdrama: 'Suggest a specific Korean drama (K-drama). Include the year and number of episodes. Focus on emotional depth, romance, character dynamics, and the unique storytelling style of Korean dramas.',
     substack: 'Suggest a SPECIFIC Substack article (NOT a newsletter or publication — a single article). Include the exact article title, the author/publication name, and most importantly a "substackUrl" field with the direct URL to the article (e.g. "https://authorname.substack.com/p/article-slug"). Also include a searchQuery as fallback. Focus on the user\'s interests for topic matching.',
+    research: 'Suggest a focused research topic or learning path. Provide 3-5 curated links (articles, papers, videos) as a knowledge checklist. Include a clear starting point and a suggested order for exploring the topic.',
+    poetry: 'Suggest a specific poem or poet. Include the poem title, author, and a brief note on its themes and emotional tone. Provide a link to read it online.',
+    short_story: 'Suggest a specific short story. Include the title, author, and collection it appears in if applicable. Describe the mood and themes briefly.',
+    book: 'Suggest a specific book. Include the title, author, and year. Focus on why it matches the user\'s current vibe — themes, prose style, emotional resonance.',
+    essay: 'Suggest a specific essay. Include the title, author, and where it can be read. Focus on the intellectual or emotional angle that matches the user\'s mood.',
+    podcast: 'Suggest a specific podcast episode (NOT just a show). Include the episode title, podcast name, and a searchQuery to find it. Describe what makes this episode match the vibe.',
+    manga: 'Suggest a specific manga series. Include the title, author/mangaka, and number of volumes or chapters if relevant. Focus on art style, story depth, and emotional resonance with the user\'s vibe.',
+    comic: 'Suggest a specific comic book series or graphic novel. Include the title, writer/artist, and publisher. Focus on art style, narrative tone, and thematic depth that matches the user\'s mood.',
   };
 
   return [
@@ -127,7 +149,7 @@ NEVER recommend any of these rejected titles: ${[...favorites.map(f => f.title)]
     `Your task: ${instructions[contentType]}`,
     '',
     'CRITICAL: The user\'s vibe/prompt is your #1 priority. NEVER ignore what they asked for. The vibe IS the assignment — everything else (interests, taste profile, library) exists to ENHANCE your understanding of what they want, not to override it.',
-    'CONTEXT vs TOPIC: If the user mentions an activity or situation (eating, having lunch, having dinner, breakfast, cooking, commuting, on the bus, working out, in bed, etc.), that describes their SITUATION — not what they want content about. "I\'m having lunch" means suggest something light and engaging to watch while eating, NOT recipes or food content. Treat activities as format hints (easy to follow, not too intense) and use the rest of the vibe for topic.',
+    'CONTEXT vs TOPIC: If the user mentions an activity or situation (eating, having lunch, having dinner, breakfast, cooking, commuting, on the bus, working out, in bed, etc.), that describes their SITUATION — not what they want content about. Format hints by activity: "eating/lunch/dinner/breakfast" → light, engaging, easy to follow without full attention, not emotionally heavy or demanding; "commuting/on the bus/on the train" → works as background or audio-forward, episodic or self-contained; "working out" → high energy, motivating, fast-paced; "in bed/winding down" → calm, low-stakes, nothing anxiety-inducing. Use the REST of the vibe for topic — never recommend food/workout/travel content just because they mentioned an activity.',
     'If the vibe is specific (e.g. "feminist mythology"), recommend something that is DIRECTLY about that topic. Use their interests to pick the BEST match within that topic, not to change the topic.',
     'IMPORTANT: Prioritize content similar to what the user LOVED. AVOID anything similar to what they DISLIKED, paying attention to their stated reasons.',
     'Always explain WHY this specific recommendation fits the vibe.',
@@ -159,14 +181,24 @@ async function expandVibe(openai: ReturnType<typeof getOpenAI>, vibe: string, in
     messages: [
       {
         role: 'system',
-        content: `You expand a user's prompt into a rich search concept. The prompt "${vibe}" is the ONLY topic — never drift from it.
+        content: `You expand a user's vibe description into a rich, evocative search concept for finding content recommendations.
+
+CRITICAL — VIBE vs LITERAL TOPIC:
+Most user inputs describe a MOOD, FEELING, or EXPERIENCE they want — NOT a literal subject to research.
+- "a rabbit hole I can get lost in" → they want something FASCINATING and DEEP to explore, not content about rabbit holes
+- "something that makes me question everything" → they want mind-bending, perspective-shifting content, not philosophy lectures
+- "cozy and warm" → they want content that FEELS comforting, not content about warmth
+- "unhinged and chaotic" → they want wild, unpredictable, entertaining content
+- "need a good cry" → they want emotionally devastating content
+Only interpret as a literal topic if the user clearly names a specific subject (e.g. "ancient Rome", "quantum physics", "feminism in mythology").
 
 Rules:
-- First, unpack what the prompt means: themes, emotions, aesthetics, ideas
+- Unpack the prompt's specific emotions (go granular: not just "sad" but "bittersweet nostalgia", "anxious excitement", "quiet melancholy", "restless yearning"), energy level (low/medium/high), sensory qualities (dark/bright, slow/kinetic, sparse/lush), and core ideas
+- Identify the emotional state the user is seeking — are they looking to feel comforted, challenged, moved, uplifted, or unsettled?
 - ONLY include user interests that DIRECTLY relate to the prompt topic. If an interest doesn't connect, drop it completely.
 - If the prompt is specific (e.g. "feminist mythology"), every word of your expansion must be about that exact topic
-- Activity words like "eating", "having lunch", "having dinner", "breakfast", "cooking", "commuting", "on the bus", "working out", "in bed" describe what the user is DOING right now — they are NOT requesting content about that activity. Treat them as context for the FORMAT (light, engaging, easy background watch) not the TOPIC. Never recommend recipes, food content, workout videos, etc. just because they mentioned an activity.
-- Return 2-3 sentences, no JSON`,
+- Activity words like "eating", "having lunch", "having dinner", "breakfast", "cooking", "commuting", "on the bus", "working out", "in bed" describe what the user is DOING right now — NOT requesting content about that activity. "Eating/lunch/dinner" → light, engaging, easy to follow without full attention. "Commuting/on the bus" → works as audio-forward or without constant visual focus. "Working out" → high energy, motivating. "In bed/winding down" → calm, not too intense. Never drift to food/workout/travel content from these cues.
+- Return 2-3 sentences capturing the emotional + sensory essence, no JSON`,
       },
       {
         role: 'user',
@@ -183,6 +215,9 @@ interface VibeFacets {
   themes: string[];
   aesthetic: string;
   intensity: string;
+  pacing?: string;
+  tone?: string;
+  surprise_openness?: string;
 }
 
 async function decomposeVibe(openai: ReturnType<typeof getOpenAI>, vibe: string): Promise<VibeFacets> {
@@ -194,8 +229,9 @@ async function decomposeVibe(openai: ReturnType<typeof getOpenAI>, vibe: string)
         {
           role: 'system',
           content: `Decompose a user's vibe into structured facets. Return ONLY JSON:
-{"mood": "emotional tone (e.g. melancholic, cozy, intense)", "genres": ["genre1", "genre2"], "themes": ["theme1", "theme2"], "aesthetic": "visual/tonal style", "intensity": "low/medium/high"}
-IMPORTANT: Activity/situation words like "eating", "having lunch", "having dinner", "breakfast", "cooking", "commuting", "working out", "in bed", "on the bus" describe what the user is DOING — they are NOT the topic. Do NOT include food, meal, or cooking themes just because they mentioned a meal. Extract the mood and themes from the REST of the vibe.`,
+{"mood": "granular emotional tone (e.g. 'bittersweet nostalgia', 'anxious excitement', 'cozy melancholy', 'restless wonder')", "genres": ["genre1", "genre2"], "themes": ["theme1", "theme2"], "aesthetic": "visual/tonal style description", "intensity": "low/medium/high", "pacing": "slow-burn/steady/fast-paced", "tone": "e.g. dry-wit/sincere/darkly-comic/earnest/sardonic", "surprise_openness": "low/medium/high"}
+CRITICAL — VIBE vs LITERAL: Most inputs are MOODS, not literal subjects. "a rabbit hole I can get lost in" = fascinating/deep/obsessive, NOT about rabbits. "something that makes me question everything" = mind-bending/perspective-shifting, NOT a philosophy lecture. "need a good cry" = emotionally devastating content. Only treat as literal topic if user names a specific subject (e.g. "ancient Rome", "quantum physics").
+IMPORTANT: Activity/situation words like "eating", "having lunch", "having dinner", "breakfast", "cooking", "commuting", "working out", "in bed", "on the bus" describe what the user is DOING — they are NOT the topic. Do NOT include food, meal, or cooking themes. Extract mood and themes from the REST of the vibe. Let activity context influence pacing/intensity only: "eating" → steady/low-medium; "commuting" → steady; "working out" → fast-paced/high; "in bed" → slow-burn/low.`,
         },
         { role: 'user', content: `Vibe: "${vibe}"` },
       ],
@@ -220,8 +256,14 @@ function analyzeTastePatterns(favorites: Favorite[], ratings: Rating[]): string 
   const titles = loved.map(f => f.title);
 
   return `TASTE PATTERNS from ${loved.length} loved items (${titles.join(', ')}):
-${reasons.length > 0 ? `Their reasons for loving these: ${reasons.join('; ')}` : ''}
-Identify COMMON THREADS: recurring themes, storytelling styles, emotional tones, character archetypes, or aesthetic qualities across these loved items. Prioritize recommendations that share these patterns.`;
+${reasons.length > 0 ? `Their stated reasons for loving these: ${reasons.join('; ')}` : ''}
+Identify DEEP PATTERNS — go beyond surface genre matches:
+- EMOTIONAL ARCS: Do they love transformation journeys? Quiet character studies? Cathartic resolutions? Ambiguous endings?
+- AESTHETIC PREFERENCES: What visual/tonal qualities recur (atmospheric, minimalist, maximalist, gritty realism, lush stylization)?
+- PACING PREFERENCES: Do they gravitate toward slow burns or tight fast-paced narratives?
+- TONE SIGNATURES: Recurring tone (dry wit, sincere earnestness, dark humor, lyrical sadness, deadpan)?
+- CHARACTER DYNAMICS: Relationship types or archetypes they connect with (found family, morally complex leads, unlikely mentors)?
+Prioritize recommendations that match these deep fingerprints, not just surface genre.`;
 }
 
 async function getYouTubeRecommendation(
@@ -243,11 +285,11 @@ async function getYouTubeRecommendation(
     messages: [
       {
         role: 'system',
-        content: `Generate YouTube search queries to find full-length videos (NOT Shorts). Focus ONLY on what the user asked for — do not add unrelated topics. Return ONLY a JSON array of 3-4 specific search strings. No markdown.`,
+        content: `Generate YouTube search queries to find full-length videos (NOT Shorts). Return ONLY a JSON array of 4-5 specific search strings. No markdown.`,
       },
       {
         role: 'user',
-        content: `The user wants: "${vibe}"\n\nExpanded concept: ${expandedVibe}\n\nGenerate 3-4 YouTube search queries. ALL queries must be directly and literally about "${vibe}". Do NOT add topics the user didn't ask for. Think video essays, deep dives, niche creators.`,
+        content: `The user wants: "${vibe}"\n\nExpanded concept: ${expandedVibe}\n\nGenerate 4-5 YouTube search queries with this mix:\n- 2 direct queries: literal about "${vibe}" (video essays, deep dives, explainers, niche creators)\n- 1 lateral query: an unexpected angle or tangentially related concept that captures the same FEELING as "${vibe}" but approaches it from a surprising direction\n- 1 format-specific query: combine the topic with a format (e.g. "documentary", "analysis", "essay", "breakdown", "history of", "deep dive")\n- 1 niche creator query: target smaller passionate creators over mainstream channels (think indie, underrated, or niche community spaces)\nThe lateral query should be genuinely surprising — what unexpected topic FEELS exactly like "${vibe}"?`,
       },
     ],
   });
@@ -287,16 +329,19 @@ async function getYouTubeRecommendation(
           role: 'system',
           content: `Pick the best YouTube video from a list that GENUINELY matches the user's vibe.
 
-RULES:
-1. The vibe is the #1 priority. The video MUST be actually about what the user asked for.
-2. Rate each candidate 1-10 for vibe relevance. Only pick videos scoring 7+.
-3. If NONE score 7+, set "pick" to 0.
-4. Interests are SECONDARY — use them only to break ties between equally relevant videos.
-5. For the "interests" array, ONLY include tags that genuinely describe this specific video. Do NOT copy the user's interest tags unless they truly apply.
-6. If the user mentions a duration preference (e.g. "long", "1 hour", "quick", "short"), prefer videos matching that length. Duration is shown in brackets.
-7. When two videos are equally relevant, prefer the one with more views (quality signal).
+SCORING — rate each candidate on THREE dimensions:
+1. VIBE RELEVANCE (1-10): Is this actually about what the user asked for?
+2. EMOTIONAL RESONANCE (1-10): Does it capture the specific mood/feeling, not just the topic?
+3. NOVELTY (1-10): Is this something the user likely hasn't seen? Niche/indie creators score higher than mega-viral videos.
 
-Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief summary", "reasoning": "why this SPECIFICALLY matches the vibe", "interests": ["tag1", "tag2"]}`,
+Only pick videos averaging 7+ across all three. If NONE average 7+, set "pick" to 0.
+TIE-BREAKING: Favor novelty over views — the hidden gem over the obvious top result.
+Additional rules:
+- Interests are SECONDARY — use for tie-breaking only.
+- For "interests": ONLY include tags that genuinely describe this video. Do NOT copy user tags unless they truly apply.
+- If the user mentions a duration preference (e.g. "long", "1 hour", "quick"), prefer videos matching that length.
+
+Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief summary", "reasoning": "why this SPECIFICALLY matches the vibe and mood", "interests": ["tag1", "tag2"]}`,
         },
         {
           role: 'user',
@@ -432,19 +477,19 @@ async function getSubstackRecommendation(
     messages: [
       {
         role: 'system',
-        content: `You generate creative, diverse search queries to find Substack articles. Think laterally — explore unexpected angles, adjacent topics, and niche intersections, but ALWAYS stay rooted in the user's vibe.
-
-Return ONLY a JSON array of 4-5 search strings. No markdown.`,
+        content: `You generate search queries to find high-quality, niche Substack articles — not surface-level hits. Target specific intellectual spaces, respected voices, and deep cuts. Return ONLY a JSON array of 5-6 search strings. No markdown.`,
       },
       {
         role: 'user',
         content: `The user wants: "${vibe}"\n\nExpanded concept: ${expandedVibe}
 
-Generate 4-5 search queries to find Substack articles. The vibe/prompt "${vibe}" is the ABSOLUTE #1 priority — never drift from it. Rules:
-- 3 queries should directly match the vibe (highest priority — the vibe IS the topic)
-- 1 query should creatively blend the vibe with their interests (e.g. if vibe is "feminist mythology" and they like philosophy, try "feminist mythology philosophy ancient goddesses essay")
-- 1 query should be a creative angle ON THE SAME TOPIC that could surprise them
-- ALL queries must be directly about "${vibe}". Interests refine, never replace.`,
+Generate 5-6 search queries to find exceptional Substack articles. "${vibe}" is the #1 priority. Structure:
+- 2 direct topic queries: precise about "${vibe}" as a curious reader would search
+- 1 intellectual angle query: frame the topic from a specific perspective (critical theory, personal essay, historical, philosophical, or scientific lens)
+- 1 author/publication-targeting query: think of the KIND of writer who covers this deeply (e.g. "feminist cultural critic substack", "independent film essayist", "cognitive scientist newsletter") — targets niche respected voices over mainstream
+- 1 adjacent intersection query: blend "${vibe}" with a neighboring discipline that creates surprising depth
+- 1 format-targeted query: target a specific article form that suits this topic (e.g. "long read", "personal essay", "reported piece", "letter")
+ALL queries stay rooted in "${vibe}". Aim for depth and quality over popularity.`,
       },
     ],
   });
@@ -471,11 +516,18 @@ Generate 4-5 search queries to find Substack articles. The vibe/prompt "${vibe}"
       messages: [
         {
           role: 'system',
-          content: 'Pick the best article from a list of real Substack articles. Return ONLY JSON: {"pick": <number>, "reasoning": "why this fits", "interests": ["tag1", "tag2", "tag3"]}',
+          content: `Pick the best article from a list of real Substack articles that GENUINELY matches the user's vibe.
+
+SCORING — rate each article on THREE dimensions:
+1. VIBE RELEVANCE (1-10): Is it actually about what the user asked for?
+2. DEPTH & QUALITY (1-10): Does it go beyond surface-level? Is it a thoughtful long read, personal essay, or incisive critique — not a listicle or generic overview?
+3. NOVELTY (1-10): Is this a non-obvious find? Niche author or unique angle scores higher than top-10 mainstream articles.
+
+Pick the article averaging highest. Return ONLY JSON: {"pick": <number>, "reasoning": "why this fits the vibe and what makes it worth reading", "interests": ["tag1", "tag2", "tag3"]}`,
         },
         {
           role: 'user',
-          content: `Vibe: "${vibe}"\n${interests.length > 0 ? `Interests: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\nUser taste: ${tasteProfile.slice(0, 400)}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\nPick the article that best matches the vibe "${vibe}" AND resonates with their personality:\n\n${articleList}`,
+          content: `Vibe: "${vibe}"\n${interests.length > 0 ? `Interests: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\nUser taste: ${tasteProfile.slice(0, 400)}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\nPick the article that best matches "${vibe}" and would genuinely be worth reading:\n\n${articleList}`,
         },
       ],
     });
@@ -572,7 +624,12 @@ async function getScreenRecommendation(
 
   // Step 1: Decompose vibe into structured facets (#6)
   const facets = await decomposeVibe(openai, vibe);
-  const contentLabel = contentType === 'anime' ? 'anime' : contentType === 'kdrama' ? 'Korean dramas' : contentType === 'movie' ? 'movies' : 'TV shows';
+  const contentLabelMap: Record<string, string> = {
+    movie: 'movies', tv: 'TV shows', anime: 'anime', kdrama: 'Korean dramas',
+    book: 'books', poetry: 'poems', short_story: 'short stories', essay: 'essays',
+    podcast: 'podcasts', research: 'research topics', manga: 'manga', comic: 'comics',
+  };
+  const contentLabel = contentLabelMap[contentType] ?? contentType;
 
   // Step 2: Generate actual title suggestions from facets (TMDB needs titles, not vibes)
   const queryResponse = await openai.chat.completions.create({
@@ -581,11 +638,25 @@ async function getScreenRecommendation(
     messages: [
       {
         role: 'system',
-        content: `You are a ${contentLabel} expert. Given a user's vibe, suggest 8-10 ACTUAL ${contentLabel} TITLES that match. Return ONLY a JSON array of title strings. No markdown. These must be real, existing ${contentLabel} — not made up. Think broadly: popular picks, hidden gems, classics, and recent releases.`,
+        content: `You are a ${contentLabel} expert with deep knowledge of mainstream hits, cult classics, international gems, and obscure picks. Suggest 10-12 REAL ${contentLabel} TITLES that match the vibe. Return ONLY a JSON array of title strings. No markdown.
+
+CRITICAL: Every suggestion MUST be a ${contentLabel} — not a different content type. For example, if asked for books, do NOT suggest essays, articles, or films. If asked for poems, do NOT suggest song lyrics or novels. If asked for short stories, do NOT suggest novels or novellas. Be precise about the medium.
+
+VIBE INTERPRETATION: The user's vibe describes a MOOD or FEELING they want, not a literal subject. "a rabbit hole I can get lost in" means something fascinating and deep, not content about rabbit holes. "something that makes me question everything" means mind-bending content, not a philosophy textbook. Recommend ${contentLabel} that EVOKE the described feeling. Only treat as a literal topic if the user names a specific subject.
+
+DIVERSITY REQUIREMENTS — your list MUST include a mix of:
+- 2-3 well-known titles (crowd-pleasers the user might know but genuinely fit the vibe)
+- 3-4 hidden gems or cult classics (critically loved but underseen, non-obvious picks)
+- 1-2 titles from a different era than the obvious choice (older films, vintage TV, classic anime arcs)
+- 1-2 international picks (non-English or non-American originals) if they genuinely match
+- 1-2 recent releases (last 3 years) if any exist
+- Different subgenres that all serve the same core mood/theme
+
+DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maximizes the chance of a perfect match.`,
       },
       {
         role: 'user',
-        content: `Vibe: "${vibe}"\nMood: ${facets.mood}\nGenres: ${facets.genres.join(', ') || 'any'}\nThemes: ${facets.themes.join(', ') || 'any'}\nAesthetic: ${facets.aesthetic || 'any'}\n\nSuggest 8-10 real ${contentLabel} titles that match this vibe.${existingTitles.length > 0 ? `\n\nDo NOT suggest any of these (already seen): ${existingTitles.slice(0, 30).join(', ')}` : ''}${rejectionReasons.length > 0 ? `\n\nUser previously rejected similar recs for: ${rejectionReasons.join('; ')}. Avoid those patterns.` : ''}`,
+        content: `Vibe: "${vibe}"\nMood: ${facets.mood}\nGenres: ${facets.genres.join(', ') || 'any'}\nThemes: ${facets.themes.join(', ') || 'any'}\nAesthetic: ${facets.aesthetic || 'any'}${facets.pacing ? `\nPacing: ${facets.pacing}` : ''}${facets.tone ? `\nTone: ${facets.tone}` : ''}\n\nSuggest 10-12 real ${contentLabel} titles with the diversity mix described above.${existingTitles.length > 0 ? `\n\nDo NOT suggest any of these (already seen): ${existingTitles.slice(0, 30).join(', ')}` : ''}${rejectionReasons.length > 0 ? `\n\nUser previously rejected similar recs for: ${rejectionReasons.join('; ')}. Avoid those patterns.` : ''}`,
       },
     ],
   });
@@ -649,21 +720,29 @@ async function getScreenRecommendation(
           role: 'system',
           content: `Pick the best ${contentLabel} from a list that GENUINELY matches the user's vibe.
 
-RULES:
-1. The vibe "${vibe}" is #1 priority. The pick MUST be about what the user asked for.
-2. Score each candidate 1-10 for vibe relevance. Only pick items scoring 7+.
-3. If NONE score 7+, set "pick" to 0.
-4. ${tastePatterns ? 'Use the taste patterns to break ties — pick what matches their taste DNA.' : 'Pick the most critically acclaimed option among equally relevant candidates.'}
-${peopleSection ? '5. Prefer content featuring people the user loves.' : ''}
+CONTENT TYPE VALIDATION — CRITICAL:
+The user specifically requested a ${contentLabel}. You MUST verify your pick is actually a ${contentLabel}.
+- If a candidate is a different content type (e.g. an essay when they asked for a book, a film when they asked for a short story, a TV show when they asked for a movie), SKIP IT and set "is_correct_type" to false.
+- Only pick candidates that are genuinely ${contentLabel}. Set "is_correct_type" to true for valid picks.
 
-REQUIRED FIELDS — you MUST fill ALL of these with real, detailed content:
-- "description": Write a compelling 2-3 sentence plot summary from YOUR knowledge (do NOT copy the truncated text from the list). Describe what the story is actually about.
-- "reasoning": Explain in 2-3 sentences exactly WHY this pick matches the vibe "${vibe}". Be specific about what makes it fit.
-- "actors": List 2-4 real actors/voice actors who star in this. REQUIRED for movies/tv/anime/kdrama.
-- "tropes": List 2-4 NARRATIVE tropes central to the story (e.g. "found family", "enemies to lovers", "slow burn", "redemption arc"). These are NOT genres — tropes describe story patterns and character dynamics. REQUIRED.
-- "interests": List 3-5 interest tags that describe why this matches (e.g. "dark humor", "coming of age").
+SCORING — rate each candidate on THREE dimensions, then average for overall score:
+1. VIBE RELEVANCE (1-10): Does it directly match what the user asked for — thematically, tonally, emotionally?
+2. EMOTIONAL RESONANCE (1-10): Does it hit the specific emotional register being sought? The exact mood, not just the genre?
+3. NOVELTY (1-10): How likely is it the user HASN'T seen this? Obscure gems score higher, blockbusters everyone knows score lower.
 
-Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact title", "description": "...", "reasoning": "...", "year": "YYYY", "episodeInfo": "optional", "actors": ["actor1", "actor2"], "tropes": ["trope1", "trope2"], "interests": ["tag1", "tag2"]}`,
+Only pick items with an AVERAGE score of 7+ AND "is_correct_type" = true. If NONE qualify, set "pick" to 0.
+TIE-BREAKING: ${tastePatterns ? 'Use taste patterns to find what matches their emotional fingerprint.' : 'Favor higher novelty — the hidden gem over the obvious pick when relevance is equal.'}
+${peopleSection ? 'BONUS: Prefer content featuring people the user loves.' : ''}
+
+REQUIRED FIELDS — fill ALL with real, detailed content:
+- "description": A compelling 2-3 sentence plot summary from YOUR knowledge (do NOT copy the list text). Make it sound enticing.
+- "reasoning": 2-3 sentences on WHY this matches "${vibe}" — cite specific tone, pacing, emotional arc, or themes that align.
+- "actors": 2-4 real actors/voice actors. REQUIRED.
+- "tropes": 2-4 NARRATIVE tropes central to the story (e.g. "found family", "enemies to lovers", "slow burn", "redemption arc") — NOT genres. REQUIRED.
+- "interests": 3-5 interest tags explaining the match.
+- "surprise_factor": One sentence on what makes this an unexpected but perfect pick (even for obvious choices — find the non-obvious angle).
+
+Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact title", "description": "...", "reasoning": "...", "year": "YYYY", "episodeInfo": "optional", "actors": ["actor1", "actor2"], "tropes": ["trope1", "trope2"], "interests": ["tag1", "tag2"], "surprise_factor": "..."}`,
         },
         {
           role: 'user',
@@ -748,19 +827,54 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
     throw new Error('Could not find a good recommendation for this vibe. Try rephrasing or picking a different content type!');
   }
 
-  // Build action URL
-  const actionUrl = contentType === 'kdrama'
-    ? `https://kissasian.cam/series/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}/`
-    : contentType === 'anime'
-    ? `https://kissanime.ba/series/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '')}/`
-    : `https://sflix.ps/search/${encodeURIComponent(title)}`;
-  const actionLabel = contentType === 'kdrama' ? 'Watch on KissAsian' : contentType === 'anime' ? 'Watch on KissAnime' : 'Watch on sflix';
+  // Build action URL — verify direct links, fall back to search if dead
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+  let actionUrl: string;
+  let actionLabel: string;
+
+  if (contentType === 'kdrama') {
+    const directUrl = `https://kissasian.cam/series/${slug}/`;
+    const isValid = await verifyUrl(directUrl);
+    actionUrl = isValid ? directUrl : `https://kissasian.cam/search?keyword=${encodeURIComponent(title)}`;
+    actionLabel = 'Watch on KissAsian';
+  } else if (contentType === 'anime') {
+    actionUrl = `https://gogoanimes.cv/search?keyword=${encodeURIComponent(title)}`;
+    actionLabel = 'Watch on GoGoAnime';
+  } else if (contentType === 'poetry') {
+    actionUrl = `https://www.poetryfoundation.org/search?query=${encodeURIComponent(title)}`;
+    actionLabel = 'Find on Poetry Foundation';
+  } else if (contentType === 'book') {
+    actionUrl = `https://z-library.bz/s/${encodeURIComponent(title)}`;
+    actionLabel = 'Find on Z-Library';
+  } else if (contentType === 'short_story') {
+    actionUrl = `https://www.google.com/search?q=${encodeURIComponent(title + ' short story read online')}`;
+    actionLabel = 'Search online';
+  } else if (contentType === 'essay') {
+    actionUrl = `https://www.google.com/search?q=${encodeURIComponent(title + ' essay read online')}`;
+    actionLabel = 'Search online';
+  } else if (contentType === 'podcast') {
+    actionUrl = `https://open.spotify.com/search/${encodeURIComponent(title)}/podcasts`;
+    actionLabel = 'Find on Spotify';
+  } else if (contentType === 'research') {
+    actionUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(title)}`;
+    actionLabel = 'Search on Google Scholar';
+  } else if (contentType === 'manga') {
+    actionUrl = `https://mangadex.org/search?q=${encodeURIComponent(title)}`;
+    actionLabel = 'Find on MangaDex';
+  } else if (contentType === 'comic') {
+    actionUrl = `https://readcomiconline.li/Search/Comic?keyword=${encodeURIComponent(title)}`;
+    actionLabel = 'Find on ReadComicOnline';
+  } else {
+    actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
+    actionLabel = 'Watch on sflix';
+  }
 
   // Fetch poster/stills and Reddit insights in parallel
   let imageUrls: string[] = [];
   let thumbnailUrl: string | undefined;
   let redditInsights: { subreddit: string; comment: string; score: number }[] | undefined;
 
+  const readTypes: ContentType[] = ['book', 'poetry', 'short_story', 'essay', 'podcast', 'research', 'manga', 'comic'];
   const imagePromise = (async () => {
     if (contentType === 'anime') {
       const [jikan, tmdb] = await Promise.all([
@@ -769,6 +883,23 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
       ]);
       thumbnailUrl = jikan?.posterUrl ?? tmdb?.posterUrl ?? undefined;
       imageUrls = tmdb?.backdropUrls?.length ? tmdb.backdropUrls : (jikan?.backdropUrls ?? []);
+    } else if (readTypes.includes(contentType)) {
+      // Read types — vibe image from Brave
+      const braveKey = process.env.BRAVE_API_KEY;
+      if (braveKey) {
+        try {
+          const res = await fetch(
+            `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(`${title!} ${contentType} aesthetic`)}&count=3&safesearch=moderate`,
+            { headers: { 'Accept': 'application/json', 'X-Subscription-Token': braveKey }, signal: AbortSignal.timeout(5000) }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const result = data?.results?.[0];
+            const url = (result?.properties as Record<string, unknown>)?.url as string ?? result?.url as string;
+            if (url) thumbnailUrl = url;
+          }
+        } catch { /* best effort */ }
+      }
     } else {
       const tmdbType = contentType === 'movie' ? 'movie' : 'tv';
       const tmdb = await searchTMDB(title!, tmdbType, year);
