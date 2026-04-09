@@ -56,14 +56,22 @@ export async function POST(request: NextRequest) {
     const favorite = await addFavorite({ type, title, external_id, metadata, image_url });
     log.success(`Added favorite #${favorite.id}`, `"${title}" (${type})`);
 
-    // Auto-enrich manually added records (no metadata yet) for all content types
-    if (!metadata) {
+    // Auto-enrich manually added records for all content types
+    // Skip only if metadata is already an enrichment object (has "source" key)
+    const isAlreadyEnriched = (() => {
+      if (!metadata) return false;
+      try { return !!JSON.parse(metadata).source; } catch { return false; }
+    })();
+
+    if (!isAlreadyEnriched) {
       const enriched = await enrichManualAdd(title, type, image_url).catch(err => {
         log.warn('Failed to enrich favorite', String(err));
         return null;
       });
 
       if (enriched) {
+        // Preserve user notes inside enriched metadata
+        if (metadata) enriched.metadata.notes = metadata;
         const enrichedFavorite = await updateFavorite(favorite.id, {
           title: enriched.title,
           image_url: enriched.image_url,
