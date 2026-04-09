@@ -19,3 +19,26 @@ export function buildMALSearchUrl(title: string): string {
 export function buildLetterboxdSearchUrl(title: string): string {
   return `https://letterboxd.com/search/${encodeURIComponent(title)}`;
 }
+
+/** Build a direct link for a favorite based on its external_id or content type. */
+export function buildDirectLink(type: ContentType, title: string, externalId?: string): string {
+  if (externalId) return externalId;
+  const t = encodeURIComponent(title);
+  switch (type) {
+    case 'youtube': return `https://www.youtube.com/results?search_query=${t}`;
+    case 'substack': return `https://substack.com/search/${t}`;
+    case 'anime': return `https://gogoanimes.cv/search?keyword=${t}`;
+    case 'kdrama': return `https://kissasian.cam/search?keyword=${t}`;
+    case 'movie':
+    case 'tv': return `https://sflix.ps/search/${t}`;
+    case 'poetry': return `https://www.poetryfoundation.org/search?query=${t}`;
+    case 'book': return `https://z-library.bz/s/${t}`;
+    case 'short_story': return `https://www.google.com/search?q=${t}+short+story+read+online`;
+    case 'essay': return `https://www.google.com/search?q=${t}+essay+read+online`;
+    case 'podcast': return `https://open.spotify.com/search/${t}/podcasts`;
+    case 'research': return `https://scholar.google.com/scholar?q=${t}`;
+    case 'manga': return `https://mangadex.org/search?q=${t}`;
+    case 'comic': return `https://readcomiconline.li/Search/Comic?keyword=${t}`;
+    default: return `https://www.google.com/search?q=${t}`;
+  }
+}

@@ -319,6 +319,7 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
                     favorite={fav}
                     rating={ratingsMap[fav.id]}
                     currentStatus={getCurrentStatus(fav)}
+                    showDirectLink={activeTab === 'In Progress'}
                     isGuest={!isOwner}
                     onDelete={handleDelete}
                     onRate={handleRate}
