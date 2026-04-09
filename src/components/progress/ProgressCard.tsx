@@ -5,6 +5,7 @@ import type { ProgressWithFavorite } from '@/lib/progress';
 import { useDragStatus } from '@/components/StatusDragOverlay';
 import { TYPE_COLORS } from '@/lib/constants';
 import { useLongPress } from '@/lib/hooks';
+import { buildDirectLink } from '@/lib/external-links';
 
 interface ProgressCardProps {
   item: ProgressWithFavorite;
@@ -85,9 +86,17 @@ export default function ProgressCard({ item, isGuest, onUpdate }: ProgressCardPr
 
       {/* Body */}
       <div className="p-3 flex flex-col gap-2.5 flex-1">
-        <h3 className="text-[#2d2640] font-semibold text-sm leading-tight line-clamp-2">
+        <a
+          href={buildDirectLink(item.favorite_type, item.favorite_title, item.favorite_external_id)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={e => e.stopPropagation()}
+          onMouseDown={e => e.stopPropagation()}
+          onTouchStart={e => e.stopPropagation()}
+          className="text-[#2d2640] font-semibold text-sm leading-tight line-clamp-2 hover:text-[#7c3aed] hover:underline transition-colors"
+        >
           {item.favorite_title}
-        </h3>
+        </a>
 
         {/* Season/Episode for TV and Anime only */}
         {(item.favorite_type === 'tv' || item.favorite_type === 'anime') && (

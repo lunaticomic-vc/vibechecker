@@ -5,6 +5,7 @@ export type ProgressWithFavorite = WatchProgress & {
   favorite_title: string;
   favorite_type: ContentType;
   favorite_image: string;
+  favorite_external_id?: string;
 };
 
 export async function getProgressForFavorite(favoriteId: number): Promise<WatchProgress | undefined> {
@@ -20,7 +21,8 @@ export async function getAllProgress(): Promise<ProgressWithFavorite[]> {
       wp.*,
       f.title AS favorite_title,
       f.type AS favorite_type,
-      f.image_url AS favorite_image
+      f.image_url AS favorite_image,
+      f.external_id AS favorite_external_id
     FROM watch_progress wp
     JOIN favorites f ON f.id = wp.favorite_id
     ORDER BY wp.updated_at DESC
