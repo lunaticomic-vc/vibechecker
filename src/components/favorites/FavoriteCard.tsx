@@ -9,12 +9,14 @@ import { useDragStatus } from '@/components/StatusDragOverlay';
 import { TYPE_COLORS, TYPE_LABELS } from '@/lib/constants';
 import { useLongPress } from '@/lib/hooks';
 import Accordion from '@/components/Accordion';
+import { buildDirectLink } from '@/lib/external-links';
 
 interface FavoriteCardProps {
   favorite: Favorite;
   rating?: { rating: RatingValue; reasoning?: string };
   currentStatus?: string;
   showTypeLabel?: boolean;
+  showDirectLink?: boolean;
   landscape?: boolean;
   isGuest?: boolean;
   onDelete: (id: number) => void;
@@ -24,7 +26,7 @@ interface FavoriteCardProps {
 
 type AccordionSection = 'about' | 'vibe' | 'rating' | 'reddit' | null;
 
-export default function FavoriteCard({ favorite, rating, currentStatus, showTypeLabel, landscape, isGuest, onDelete, onRate, onStatusChange }: FavoriteCardProps) {
+export default function FavoriteCard({ favorite, rating, currentStatus, showTypeLabel, showDirectLink, landscape, isGuest, onDelete, onRate, onStatusChange }: FavoriteCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [openSection, setOpenSection] = useState<AccordionSection>(null);
@@ -143,7 +145,27 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
                   {TYPE_LABELS[favorite.type]}
                 </span>
               )}
-              <p className="text-xs font-medium text-[#2d2640] leading-snug line-clamp-2">{favorite.title}</p>
+              <div className="flex items-start gap-1.5">
+                <p className="text-xs font-medium text-[#2d2640] leading-snug line-clamp-2 flex-1">{favorite.title}</p>
+                {showDirectLink && (
+                  <a
+                    href={buildDirectLink(favorite.type, favorite.title, favorite.external_id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    onMouseDown={e => e.stopPropagation()}
+                    onTouchStart={e => e.stopPropagation()}
+                    className="flex-shrink-0 mt-0.5 text-[#c4b5fd] hover:text-[#7c3aed] transition-colors"
+                    title="Open directly"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         )}
