@@ -204,11 +204,11 @@ export async function enrichManualAdd(
   // Use canonical title from GPT if available
   let finalTitle = gpt?.canonicalTitle || title;
 
-  // Format as "Title - Author" if we have an author
+  // Store author in metadata; only append to title for written content types
   if (gpt?.author) {
     metadata.author = gpt.author;
-    // Only append author if not already in the title
-    if (!finalTitle.toLowerCase().includes(gpt.author.toLowerCase())) {
+    const authorInTitle = ['book', 'poetry', 'short_story', 'essay', 'research'] as const;
+    if ((authorInTitle as readonly string[]).includes(type) && !finalTitle.toLowerCase().includes(gpt.author.toLowerCase())) {
       finalTitle = `${finalTitle} - ${gpt.author}`;
     }
   }
