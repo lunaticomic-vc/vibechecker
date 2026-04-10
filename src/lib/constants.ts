@@ -73,9 +73,9 @@ export const TYPE_LABELS: Record<string, string> = {
   game: 'Game',
 };
 
-export const WATCH_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'kdrama', 'podcast', 'research'];
-export const READ_TYPES: ContentType[] = ['substack', 'book', 'manga', 'comic', 'poetry', 'short_story', 'essay', 'research'];
-export const PLAY_TYPES: ContentType[] = ['game'];
+export const WATCH_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'kdrama'];
+export const READ_TYPES: ContentType[] = ['substack', 'book', 'manga', 'comic', 'poetry', 'short_story', 'essay'];
+export const DO_TYPES: ContentType[] = ['research', 'podcast', 'game'];
 
 export const RATING_ORDER: Record<string, number> = {
   felt_things: 0,

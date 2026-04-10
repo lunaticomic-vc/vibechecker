@@ -8,14 +8,14 @@ import { ContentType, Recommendation } from '@/types/index';
 import { useIsOwner } from '@/lib/useIsOwner';
 import { useAuth } from '@/components/AuthProvider';
 import LoadingMouse from '@/components/LoadingMouse';
-import { WATCH_TYPES, READ_TYPES, PLAY_TYPES } from '@/lib/constants';
+import { WATCH_TYPES, READ_TYPES, DO_TYPES } from '@/lib/constants';
 
 type Screen = 'pick' | 'type' | 'vibe' | 'result';
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>('pick');
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
-  const [activeTab, setActiveTab] = useState<'watch' | 'read' | 'play'>('watch');
+  const [activeTab, setActiveTab] = useState<'watch' | 'read' | 'do'>('watch');
 
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,7 +89,7 @@ export default function Home() {
         {/* Screen 1: Watch or Read */}
         {screen === 'pick' && (
           <div className="animate-[fadeIn_0.5s_ease-out] flex flex-row items-center gap-10">
-            {(['watch', 'read', 'play'] as const).map((tab) => (
+            {(['watch', 'read', 'do'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => { setActiveTab(tab); setScreen('type'); }}
@@ -119,7 +119,7 @@ export default function Home() {
             <ContentTypeSelector
               selected={null}
               onSelect={handlePickType}
-              types={activeTab === 'watch' ? WATCH_TYPES : activeTab === 'read' ? READ_TYPES : PLAY_TYPES}
+              types={activeTab === 'watch' ? WATCH_TYPES : activeTab === 'read' ? READ_TYPES : DO_TYPES}
             />
           </div>
         )}

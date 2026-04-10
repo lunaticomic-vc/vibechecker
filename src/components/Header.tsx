@@ -177,7 +177,6 @@ export default function Header() {
                   <Link href="/anime" onClick={navClick} className={mobileLinkClass}>Anime</Link>
                   <Link href="/youtube" onClick={navClick} className={mobileLinkClass}>YouTube</Link>
                   <Link href="/kdrama" onClick={navClick} className={mobileLinkClass}>K-Drama</Link>
-                  <Link href="/podcasts" onClick={navClick} className={mobileLinkClass}>Podcasts</Link>
                 </div>
               )}
 
@@ -197,11 +196,18 @@ export default function Header() {
                   <Link href="/poetry" onClick={navClick} className={mobileLinkClass}>Poetry</Link>
                   <Link href="/short-stories" onClick={navClick} className={mobileLinkClass}>Short Stories</Link>
                   <Link href="/essays" onClick={navClick} className={mobileLinkClass}>Essays</Link>
-                  <Link href="/research" onClick={navClick} className={mobileLinkClass}>Research</Link>
                 </div>
               )}
 
-              <Link href="/games" onClick={navClick} className={mobileLinkClass}>Games</Link>
+              {/* Do — expandable */}
+              <button onClick={() => { setWatchOpen(false); setReadOpen(false); }} className={`${mobileLinkClass} flex items-center gap-1 text-left`}>
+                Do
+              </button>
+              <div className="grid grid-cols-2 pl-3">
+                <Link href="/research" onClick={navClick} className={mobileLinkClass}>Research</Link>
+                <Link href="/podcasts" onClick={navClick} className={mobileLinkClass}>Podcasts</Link>
+                <Link href="/games" onClick={navClick} className={mobileLinkClass}>Games</Link>
+              </div>
 
               <div className="mx-3 my-1 border-t border-[#e9e4f5]/40" />
 
@@ -239,7 +245,6 @@ export default function Header() {
                     <Link href="/anime" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Anime</Link>
                     <Link href="/youtube" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">YouTube</Link>
                     <Link href="/kdrama" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">K-Drama</Link>
-                    <Link href="/podcasts" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Podcasts</Link>
                   </div>
                 )}
               </div>
@@ -268,11 +273,12 @@ export default function Header() {
                     <Link href="/poetry" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Poetry</Link>
                     <Link href="/short-stories" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Short Stories</Link>
                     <Link href="/essays" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Essays</Link>
-                    <Link href="/research" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Research</Link>
                   </div>
                 )}
               </div>
 
+              <Link href="/research" onClick={navClick} className={linkClass}>Research</Link>
+              <Link href="/podcasts" onClick={navClick} className={linkClass}>Podcasts</Link>
               <Link href="/games" onClick={navClick} className={linkClass}>Games</Link>
               <Link href="/progress" onClick={navClick} className={linkClass}>Current</Link>
               <Link href="/interests" onClick={navClick} className={linkClass}>Interests</Link>
