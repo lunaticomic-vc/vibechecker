@@ -364,6 +364,29 @@ const CONTENT_TYPE_MAP: Record<ContentType, { label: string; icon: React.ReactNo
       </svg>
     ),
   },
+  game: {
+    label: 'game',
+    icon: (
+      <svg aria-hidden="true" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        {/* Controller body */}
+        <path d="M16 28 Q 16 22, 24 22 L48 22 Q 56 22, 56 28 L58 40 Q 60 50, 52 50 L46 50 Q 44 50, 42 46 L30 46 Q 28 50, 26 50 L20 50 Q 12 50, 14 40 Z" />
+        {/* D-pad */}
+        <line x1="26" y1="33" x2="26" y2="39" strokeWidth="1" opacity="0.4" />
+        <line x1="23" y1="36" x2="29" y2="36" strokeWidth="1" opacity="0.4" />
+        {/* Buttons */}
+        <circle cx="44" cy="33" r="2" strokeWidth="0.9" opacity="0.35" />
+        <circle cx="49" cy="36" r="2" strokeWidth="0.9" opacity="0.3" />
+        {/* Analog sticks */}
+        <circle cx="32" cy="42" r="2.5" strokeWidth="0.7" opacity="0.2" />
+        <circle cx="40" cy="42" r="2.5" strokeWidth="0.7" opacity="0.2" />
+        {/* Top bumpers */}
+        <line x1="22" y1="22" x2="28" y2="18" strokeWidth="0.7" opacity="0.2" />
+        <line x1="50" y1="22" x2="44" y2="18" strokeWidth="0.7" opacity="0.2" />
+        {/* Sparkle */}
+        <path d="M60 18 L60 14 M58 16 L62 16" strokeWidth="0.7" opacity="0.2" />
+      </svg>
+    ),
+  },
 };
 
 interface Props {

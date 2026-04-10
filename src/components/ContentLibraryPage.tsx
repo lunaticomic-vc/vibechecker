@@ -31,6 +31,7 @@ const PAGE_TITLES: Record<string, string> = {
   podcast: 'Podcasts',
   manga: 'Manga',
   comic: 'Comics',
+  game: 'Games',
 };
 
 const EMPTY_TODO_MESSAGES: Record<string, string> = {
@@ -46,6 +47,7 @@ const EMPTY_TODO_MESSAGES: Record<string, string> = {
   podcast: 'Nothing here yet. Add some podcasts!',
   manga: 'Nothing here yet. Add some manga!',
   comic: 'Nothing here yet. Add some comics!',
+  game: 'Nothing here yet. Add some games!',
 };
 
 const IMAGE_LOOKUP_TYPE: Record<string, string> = {
@@ -62,6 +64,7 @@ const IMAGE_LOOKUP_TYPE: Record<string, string> = {
   substack: 'substack',
   manga: 'manga',
   comic: 'comic',
+  game: 'game',
 };
 
 interface ContentLibraryPageProps {

@@ -201,6 +201,8 @@ export default function Header() {
                 </div>
               )}
 
+              <Link href="/games" onClick={navClick} className={mobileLinkClass}>Games</Link>
+
               <div className="mx-3 my-1 border-t border-[#e9e4f5]/40" />
 
               <div className="grid grid-cols-2">
@@ -271,6 +273,7 @@ export default function Header() {
                 )}
               </div>
 
+              <Link href="/games" onClick={navClick} className={linkClass}>Games</Link>
               <Link href="/progress" onClick={navClick} className={linkClass}>Current</Link>
               <Link href="/interests" onClick={navClick} className={linkClass}>Interests</Link>
               <Link href="/people" onClick={navClick} className={linkClass}>People</Link>

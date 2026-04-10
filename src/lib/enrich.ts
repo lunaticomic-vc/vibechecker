@@ -30,6 +30,7 @@ const CONTENT_LABELS: Record<ContentType, string> = {
   podcast: 'podcast',
   manga: 'manga',
   comic: 'comic',
+  game: 'game',
 };
 
 /** Look up external metadata (poster, year, actors, canonical title) from type-specific APIs */

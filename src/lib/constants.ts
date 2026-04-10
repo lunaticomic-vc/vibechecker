@@ -34,6 +34,7 @@ export const TYPE_COLORS: Record<string, string> = {
   podcast: 'bg-[#fff1f2] text-[#e11d48]',
   manga: 'bg-[#fef3f2] text-[#c2410c]',
   comic: 'bg-[#eff6ff] text-[#1d4ed8]',
+  game: 'bg-[#f0fdf4] text-[#15803d]',
 };
 
 export const TYPE_BORDER_COLORS: Record<string, string> = {
@@ -51,6 +52,7 @@ export const TYPE_BORDER_COLORS: Record<string, string> = {
   podcast: 'border-[#fda4af]',
   manga: 'border-[#fdba74]',
   comic: 'border-[#93c5fd]',
+  game: 'border-[#86efac]',
 };
 
 export const TYPE_LABELS: Record<string, string> = {
@@ -68,10 +70,12 @@ export const TYPE_LABELS: Record<string, string> = {
   podcast: 'Podcast',
   manga: 'Manga',
   comic: 'Comic',
+  game: 'Game',
 };
 
 export const WATCH_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'kdrama', 'podcast', 'research'];
 export const READ_TYPES: ContentType[] = ['substack', 'book', 'manga', 'comic', 'poetry', 'short_story', 'essay', 'research'];
+export const PLAY_TYPES: ContentType[] = ['game'];
 
 export const RATING_ORDER: Record<string, number> = {
   felt_things: 0,

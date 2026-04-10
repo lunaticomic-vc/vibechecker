@@ -122,6 +122,7 @@ export function buildRecommendationPrompt(
     podcast: 'Suggest a specific podcast episode (NOT just a show). Include the episode title, podcast name, and a searchQuery to find it. Describe what makes this episode match the vibe.',
     manga: 'Suggest a specific manga series. Include the title, author/mangaka, and number of volumes or chapters if relevant. Focus on art style, story depth, and emotional resonance with the user\'s vibe.',
     comic: 'Suggest a specific comic book series or graphic novel. Include the title, writer/artist, and publisher. Focus on art style, narrative tone, and thematic depth that matches the user\'s mood.',
+    game: 'Suggest a specific video game. Include the title, developer/studio, platform(s), and year. Focus on gameplay feel, atmosphere, narrative depth, and emotional experience that matches the user\'s vibe.',
   };
 
   return [
@@ -630,6 +631,7 @@ async function getScreenRecommendation(
     movie: 'movies', tv: 'TV shows', anime: 'anime', kdrama: 'Korean dramas',
     book: 'books', poetry: 'poems', short_story: 'short stories', essay: 'essays',
     podcast: 'podcasts', research: 'research topics', manga: 'manga', comic: 'comics',
+    game: 'games',
   };
   const contentLabel = contentLabelMap[contentType] ?? contentType;
 
@@ -866,6 +868,9 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
   } else if (contentType === 'comic') {
     actionUrl = `https://readcomiconline.li/Search/Comic?keyword=${encodeURIComponent(title)}`;
     actionLabel = 'Find on ReadComicOnline';
+  } else if (contentType === 'game') {
+    actionUrl = `https://store.steampowered.com/search/?term=${encodeURIComponent(title)}`;
+    actionLabel = 'Find on Steam';
   } else {
     actionUrl = `https://sflix.ps/search/${encodeURIComponent(title)}`;
     actionLabel = 'Watch on sflix';
@@ -876,7 +881,7 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
   let thumbnailUrl: string | undefined;
   let redditInsights: { subreddit: string; comment: string; score: number }[] | undefined;
 
-  const readTypes: ContentType[] = ['book', 'poetry', 'short_story', 'essay', 'podcast', 'research', 'manga', 'comic'];
+  const readTypes: ContentType[] = ['book', 'poetry', 'short_story', 'essay', 'podcast', 'research', 'manga', 'comic', 'game'];
   const imagePromise = (async () => {
     if (contentType === 'anime') {
       const [jikan, tmdb] = await Promise.all([

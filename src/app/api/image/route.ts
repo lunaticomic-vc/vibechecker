@@ -3,7 +3,7 @@ import { searchTMDB } from '@/lib/tmdb';
 import { log } from '@/lib/logger';
 
 const SCREEN_TYPES = ['movie', 'tv'];
-const READ_TYPES = ['book', 'poetry', 'short_story', 'essay', 'podcast', 'substack', 'research'];
+const READ_TYPES = ['book', 'poetry', 'short_story', 'essay', 'podcast', 'substack', 'research', 'game'];
 
 async function searchBraveImage(query: string): Promise<string | null> {
   const apiKey = process.env.BRAVE_API_KEY;

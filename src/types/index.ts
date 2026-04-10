@@ -1,4 +1,4 @@
-export const CONTENT_TYPES = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'research', 'poetry', 'short_story', 'book', 'essay', 'podcast', 'manga', 'comic'] as const;
+export const CONTENT_TYPES = ['movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'research', 'poetry', 'short_story', 'book', 'essay', 'podcast', 'manga', 'comic', 'game'] as const;
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
 export type FavoriteMetadata =

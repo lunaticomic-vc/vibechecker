@@ -8,14 +8,14 @@ import { ContentType, Recommendation } from '@/types/index';
 import { useIsOwner } from '@/lib/useIsOwner';
 import { useAuth } from '@/components/AuthProvider';
 import LoadingMouse from '@/components/LoadingMouse';
-import { WATCH_TYPES, READ_TYPES } from '@/lib/constants';
+import { WATCH_TYPES, READ_TYPES, PLAY_TYPES } from '@/lib/constants';
 
 type Screen = 'pick' | 'type' | 'vibe' | 'result';
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>('pick');
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
-  const [activeTab, setActiveTab] = useState<'watch' | 'read'>('watch');
+  const [activeTab, setActiveTab] = useState<'watch' | 'read' | 'play'>('watch');
 
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,11 +89,11 @@ export default function Home() {
         {/* Screen 1: Watch or Read */}
         {screen === 'pick' && (
           <div className="animate-[fadeIn_0.5s_ease-out] flex flex-row items-center gap-10">
-            {(['watch', 'read'] as const).map((tab) => (
+            {(['watch', 'read', 'play'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => { setActiveTab(tab); setScreen('type'); }}
-                className="group w-[180px] h-[180px] sm:w-[200px] sm:h-[200px] flex items-center justify-center rounded-3xl border-2 border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#d4cee6] hover:shadow-lg hover:shadow-purple-50/40 transition-all duration-500 active:scale-95"
+                className="group w-[140px] h-[140px] sm:w-[170px] sm:h-[170px] flex items-center justify-center rounded-3xl border-2 border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#d4cee6] hover:shadow-lg hover:shadow-purple-50/40 transition-all duration-500 active:scale-95"
               >
                 <span className="text-[10px] sm:text-[11px] tracking-[0.15em] uppercase font-light text-[#d0cadc] group-hover:text-[#b0a8c4] transition-colors duration-500">
                   something to {tab}
@@ -119,7 +119,7 @@ export default function Home() {
             <ContentTypeSelector
               selected={null}
               onSelect={handlePickType}
-              types={activeTab === 'watch' ? WATCH_TYPES : READ_TYPES}
+              types={activeTab === 'watch' ? WATCH_TYPES : activeTab === 'read' ? READ_TYPES : PLAY_TYPES}
             />
           </div>
         )}
