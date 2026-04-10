@@ -20,9 +20,16 @@ export default function SettingsPage() {
   const [ytConnected, setYtConnected] = useState(false);
   const [ytLoading, setYtLoading] = useState(false);
   const [ytMessage, setYtMessage] = useState('');
+  const [tasteProfile, setTasteProfile] = useState<string | null>(null);
+  const [tasteLoading, setTasteLoading] = useState(false);
+  const [tasteFetched, setTasteFetched] = useState(false);
 
   useEffect(() => {
     fetch('/api/accounts/mal').then(r => r.json()).then(d => { if (d.username) setLastMalUser(d.username); }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/preferences').then(r => r.json()).then(d => { if (d.exists) setTasteProfile(d.content); setTasteFetched(true); }).catch(() => setTasteFetched(true));
   }, []);
 
   useEffect(() => {
@@ -136,6 +143,57 @@ export default function SettingsPage() {
           <p className="text-sm text-[#7c7291] py-16 text-center">only danichka can change settings~</p>
         ) : (
         <div className="space-y-6 max-w-2xl">
+
+          {/* Taste Profile */}
+          <h2 className="text-base font-semibold text-[#2d2640]">Taste Profile</h2>
+          <div className="bg-white border-2 border-[#e9e4f5] rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[#c4b5fd] shrink-0">
+                <svg width="18" height="18" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="36" cy="28" r="14" />
+                  <path d="M16 58 Q 16 44, 36 44 Q 56 44, 56 58" />
+                </svg>
+              </span>
+              <h3 className="text-sm font-semibold text-[#2d2640]">Your Taste Profile</h3>
+            </div>
+            <p className="text-xs text-[#7c7291] mb-3">AI-generated personality and taste analysis based on your library, ratings, and notes.</p>
+            {!tasteFetched ? (
+              <p className="text-xs text-[#b8b0c8]">Loading...</p>
+            ) : tasteProfile ? (
+              <div className="prose prose-sm max-w-none">
+                <div className="text-xs text-[#2d2640] leading-relaxed whitespace-pre-wrap space-y-2">
+                  {tasteProfile.split('\n').map((line, i) => {
+                    if (line.startsWith('# ')) return <h2 key={i} className="text-base font-semibold text-[#2d2640] mt-4 mb-1">{line.slice(2)}</h2>;
+                    if (line.startsWith('## ')) return <h3 key={i} className="text-sm font-semibold text-[#7c3aed] mt-3 mb-1">{line.slice(3)}</h3>;
+                    if (line.startsWith('> ')) return <p key={i} className="text-[11px] text-[#b8b0c8] italic border-l-2 border-[#e9e4f5] pl-3">{line.slice(2)}</p>;
+                    if (line.startsWith('- ')) return <p key={i} className="text-xs text-[#2d2640] pl-3">{'·'} {line.slice(2)}</p>;
+                    if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className="text-xs font-semibold text-[#2d2640] mt-2">{line.slice(2, -2)}</p>;
+                    if (line.trim() === '---') return <hr key={i} className="border-[#e9e4f5] my-3" />;
+                    if (line.trim() === '') return <br key={i} />;
+                    return <p key={i} className="text-xs text-[#2d2640]">{line}</p>;
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-[#b8b0c8]">No taste profile generated yet. Click below to create one.</p>
+            )}
+            <button
+              onClick={async () => {
+                setTasteLoading(true);
+                try {
+                  const res = await fetch('/api/preferences', { method: 'POST' });
+                  const data = await res.json();
+                  if (data.content) setTasteProfile(data.content);
+                } catch {}
+                setTasteLoading(false);
+              }}
+              disabled={tasteLoading}
+              className="mt-4 px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40"
+            >
+              {tasteLoading ? 'Generating...' : tasteProfile ? 'Regenerate' : 'Generate Profile'}
+            </button>
+          </div>
+
           <h2 className="text-base font-semibold text-[#2d2640]">Import</h2>
 
           {/* MAL */}
