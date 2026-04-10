@@ -176,6 +176,7 @@ export default function SettingsPage() {
                     .replace(/\n## Raw Stats[\s\S]*$/, '')
                     .split('\n').map((line, i) => {
                     if (line.startsWith('# ')) return null;
+                    if (line.startsWith('### ')) return <h4 key={i} className="text-[13px] font-semibold text-[#7c3aed] mt-4 mb-1">{line.slice(4)}</h4>;
                     if (line.startsWith('## ')) return <h3 key={i} className="text-sm font-semibold text-[#7c3aed] mt-5 mb-2 pb-1 border-b border-[#e9e4f5]">{line.slice(3)}</h3>;
                     if (line.startsWith('> ')) return <p key={i} className="text-[11px] text-[#b8b0c8] italic border-l-2 border-[#e9e4f5] pl-3 my-1">{line.slice(2)}</p>;
                     if (line.startsWith('- ')) {
