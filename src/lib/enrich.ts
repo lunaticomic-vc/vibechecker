@@ -85,13 +85,13 @@ async function lookupExternal(title: string, type: ContentType) {
   }
 
   // Other read types — vibe image from Brave
-  if (['poetry', 'short_story', 'essay', 'podcast', 'substack', 'research', 'manga', 'comic'].includes(type)) {
+  if (['poetry', 'short_story', 'essay', 'podcast', 'substack', 'research', 'manga', 'comic', 'game'].includes(type)) {
     let posterUrl: string | null = null;
     const braveKey = process.env.BRAVE_API_KEY;
     if (braveKey) {
       try {
         const res = await fetch(
-          `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(`${title} ${type} aesthetic`)}&count=3&safesearch=moderate`,
+          `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(type === 'game' ? `${title} video game cover art` : `${title} ${type} aesthetic`)}&count=3&safesearch=moderate`,
           { headers: { 'Accept': 'application/json', 'X-Subscription-Token': braveKey }, signal: AbortSignal.timeout(5000) }
         );
         if (res.ok) {
@@ -106,6 +106,7 @@ async function lookupExternal(title: string, type: ContentType) {
       poetry: `https://www.poetryfoundation.org/search?query=${encodeURIComponent(title)}`,
       podcast: `https://open.spotify.com/search/${encodeURIComponent(title)}/podcasts`,
       research: `https://scholar.google.com/scholar?q=${encodeURIComponent(title)}`,
+      game: `https://store.steampowered.com/search/?term=${encodeURIComponent(title)}`,
     };
 
     return {

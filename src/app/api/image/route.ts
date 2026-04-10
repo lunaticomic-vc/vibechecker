@@ -67,7 +67,8 @@ export async function GET(req: NextRequest) {
 
     // Other read content — vibe image from Brave
     if (type && READ_TYPES.includes(type)) {
-      const image = await searchBraveImage(`${title} ${type} aesthetic`);
+      const query = type === 'game' ? `${title} video game cover art` : `${title} ${type} aesthetic`;
+      const image = await searchBraveImage(query);
       if (image) {
         log.success('Found vibe image for', `"${title}"`);
         return NextResponse.json({ image_url: image });
