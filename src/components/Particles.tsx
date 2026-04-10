@@ -126,7 +126,7 @@ export default function Particles() {
           const v = dot.brightness + 30;
           ctx!.beginPath();
           ctx!.arc(drawX + rippleOffset, drawY, dot.radius * 0.8, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx!.fillStyle = `rgba(180, 175, 195, ${alpha})`;
           ctx!.fill();
         } else {
           // Sea
@@ -146,7 +146,7 @@ export default function Particles() {
 
           ctx!.beginPath();
           ctx!.arc(drawX + rippleOffset, drawY, r, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(255, 255, 255, ${Math.min(0.65, Math.max(0.08, alpha))})`;
+          ctx!.fillStyle = `rgba(180, 175, 195, ${Math.min(0.65, Math.max(0.08, alpha))})`;
           ctx!.fill();
         }
       }
@@ -162,7 +162,7 @@ export default function Particles() {
             if (radius < 0) continue;
             ctx!.beginPath();
             ctx!.arc(rip.x, rip.y, radius, 0, Math.PI * 2);
-            ctx!.strokeStyle = `rgba(255, 255, 255, ${fade * 0.3 * (1 - ring * 0.3)})`;
+            ctx!.strokeStyle = `rgba(180, 175, 195, ${fade * 0.3 * (1 - ring * 0.3)})`;
             ctx!.lineWidth = 1.5 - ring * 0.4;
             ctx!.stroke();
           }

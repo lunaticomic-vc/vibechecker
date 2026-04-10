@@ -473,10 +473,10 @@ export default function GuestCat() {
                 <motion.circle
                   cx={21} cy={10} r={2}
                   fill="none"
-                  stroke="rgba(196,181,253,0.3)"
-                  strokeWidth="0.3"
+                  stroke="rgba(196,181,253,0.1)"
+                  strokeWidth="0.2"
                   animate={{
-                    opacity: [0.1, 0.4, 0.1],
+                    opacity: [0.05, 0.15, 0.05],
                     x: eyeOffset.x * 0.3,
                     y: eyeOffset.y * 0.3,
                   }}
@@ -485,10 +485,10 @@ export default function GuestCat() {
                 <motion.circle
                   cx={27} cy={10} r={2}
                   fill="none"
-                  stroke="rgba(196,181,253,0.3)"
-                  strokeWidth="0.3"
+                  stroke="rgba(196,181,253,0.1)"
+                  strokeWidth="0.2"
                   animate={{
-                    opacity: [0.1, 0.4, 0.1],
+                    opacity: [0.05, 0.15, 0.05],
                     x: eyeOffset.x * 0.3,
                     y: eyeOffset.y * 0.3,
                   }}

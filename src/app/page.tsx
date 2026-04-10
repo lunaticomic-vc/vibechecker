@@ -88,18 +88,25 @@ export default function Home() {
 
         {/* Screen 1: Watch or Read */}
         {screen === 'pick' && (
-          <div className="animate-[fadeIn_0.5s_ease-out] flex flex-row items-center gap-10">
-            {(['watch', 'read', 'do'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => { setActiveTab(tab); setScreen('type'); }}
-                className="group w-[140px] h-[140px] sm:w-[170px] sm:h-[170px] flex items-center justify-center rounded-3xl border-2 border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#d4cee6] hover:shadow-lg hover:shadow-purple-50/40 transition-all duration-500 active:scale-95"
-              >
-                <span className="text-[10px] sm:text-[11px] tracking-[0.15em] uppercase font-light text-[#d0cadc] group-hover:text-[#b0a8c4] transition-colors duration-500">
-                  something to {tab}
-                </span>
-              </button>
-            ))}
+          <div className="animate-[fadeIn_0.5s_ease-out] relative w-[320px] h-[320px] sm:w-[380px] sm:h-[380px]">
+            {(['watch', 'read', 'do'] as const).map((tab, i) => {
+              const angle = (i * 120 - 90) * (Math.PI / 180);
+              const radius = 52;
+              const x = 50 + radius * Math.cos(angle);
+              const y = 50 + radius * Math.sin(angle);
+              return (
+                <button
+                  key={tab}
+                  onClick={() => { setActiveTab(tab); setScreen('type'); }}
+                  className="group absolute w-[120px] h-[120px] sm:w-[140px] sm:h-[140px] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/80 bg-white/40 hover:bg-white/70 hover:border-[#d4cee6] hover:shadow-lg hover:shadow-purple-50/40 transition-all duration-500 active:scale-95"
+                  style={{ left: `${x}%`, top: `${y}%` }}
+                >
+                  <span className="text-[10px] sm:text-[11px] tracking-[0.15em] uppercase font-light text-[#2d2640] group-hover:text-[#7c3aed] transition-colors duration-500">
+                    {tab}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 

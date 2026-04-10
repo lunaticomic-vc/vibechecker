@@ -9,6 +9,7 @@ export default function Header() {
   const [isMobile, setIsMobile] = useState(false);
   const [watchOpen, setWatchOpen] = useState(false);
   const [readOpen, setReadOpen] = useState(false);
+  const [doOpen, setDoOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -22,6 +23,7 @@ export default function Header() {
         setOpen(false);
         setWatchOpen(false);
         setReadOpen(false);
+        setDoOpen(false);
       }
     }
     if (open) {
@@ -277,9 +279,29 @@ export default function Header() {
                 )}
               </div>
 
-              <Link href="/research" onClick={navClick} className={linkClass}>Research</Link>
-              <Link href="/podcasts" onClick={navClick} className={linkClass}>Podcasts</Link>
-              <Link href="/games" onClick={navClick} className={linkClass}>Games</Link>
+              {/* Do — expandable dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => { setDoOpen(v => !v); setWatchOpen(false); setReadOpen(false); }}
+                  className={`${linkClass} flex items-center gap-1`}
+                >
+                  Do
+                  <svg className={`w-3 h-3 transition-transform duration-200 ${doOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {doOpen && (
+                  <div
+                    className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border border-white/30 rounded-xl shadow-lg shadow-purple-200/15 py-1.5 min-w-[120px] z-[70]"
+                    style={{ WebkitBackdropFilter: 'blur(40px) saturate(180%)' }}
+                    onMouseDown={e => e.stopPropagation()}
+                  >
+                    <Link href="/research" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Research</Link>
+                    <Link href="/podcasts" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Podcasts</Link>
+                    <Link href="/games" onClick={navClick} className="block px-4 py-1.5 text-xs text-[#2d2640] hover:bg-[#f5f3ff] hover:text-[#7c3aed] transition-colors">Games</Link>
+                  </div>
+                )}
+              </div>
               <Link href="/progress" onClick={navClick} className={linkClass}>Current</Link>
               <Link href="/interests" onClick={navClick} className={linkClass}>Interests</Link>
               <Link href="/people" onClick={navClick} className={linkClass}>People</Link>
