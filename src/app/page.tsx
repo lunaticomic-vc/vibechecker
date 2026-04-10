@@ -105,11 +105,11 @@ export default function Home() {
 
         {/* Screen 2: Type selector */}
         {screen === 'type' && (
-          <div className="animate-[fadeIn_0.5s_ease-out] flex flex-col items-center gap-6 relative">
+          <div className="animate-[fadeIn_0.5s_ease-out] flex flex-col items-center gap-6">
             <button
               onClick={() => setScreen('pick')}
               aria-label="Go back"
-              className="absolute -top-12 w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all"
+              className="fixed top-5 right-5 z-[50] w-8 h-8 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all backdrop-blur-sm bg-white/30"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />

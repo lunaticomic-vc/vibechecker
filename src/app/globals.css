@@ -3,16 +3,16 @@
 @tailwind utilities;
 
 :root {
-  --bg: #1a1025;
-  --bg-card: #241830;
-  --text: #e8e0f0;
-  --text-muted: #a89bb8;
+  --bg: #faf8ff;
+  --bg-card: #ffffff;
+  --text: #2d2640;
+  --text-muted: #7c7291;
   --lilac: #c4b5fd;
   --purple: #8b5cf6;
   --purple-deep: #7c3aed;
   --sage: #a7c4a0;
   --sage-light: #d4e6d1;
-  --border: #3d2e52;
+  --border: #e9e4f5;
 }
 
 body {

@@ -80,7 +80,7 @@ export default function Particles() {
       time += 0.006;
 
       // Clear with shore color
-      ctx!.fillStyle = '#d8cfe8';
+      ctx!.fillStyle = '#1a1025';
       ctx!.fillRect(0, 0, w, h);
 
       for (const dot of dots) {
