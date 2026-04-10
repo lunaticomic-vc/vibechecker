@@ -124,6 +124,16 @@ export default function SettingsPage() {
     setTimeout(() => setLbMessage(''), 5000);
   }
 
+  function renderInline(text: string) {
+    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|"[^"]+"|_[^_]+_)/g);
+    return parts.map((part, j) => {
+      if (part.startsWith('**') && part.endsWith('**')) return <strong key={j} className="font-semibold text-[#2d2640]">{part.slice(2, -2)}</strong>;
+      if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) return <em key={j} className="italic text-[#7c7291]">{part.slice(1, -1)}</em>;
+      if (part.startsWith('"') && part.endsWith('"')) return <span key={j} className="italic text-[#8b5cf6]">{part}</span>;
+      return <span key={j}>{part}</span>;
+    });
+  }
+
   const inputClass = "bg-white border-2 border-[#e9e4f5] rounded-lg px-3 py-2 text-sm text-[#2d2640] placeholder-[#b8b0c8] focus:outline-none focus:border-[#c4b5fd]";
   const msgClass = (msg: string) => msg.toLowerCase().includes('import') || msg.toLowerCase().includes('added') || msg.toLowerCase().includes('connected') || msg.toLowerCase().includes('sync') ? 'text-[#6b9a65]' : 'text-red-500';
 
@@ -160,17 +170,21 @@ export default function SettingsPage() {
             {!tasteFetched ? (
               <p className="text-xs text-[#b8b0c8]">Loading...</p>
             ) : tasteProfile ? (
-              <div className="prose prose-sm max-w-none">
-                <div className="text-xs text-[#2d2640] leading-relaxed whitespace-pre-wrap space-y-2">
-                  {tasteProfile.split('\n').map((line, i) => {
-                    if (line.startsWith('# ')) return <h2 key={i} className="text-base font-semibold text-[#2d2640] mt-4 mb-1">{line.slice(2)}</h2>;
-                    if (line.startsWith('## ')) return <h3 key={i} className="text-sm font-semibold text-[#7c3aed] mt-3 mb-1">{line.slice(3)}</h3>;
-                    if (line.startsWith('> ')) return <p key={i} className="text-[11px] text-[#b8b0c8] italic border-l-2 border-[#e9e4f5] pl-3">{line.slice(2)}</p>;
-                    if (line.startsWith('- ')) return <p key={i} className="text-xs text-[#2d2640] pl-3">{'·'} {line.slice(2)}</p>;
-                    if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className="text-xs font-semibold text-[#2d2640] mt-2">{line.slice(2, -2)}</p>;
-                    if (line.trim() === '---') return <hr key={i} className="border-[#e9e4f5] my-3" />;
-                    if (line.trim() === '') return <br key={i} />;
-                    return <p key={i} className="text-xs text-[#2d2640]">{line}</p>;
+              <div className="max-w-none">
+                <div className="text-[13px] text-[#2d2640] leading-relaxed space-y-1">
+                  {tasteProfile
+                    .replace(/\n## Raw Stats[\s\S]*$/, '')
+                    .split('\n').map((line, i) => {
+                    if (line.startsWith('# ')) return null;
+                    if (line.startsWith('## ')) return <h3 key={i} className="text-sm font-semibold text-[#7c3aed] mt-5 mb-2 pb-1 border-b border-[#e9e4f5]">{line.slice(3)}</h3>;
+                    if (line.startsWith('> ')) return <p key={i} className="text-[11px] text-[#b8b0c8] italic border-l-2 border-[#e9e4f5] pl-3 my-1">{line.slice(2)}</p>;
+                    if (line.startsWith('- ')) {
+                      const text = line.slice(2);
+                      return <p key={i} className="text-[13px] text-[#2d2640] pl-4 py-0.5">{renderInline(text)}</p>;
+                    }
+                    if (line.trim() === '---') return <hr key={i} className="border-[#e9e4f5] my-4" />;
+                    if (line.trim() === '') return null;
+                    return <p key={i} className="text-[13px] text-[#2d2640] leading-relaxed py-0.5">{renderInline(line)}</p>;
                   })}
                 </div>
               </div>
