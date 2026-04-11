@@ -104,14 +104,35 @@ async function lookupExternal(title: string, type: ContentType) {
     };
   }
 
+  // Games — use Steam Store API for cover art
+  if (type === 'game') {
+    let posterUrl: string | null = null;
+    try {
+      const steamRes = await fetch(
+        `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(title)}&l=en&cc=US`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (steamRes.ok) {
+        const steamData = await steamRes.json();
+        const appId = steamData?.items?.[0]?.id;
+        if (appId) posterUrl = `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
+      }
+    } catch { /* best effort */ }
+    return {
+      ...base,
+      posterUrl,
+      external_id: `https://store.steampowered.com/search/?term=${encodeURIComponent(title)}`,
+    };
+  }
+
   // Other read types — vibe image from Brave
-  if (['poetry', 'short_story', 'essay', 'podcast', 'substack', 'research', 'manga', 'comic', 'game'].includes(type)) {
+  if (['poetry', 'short_story', 'essay', 'podcast', 'substack', 'research', 'manga', 'comic'].includes(type)) {
     let posterUrl: string | null = null;
     const braveKey = process.env.BRAVE_API_KEY;
     if (braveKey) {
       try {
         const res = await fetch(
-          `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(type === 'game' ? `${title} video game cover art` : `${title} ${type} aesthetic`)}&count=3&safesearch=moderate`,
+          `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(`${title} ${type} aesthetic`)}&count=3&safesearch=moderate`,
           { headers: { 'Accept': 'application/json', 'X-Subscription-Token': braveKey }, signal: AbortSignal.timeout(5000) }
         );
         if (res.ok) {

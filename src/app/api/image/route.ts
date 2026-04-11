@@ -65,10 +65,34 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ image_url: null });
     }
 
+    // Games — search Steam Store API for cover art
+    if (type === 'game') {
+      try {
+        const steamRes = await fetch(
+          `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(title)}&l=en&cc=US`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (steamRes.ok) {
+          const steamData = await steamRes.json();
+          const appId = steamData?.items?.[0]?.id;
+          if (appId) {
+            const coverUrl = `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
+            log.success('Found Steam image for', `"${title}"`);
+            return NextResponse.json({ image_url: coverUrl });
+          }
+        }
+      } catch { /* fallback to Brave */ }
+      const image = await searchBraveImage(`${title} video game`);
+      if (image) {
+        log.success('Found Brave image for game', `"${title}"`);
+        return NextResponse.json({ image_url: image });
+      }
+      return NextResponse.json({ image_url: null });
+    }
+
     // Other read content — vibe image from Brave
     if (type && READ_TYPES.includes(type)) {
-      const query = type === 'game' ? `${title} video game cover art` : `${title} ${type} aesthetic`;
-      const image = await searchBraveImage(query);
+      const image = await searchBraveImage(`${title} ${type} aesthetic`);
       if (image) {
         log.success('Found vibe image for', `"${title}"`);
         return NextResponse.json({ image_url: image });
