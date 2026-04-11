@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import useSWR from 'swr';
 import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index';
 import type { ContentType } from '@/types/index';
 import FavoriteCard from '@/components/favorites/FavoriteCard';
@@ -8,108 +9,89 @@ import AddFavoriteForm from '@/components/favorites/AddFavoriteForm';
 import StatusDragProvider from '@/components/StatusDragOverlay';
 import LoadingMouse from '@/components/LoadingMouse';
 import GlassTabs from '@/components/GlassTabs';
-import { useIsOwner } from '@/lib/useIsOwner';
+import { useAuth } from '@/components/AuthProvider';
 import {
   PROGRESS_STATUS_MAP,
   SECTION_ORDER,
   statusGroupToApi,
   RATING_ORDER,
-  TYPE_LABELS,
+  TYPE_LABELS_PLURAL,
+  TYPE_EMPTY_MESSAGES,
 } from '@/lib/constants';
 import type { StatusGroup } from '@/lib/constants';
 
-const PAGE_TITLES: Record<string, string> = {
-  movie: 'Movies',
-  tv: 'TV Shows',
-  anime: 'Anime',
-  kdrama: 'K-Drama',
-  research: 'Research',
-  poetry: 'Poetry',
-  short_story: 'Short Stories',
-  book: 'Books',
-  essay: 'Essays',
-  podcast: 'Podcasts',
-  manga: 'Manga',
-  comic: 'Comics',
-  game: 'Games',
-};
-
-const EMPTY_TODO_MESSAGES: Record<string, string> = {
-  movie: 'Nothing in your todo list. Add some!',
-  tv: 'Nothing in your todo list.',
-  anime: 'Nothing in your todo list. Add some or import from MAL in Settings!',
-  kdrama: 'Nothing in your list. Add some K-dramas!',
-  research: 'Nothing here yet. Add some research topics!',
-  poetry: 'Nothing here yet. Add some poems!',
-  short_story: 'Nothing here yet. Add some short stories!',
-  book: 'Nothing here yet. Add some books!',
-  essay: 'Nothing here yet. Add some essays!',
-  podcast: 'Nothing here yet. Add some podcasts!',
-  manga: 'Nothing here yet. Add some manga!',
-  comic: 'Nothing here yet. Add some comics!',
-  game: 'Nothing here yet. Add some games!',
-};
+const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 interface ContentLibraryPageProps {
   contentType: ContentType;
 }
 
 export default function ContentLibraryPage({ contentType }: ContentLibraryPageProps) {
-  const isOwner = useIsOwner();
-  const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [ratingsMap, setRatingsMap] = useState<Record<number, { rating: RatingValue; reasoning?: string }>>({});
-  const [progressMap, setProgressMap] = useState<Record<number, WatchProgress>>({});
-  const [hasMore, setHasMore] = useState(false);
+  const { isOwner } = useAuth();
   const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [accumulated, setAccumulated] = useState<Favorite[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addError, setAddError] = useState('');
   const [activeTab, setActiveTab] = useState<StatusGroup>('Todo');
   const [ratingFilter, setRatingFilter] = useState<RatingValue | 'all'>('all');
   const [search, setSearch] = useState('');
+  const [adding, setAdding] = useState(false);
 
-  async function fetchFavorites(currentOffset: number, append = false, status?: string) {
-    const apiStatus = status ?? statusGroupToApi[activeTab] ?? 'todo';
-    const res = await fetch(`/api/favorites?type=${contentType}&status=${apiStatus}&limit=25&offset=${currentOffset}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    const items: Favorite[] = data.favorites ?? [];
-    setFavorites(prev => append ? [...prev, ...items] : items);
-    setHasMore(data.hasMore ?? false);
-    setOffset(currentOffset + items.length);
-  }
+  // SWR hooks — dedupe across tab switches, revalidate on focus
+  const apiStatus = statusGroupToApi[activeTab] ?? 'todo';
+  const favKey = `/api/favorites?type=${contentType}&status=${apiStatus}&limit=25&offset=0`;
+  const { data: favData, mutate: mutateFavs, isLoading: favsLoading } = useSWR<{ favorites: Favorite[]; total: number; hasMore: boolean }>(
+    favKey, fetcher, { revalidateOnFocus: true, dedupingInterval: 5000 }
+  );
+  const { data: ratings, mutate: mutateRatings } = useSWR<Rating[]>(
+    `/api/ratings?type=${contentType}`, fetcher, { revalidateOnFocus: true, dedupingInterval: 10000 }
+  );
+  const { data: progressData, mutate: mutateProgress } = useSWR<WatchProgress[]>(
+    `/api/progress?type=${contentType}`, fetcher, { revalidateOnFocus: true, dedupingInterval: 5000 }
+  );
 
-  async function fetchRatings() {
-    const res = await fetch('/api/ratings');
-    if (!res.ok) return;
-    const data: Rating[] = await res.json();
+  // Derive maps from SWR data
+  const ratingsMap = useMemo(() => {
     const map: Record<number, { rating: RatingValue; reasoning?: string }> = {};
-    for (const r of data) {
-      map[r.favorite_id] = { rating: r.rating, reasoning: r.reasoning };
-    }
-    setRatingsMap(map);
-  }
+    for (const r of ratings ?? []) map[r.favorite_id] = { rating: r.rating, reasoning: r.reasoning };
+    return map;
+  }, [ratings]);
 
-  async function fetchProgress() {
-    const res = await fetch('/api/progress');
-    if (!res.ok) return;
-    const data: WatchProgress[] = await res.json();
+  const progressMap = useMemo(() => {
     const map: Record<number, WatchProgress> = {};
-    for (const p of data) {
-      map[p.favorite_id] = p;
-    }
-    setProgressMap(map);
-  }
+    for (const p of progressData ?? []) map[p.favorite_id] = p;
+    return map;
+  }, [progressData]);
+
+  // Accumulate page chunks from "Show more". Reset when the base fav key (tab/type) changes.
+  useEffect(() => {
+    setAccumulated([]);
+    setOffset(0);
+  }, [favKey]);
+
+  const firstPage = favData?.favorites ?? [];
+  const favorites = useMemo(() => {
+    if (accumulated.length === 0) return firstPage;
+    return [...firstPage, ...accumulated];
+  }, [firstPage, accumulated]);
+
+  const hasMore = (favData?.hasMore ?? false) && offset + firstPage.length + accumulated.length < (favData?.total ?? 0);
+  const loading = favsLoading;
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('cat-chase', { detail: true }));
-    Promise.all([fetchFavorites(0), fetchRatings(), fetchProgress()]).finally(() => {
-      setLoading(false);
-      window.dispatchEvent(new CustomEvent('cat-chase', { detail: false }));
-    });
-  }, []);
+    window.dispatchEvent(new CustomEvent('cat-chase', { detail: loading || adding }));
+  }, [loading, adding]);
 
-  function getGroup(fav: Favorite): StatusGroup {
+  async function loadMore() {
+    const nextOffset = offset + 25 + accumulated.length;
+    const res = await fetch(`/api/favorites?type=${contentType}&status=${apiStatus}&limit=25&offset=${nextOffset}`);
+    if (!res.ok) return;
+    const data: { favorites: Favorite[] } = await res.json();
+    setAccumulated(prev => [...prev, ...(data.favorites ?? [])]);
+    setOffset(nextOffset);
+  }
+
+  const getGroup = useCallback((fav: Favorite): StatusGroup => {
     const progress = progressMap[fav.id];
     if (progress) return PROGRESS_STATUS_MAP[progress.status];
     if (fav.metadata) {
@@ -118,17 +100,15 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
         if (meta.status) {
           return PROGRESS_STATUS_MAP[meta.status as WatchProgress['status']] ?? 'Todo';
         }
-      } catch (error) { console.warn('Failed to parse favorite metadata JSON', error); }
+      } catch { /* plain-text notes; treat as Todo */ }
     }
     return 'Todo';
-  }
+  }, [progressMap]);
 
   async function handleAdd(data: { type: string; title: string; metadata?: string; external_id?: string }) {
     setShowAddForm(false);
-    setLoading(true);
+    setAdding(true);
     setAddError('');
-    window.dispatchEvent(new CustomEvent('cat-chase', { detail: true }));
-
     try {
       let image_url: string | undefined;
       try {
@@ -143,19 +123,25 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
         body: JSON.stringify({ ...data, image_url }),
       });
       if (!res.ok) { setAddError('Failed to add. Please try again.'); return; }
-      await fetchFavorites(0);
+      setAccumulated([]);
+      setOffset(0);
+      await mutateFavs();
     } catch {
       setAddError('Failed to add. Please try again.');
     } finally {
-      setLoading(false);
-      window.dispatchEvent(new CustomEvent('cat-chase', { detail: false }));
+      setAdding(false);
     }
   }
 
   async function handleDelete(id: number) {
     const res = await fetch(`/api/favorites?id=${id}`, { method: 'DELETE' });
     if (!res.ok) return;
-    setFavorites(prev => prev.filter(f => f.id !== id));
+    // Optimistic prune across page cache + accumulated chunks
+    setAccumulated(prev => prev.filter(f => f.id !== id));
+    mutateFavs(
+      prev => prev ? { ...prev, favorites: prev.favorites.filter(f => f.id !== id), total: Math.max(0, prev.total - 1) } : prev,
+      { revalidate: false }
+    );
   }
 
   async function handleRate(favoriteId: number, rating: RatingValue, reasoning?: string) {
@@ -165,20 +151,15 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
       body: JSON.stringify({ favorite_id: favoriteId, rating, reasoning }),
     });
     if (!res.ok) return;
-    setRatingsMap(prev => ({ ...prev, [favoriteId]: { rating, reasoning } }));
-  }
-
-  const grouped = SECTION_ORDER.reduce<Record<StatusGroup, Favorite[]>>((acc, s) => {
-    acc[s] = [];
-    return acc;
-  }, {} as Record<StatusGroup, Favorite[]>);
-
-  for (const fav of favorites) {
-    grouped[getGroup(fav)].push(fav);
-  }
-
-  function getCurrentStatus(fav: Favorite): string {
-    return statusGroupToApi[getGroup(fav)];
+    // Optimistic update in local cache
+    mutateRatings(
+      prev => {
+        const next = (prev ?? []).filter(r => r.favorite_id !== favoriteId);
+        next.push({ id: 0, favorite_id: favoriteId, rating, reasoning, created_at: new Date().toISOString() });
+        return next;
+      },
+      { revalidate: false }
+    );
   }
 
   async function handleStatusChange(favoriteId: number, newStatus: string) {
@@ -187,32 +168,46 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ favorite_id: favoriteId, status: newStatus }),
     });
-    await fetchProgress();
+    mutateProgress(); // background revalidate
   }
 
-  let activeItems: Favorite[] = grouped[activeTab] ?? [];
-  if (search.trim()) {
-    const q = search.toLowerCase();
-    activeItems = activeItems.filter(f => f.title.toLowerCase().includes(q));
-  }
-  if (ratingFilter !== 'all' && activeTab !== 'Todo') {
-    activeItems = activeItems.filter(f => ratingsMap[f.id]?.rating === ratingFilter);
-  }
-  if (activeTab !== 'Todo') {
-    activeItems = [...activeItems].sort((a, b) => {
-      const oa = RATING_ORDER[ratingsMap[a.id]?.rating] ?? 4;
-      const ob = RATING_ORDER[ratingsMap[b.id]?.rating] ?? 4;
-      return oa - ob;
-    });
+  // Compute grouped + filtered + sorted once per render
+  const { grouped, activeItems } = useMemo(() => {
+    const g = SECTION_ORDER.reduce<Record<StatusGroup, Favorite[]>>((acc, s) => {
+      acc[s] = [];
+      return acc;
+    }, {} as Record<StatusGroup, Favorite[]>);
+    for (const fav of favorites) g[getGroup(fav)].push(fav);
+
+    let items: Favorite[] = g[activeTab] ?? [];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      items = items.filter(f => f.title.toLowerCase().includes(q));
+    }
+    if (ratingFilter !== 'all' && activeTab !== 'Todo') {
+      items = items.filter(f => ratingsMap[f.id]?.rating === ratingFilter);
+    }
+    if (activeTab !== 'Todo') {
+      items = [...items].sort((a, b) => {
+        const oa = RATING_ORDER[ratingsMap[a.id]?.rating] ?? 4;
+        const ob = RATING_ORDER[ratingsMap[b.id]?.rating] ?? 4;
+        return oa - ob;
+      });
+    }
+    return { grouped: g, activeItems: items };
+  }, [favorites, activeTab, search, ratingFilter, ratingsMap, getGroup]);
+
+  function getCurrentStatus(fav: Favorite): string {
+    return statusGroupToApi[getGroup(fav)];
   }
 
-  const pageTitle = PAGE_TITLES[contentType] ?? TYPE_LABELS[contentType] ?? contentType;
-  const emptyTodoMsg = EMPTY_TODO_MESSAGES[contentType] ?? 'Nothing in your todo list.';
+  const pageTitle = TYPE_LABELS_PLURAL[contentType] ?? contentType;
+  const emptyTodoMsg = TYPE_EMPTY_MESSAGES[contentType] ?? 'Nothing in your todo list.';
   const layoutId = `${contentType}-tab`;
 
   return (
     <StatusDragProvider onStatusChange={handleStatusChange}>
-    <div className="min-h-screen overflow-y-auto relative z-10">
+    <div className="min-h-dvh overflow-y-auto relative z-10">
       <div className="max-w-5xl mx-auto px-4 pt-20 pb-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -259,7 +254,7 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
             onChange={(tab) => {
               setActiveTab(tab);
               setOffset(0);
-              fetchFavorites(0, false, statusGroupToApi[tab]);
+              setAccumulated([]);
             }}
             layoutId={layoutId}
           />
@@ -317,7 +312,7 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
             {hasMore && (
               <div className="flex justify-center pt-6">
                 <button
-                  onClick={() => fetchFavorites(offset, true)}
+                  onClick={loadMore}
                   className="px-6 py-2 text-sm border-2 border-[#e9e4f5] text-[#7c7291] hover:border-[#c4b5fd] hover:text-[#2d2640] rounded-lg transition-colors"
                 >
                   Show more

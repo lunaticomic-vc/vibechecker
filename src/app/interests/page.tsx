@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
-import { useIsOwner } from '@/lib/useIsOwner';
+import { useAuth } from '@/components/AuthProvider';
 import LoadingMouse from '@/components/LoadingMouse';
 
 interface Interest {
@@ -13,7 +13,7 @@ interface Interest {
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function InterestsPage() {
-  const isOwner = useIsOwner();
+  const { isOwner } = useAuth();
   const { data: interests = [], isLoading } = useSWR<Interest[]>('/api/interests', fetcher, {
     revalidateOnFocus: true,
     dedupingInterval: 5000,

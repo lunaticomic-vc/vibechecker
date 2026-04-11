@@ -5,7 +5,7 @@ import FavoriteCard from '@/components/favorites/FavoriteCard';
 import StatusDragProvider from '@/components/StatusDragOverlay';
 import GlassTabs from '@/components/GlassTabs';
 import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index';
-import { useIsOwner } from '@/lib/useIsOwner';
+import { useAuth } from '@/components/AuthProvider';
 import LoadingMouse from '@/components/LoadingMouse';
 
 type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
@@ -22,7 +22,7 @@ const SECTION_ORDER: StatusGroup[] = ['Todo', 'In Progress', 'On Hold', 'Complet
 const statusGroupToApi: Record<StatusGroup, string> = { 'Todo': 'todo', 'In Progress': 'watching', 'On Hold': 'on_hold', 'Completed': 'completed' };
 
 export default function YouTubePage() {
-  const isOwner = useIsOwner();
+  const { isOwner } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [ratingsMap, setRatingsMap] = useState<Record<number, { rating: RatingValue; reasoning?: string }>>({});
   const [progressMap, setProgressMap] = useState<Record<number, WatchProgress>>({});

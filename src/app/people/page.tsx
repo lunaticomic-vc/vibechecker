@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
-import { useIsOwner } from '@/lib/useIsOwner';
+import { useAuth } from '@/components/AuthProvider';
 import LoadingMouse from '@/components/LoadingMouse';
 
 interface Person {
@@ -28,7 +28,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function PeoplePage() {
-  const isOwner = useIsOwner();
+  const { isOwner } = useAuth();
   const { data: people = [], isLoading } = useSWR<Person[]>('/api/people', fetcher, {
     revalidateOnFocus: true,
     dedupingInterval: 5000,

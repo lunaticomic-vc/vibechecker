@@ -73,6 +73,42 @@ export const TYPE_LABELS: Record<string, string> = {
   game: 'Game',
 };
 
+export const TYPE_LABELS_PLURAL: Record<string, string> = {
+  movie: 'Movies',
+  tv: 'TV Shows',
+  anime: 'Anime',
+  youtube: 'YouTube',
+  substack: 'Substack',
+  kdrama: 'K-Drama',
+  research: 'Research',
+  poetry: 'Poetry',
+  short_story: 'Short Stories',
+  book: 'Books',
+  essay: 'Essays',
+  podcast: 'Podcasts',
+  manga: 'Manga',
+  comic: 'Comics',
+  game: 'Games',
+};
+
+export const TYPE_EMPTY_MESSAGES: Record<string, string> = {
+  movie: 'Nothing in your todo list. Add some!',
+  tv: 'Nothing in your todo list.',
+  anime: 'Nothing in your todo list. Add some or import from MAL in Settings!',
+  youtube: 'Nothing in your todo list. Add some or import from YouTube in Settings!',
+  kdrama: 'Nothing in your list. Add some K-dramas!',
+  substack: 'Nothing here yet. Add some Substack articles!',
+  research: 'Nothing here yet. Add some research topics!',
+  poetry: 'Nothing here yet. Add some poems!',
+  short_story: 'Nothing here yet. Add some short stories!',
+  book: 'Nothing here yet. Add some books!',
+  essay: 'Nothing here yet. Add some essays!',
+  podcast: 'Nothing here yet. Add some podcasts!',
+  manga: 'Nothing here yet. Add some manga!',
+  comic: 'Nothing here yet. Add some comics or browse the DC Reading Guide!',
+  game: 'Nothing here yet. Add some games!',
+};
+
 export const WATCH_TYPES: ContentType[] = ['movie', 'tv', 'anime', 'youtube', 'kdrama'];
 export const READ_TYPES: ContentType[] = ['substack', 'book', 'manga', 'comic', 'poetry', 'short_story', 'essay'];
 export const DO_TYPES: ContentType[] = ['research', 'podcast', 'game'];

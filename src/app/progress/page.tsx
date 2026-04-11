@@ -6,12 +6,12 @@ import ProgressCard from '@/components/progress/ProgressCard';
 import LoadingMouse from '@/components/LoadingMouse';
 import StatusDragProvider from '@/components/StatusDragOverlay';
 import type { ProgressWithFavorite } from '@/lib/progress';
-import { useIsOwner } from '@/lib/useIsOwner';
+import { useAuth } from '@/components/AuthProvider';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function ProgressPage() {
-  const isOwner = useIsOwner();
+  const { isOwner } = useAuth();
   const [search, setSearch] = useState('');
   const { data: items = [], isLoading } = useSWR<ProgressWithFavorite[]>('/api/progress', fetcher, {
     revalidateOnFocus: true,

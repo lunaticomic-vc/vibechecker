@@ -5,7 +5,7 @@ import type { Favorite, Rating, RatingValue, WatchProgress } from '@/types/index
 import RatingSelector from '@/components/RatingSelector';
 import StatusDragProvider, { useDragStatus } from '@/components/StatusDragOverlay';
 import GlassTabs from '@/components/GlassTabs';
-import { useIsOwner } from '@/lib/useIsOwner';
+import { useAuth } from '@/components/AuthProvider';
 import LoadingMouse from '@/components/LoadingMouse';
 
 type StatusGroup = 'Todo' | 'In Progress' | 'On Hold' | 'Completed';
@@ -105,7 +105,7 @@ function ArticleRow({ fav, ratingsMap, getCurrentStatus, onStatusChange, onDelet
 }
 
 export default function SubstackPage() {
-  const isOwner = useIsOwner();
+  const { isOwner } = useAuth();
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [ratingsMap, setRatingsMap] = useState<Record<number, { rating: RatingValue; reasoning?: string }>>({});
   const [progressMap, setProgressMap] = useState<Record<number, WatchProgress>>({});
