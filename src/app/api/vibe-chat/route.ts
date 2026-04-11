@@ -53,7 +53,9 @@ RULES:
 
 RESPONSE FORMAT — return ONLY a JSON object, no markdown:
 - If you want to ask a clarifying question: {"type": "question", "message": "your question here"}
-- If you have enough info (or hit 3 questions): {"type": "ready", "vibe": "a rich 2-3 sentence summary of exactly what they want, written as a vibe description for the recommendation engine"}
+- If you have enough info (or hit 3 questions): {"type": "ready", "vibe": "a rich summary for the recommendation engine"}
+
+CRITICAL for the "ready" vibe: You MUST preserve EVERY specific constraint the user mentioned — duration ("20 mins", "short", "quick"), format, mood, situation, energy level. The vibe is passed directly to the recommendation engine which has NO access to this conversation. If they said "20 mins", the vibe MUST say "around 20 minutes". If they said "something to watch while eating", include that context. The content type is: ${contentType} — the vibe must make sense for this type specifically. Do NOT recommend or mention titles from other content types.
 
 ${questionCount >= 3 ? 'You have asked 3 questions already. You MUST respond with type "ready" now.' : ''}`,
         },
