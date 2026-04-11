@@ -8,6 +8,24 @@ interface ChatMessage {
   content: string;
 }
 
+const VIBES_BY_TYPE: Partial<Record<ContentType, string[]>> = {
+  movie: ['something light while i eat', 'sleepover binge with the girls', 'need a good cry', 'rainy day, slow and pretty'],
+  tv: ['sleepover binge', 'background show while cooking', 'something addictive', 'cozy and feel-good'],
+  anime: ['beautiful animation', 'unhinged and chaotic', 'slow burn with deep characters', 'emotional and bittersweet'],
+  youtube: ['something light ~20 mins', 'deep dive into something niche', 'procrastinating, make it unhinged', 'calming background'],
+  kdrama: ['enemies to lovers, slow burn', 'something funny and lighthearted', 'need to cry, melodrama', 'cozy romance'],
+  substack: ['makes me think differently', 'personal essay, raw and honest', 'culture criticism, witty', 'about art or creativity'],
+  book: ['something immersive', 'short and beautiful', 'changes how i see things', 'cozy like a warm blanket'],
+  poetry: ['heartbreak but beautiful', 'nature and stillness', 'angry and raw', 'soft and tender'],
+  short_story: ['surreal and dreamlike', 'twist ending that haunts me', 'quiet and melancholy', 'weird and wonderful'],
+  essay: ['philosophical and deep', 'vulnerable and real', 'sharp cultural commentary', 'about love or loss'],
+  podcast: ['true crime but thoughtful', 'something funny for commute', 'deep conversation about life', 'weird and niche'],
+  research: ['rabbit hole i can get lost in', 'mind-blowing about the universe', 'how things work', 'niche topic nobody talks about'],
+  manga: ['beautiful art, slow pacing', 'dark and psychological', 'wholesome slice of life', 'epic worldbuilding'],
+  comic: ['gritty noir, morally grey', 'colorful classic superhero', 'indie and artistic', 'dark humor and sharp writing'],
+  game: ['something story-driven', 'cozy and relaxing', 'challenging and rewarding', 'open world to get lost in'],
+};
+
 const PLACEHOLDER_BY_TYPE: Partial<Record<ContentType, string>> = {
   movie: 'what kind of movie are you in the mood for?',
   tv: 'what kind of show are you feeling?',
@@ -139,6 +157,23 @@ export default function ChatVibeInput({ contentType, onVibeReady, loading, isOwn
             </div>
           )}
         </div>
+
+        {/* Suggestion chips — visible until first message sent */}
+        {messages.filter(m => m.role === 'user').length === 0 && (
+          <div className="border-t border-[#e9e4f5]/40 px-3 pt-2 pb-1 bg-[#faf8ff]/80">
+            <div className="flex flex-wrap gap-1.5">
+              {(VIBES_BY_TYPE[contentType] ?? []).map(example => (
+                <button
+                  key={example}
+                  onClick={() => { setInput(example); inputRef.current?.focus(); }}
+                  className="rounded-full border border-[#e9e4f5] bg-white/70 px-2.5 py-1 text-[10px] text-[#b8b0c8] hover:border-[#c4b5fd] hover:text-[#7c3aed] hover:bg-white transition-all"
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Input area */}
         <div className="border-t border-[#e9e4f5]/60 px-3 py-2.5 bg-white/50">
