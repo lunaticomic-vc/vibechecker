@@ -199,15 +199,15 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
             <div className="p-5 space-y-3">
               {/* Title + type */}
               <div>
-                {favorite.external_id ? (
-                  <a href={favorite.external_id} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-lg font-bold text-[#2d2640] leading-tight hover:text-[#7c3aed] hover:underline block">
-                    {favorite.title}
-                  </a>
-                ) : (
-                  <a href={favorite.type === 'youtube' ? `https://www.youtube.com/results?search_query=${encodeURIComponent(favorite.title)}` : favorite.type === 'substack' ? `https://substack.com/search/${encodeURIComponent(favorite.title)}` : `https://sflix.ps/search/${encodeURIComponent(favorite.title)}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-lg font-bold text-[#2d2640] leading-tight hover:text-[#7c3aed] hover:underline block">
-                    {favorite.title}
-                  </a>
-                )}
+                <a
+                  href={buildDirectLink(favorite.type, favorite.title, favorite.external_id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="text-lg font-bold text-[#2d2640] leading-tight hover:text-[#7c3aed] hover:underline block"
+                >
+                  {favorite.title}
+                </a>
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${TYPE_COLORS[favorite.type]}`}>
                     {TYPE_LABELS[favorite.type]}

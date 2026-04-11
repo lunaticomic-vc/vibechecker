@@ -229,10 +229,23 @@ export async function enrichManualAdd(
   // Use canonical title from API, fall back to user input
   const title = detail?.title || rawTitle;
 
+  // Types where lookupExternal returns a real, authoritative poster URL
+  // (not a generic vibe/Brave image). For these, the API result MUST
+  // override any pre-fetched Brave image from the client so the user
+  // gets the correct cover art (e.g. TMDB movie poster, Jikan anime
+  // cover, Steam header, YouTube thumbnail).
+  const AUTHORITATIVE_POSTER_TYPES: ContentType[] = [
+    'movie', 'tv', 'kdrama', 'anime', 'manga', 'youtube', 'book', 'game',
+  ];
+
   if (detail) {
     if (detail.year) metadata.year = detail.year;
     if (detail.actors?.length) metadata.actors = detail.actors;
-    if (!imageUrl && detail.posterUrl) imageUrl = detail.posterUrl;
+    if (detail.posterUrl) {
+      if (AUTHORITATIVE_POSTER_TYPES.includes(type) || !imageUrl) {
+        imageUrl = detail.posterUrl;
+      }
+    }
     if (detail.external_id) externalId = detail.external_id;
   }
 

@@ -50,23 +50,6 @@ const EMPTY_TODO_MESSAGES: Record<string, string> = {
   game: 'Nothing here yet. Add some games!',
 };
 
-const IMAGE_LOOKUP_TYPE: Record<string, string> = {
-  movie: 'movie',
-  tv: 'tv',
-  anime: 'tv',
-  kdrama: 'tv',
-  book: 'book',
-  poetry: 'poetry',
-  short_story: 'short_story',
-  essay: 'essay',
-  podcast: 'podcast',
-  research: 'research',
-  substack: 'substack',
-  manga: 'manga',
-  comic: 'comic',
-  game: 'game',
-};
-
 interface ContentLibraryPageProps {
   contentType: ContentType;
 }
@@ -149,8 +132,7 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
     try {
       let image_url: string | undefined;
       try {
-        const lookupType = IMAGE_LOOKUP_TYPE[contentType] ?? 'tv';
-        const imgRes = await fetch(`/api/image?title=${encodeURIComponent(data.title)}&type=${lookupType}`);
+        const imgRes = await fetch(`/api/image?title=${encodeURIComponent(data.title)}&type=${contentType}`);
         const imgData = await imgRes.json();
         if (imgData.image_url) image_url = imgData.image_url;
       } catch { /* image lookup is best-effort */ }
