@@ -294,7 +294,7 @@ export default function SceneBackground() {
         className="absolute"
         style={{
           left: '0',
-          top: '58vh',
+          top: '50vh',
           width: 'min(48vw, 560px)',
           height: 'min(22vh, 180px)',
           minWidth: '220px',
