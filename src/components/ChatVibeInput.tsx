@@ -66,7 +66,13 @@ export default function ChatVibeInput({ contentType, onVibeReady, loading, isOwn
   }, [messages, thinking]);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    // Only return focus to the input after the user has sent something
+    // (so the assistant reply flows into typing a follow-up). On initial
+    // mount we leave the input un-focused so the suggestion keyboard
+    // doesn't auto-expand before the user taps the field.
+    if (messages.length > 0) {
+      inputRef.current?.focus();
+    }
   }, [messages]);
 
   async function send() {
