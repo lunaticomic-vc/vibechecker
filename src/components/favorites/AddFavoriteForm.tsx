@@ -5,7 +5,7 @@ import type { ContentType } from '@/types/index';
 
 interface AddFavoriteFormProps {
   type: ContentType;
-  onAdd: (data: { type: ContentType; title: string; metadata?: string }) => void;
+  onAdd: (data: { type: ContentType; title: string; metadata?: string; external_id?: string }) => void;
   onCancel: () => void;
 }
 
@@ -45,9 +45,9 @@ export default function AddFavoriteForm({ type, onAdd, onCancel }: AddFavoriteFo
     if (!title.trim()) { setError('Title is required.'); return; }
     // For YouTube URLs, use the resolved title as the title and keep the URL as metadata/external_id
     if (type === 'youtube' && resolvedTitle) {
-      const notes = metadata.trim();
-      const meta = notes ? `${title.trim()}\n${notes}` : title.trim();
-      onAdd({ type, title: resolvedTitle, metadata: meta });
+      const url = title.trim();
+      const notes = metadata.trim() || undefined;
+      onAdd({ type, title: resolvedTitle, metadata: notes, external_id: url });
     } else {
       onAdd({ type, title: title.trim(), metadata: metadata.trim() || undefined });
     }

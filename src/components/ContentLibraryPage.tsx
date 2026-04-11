@@ -140,7 +140,7 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
     return 'Todo';
   }
 
-  async function handleAdd(data: { type: string; title: string; metadata?: string }) {
+  async function handleAdd(data: { type: string; title: string; metadata?: string; external_id?: string }) {
     setShowAddForm(false);
     setLoading(true);
     setAddError('');
