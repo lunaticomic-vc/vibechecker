@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ContentTypeSelector from '@/components/ContentTypeSelector';
-import VibeInput from '@/components/VibeInput';
+import ChatVibeInput from '@/components/ChatVibeInput';
 import RecommendationCard from '@/components/RecommendationCard';
 import { ContentType, Recommendation } from '@/types/index';
 import { useIsOwner } from '@/lib/useIsOwner';
@@ -144,8 +144,8 @@ export default function Home() {
               </svg>
             </button>
 
-            <div className="w-full max-w-sm">
-              <VibeInput onSubmit={handleSubmit} loading={loading} isOwner={isOwner} contentType={selectedType} />
+            <div className="w-full">
+              <ChatVibeInput contentType={selectedType!} onVibeReady={handleSubmit} loading={loading} isOwner={isOwner} />
             </div>
 
             {error && (
