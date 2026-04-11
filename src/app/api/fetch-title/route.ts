@@ -35,6 +35,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Hostname not allowed' }, { status: 400 });
     }
 
+    // YouTube: use oEmbed API which returns the real title without JS rendering
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]+)/);
+    if (ytMatch) {
+      const oembedRes = await fetch(
+        `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (oembedRes.ok) {
+        const data = await oembedRes.json();
+        if (data.title) {
+          return NextResponse.json({ title: data.title });
+        }
+      }
+    }
+
+    // Fallback: HTML scrape for non-YouTube URLs
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VibeChecker/1.0)' },
       signal: AbortSignal.timeout(5000),
