@@ -13,6 +13,78 @@ const STARS = Array.from({ length: 32 }, (_, i) => {
   };
 });
 
+// Constellations — hand-placed named star groups drawn as SVG groups
+// over the sky. Coordinates are in percent of the full scene area.
+// Each constellation has an array of {x, y} stars in logical draw order
+// and an array of [fromIdx, toIdx] line segments that connect them.
+interface Constellation {
+  name: string;
+  // Bounding box in percent — used to position the <svg> group
+  box: { left: number; top: number; width: number; height: number };
+  stars: { x: number; y: number; r: number }[]; // x,y inside 0..100 of its own viewBox
+  lines: [number, number][];
+}
+
+const CONSTELLATIONS: Constellation[] = [
+  {
+    // Big Dipper (Ursa Major) — upper left quadrant
+    name: 'Big Dipper',
+    box: { left: 3, top: 6, width: 22, height: 14 },
+    // Classic 7-star ladle: 4-star bowl + 3-star handle
+    stars: [
+      { x: 10, y: 70, r: 2.4 }, // Dubhe (bowl top-left)
+      { x: 28, y: 55, r: 2.0 }, // Merak (bowl bottom-left)
+      { x: 42, y: 60, r: 1.8 }, // Phecda (bowl bottom-right)
+      { x: 38, y: 82, r: 1.6 }, // Megrez (bowl top-right, handle base)
+      { x: 56, y: 78, r: 2.2 }, // Alioth (handle 1)
+      { x: 74, y: 66, r: 1.8 }, // Mizar (handle 2)
+      { x: 92, y: 48, r: 2.4 }, // Alkaid (handle tip)
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]],
+  },
+  {
+    // Orion — top center, slightly larger
+    name: 'Orion',
+    box: { left: 38, top: 5, width: 24, height: 26 },
+    stars: [
+      { x: 18, y: 12, r: 2.6 }, // Betelgeuse (shoulder)
+      { x: 82, y: 20, r: 2.4 }, // Bellatrix (shoulder)
+      { x: 36, y: 50, r: 1.6 }, // Belt 1 — Alnitak
+      { x: 50, y: 52, r: 1.6 }, // Belt 2 — Alnilam
+      { x: 64, y: 54, r: 1.6 }, // Belt 3 — Mintaka
+      { x: 16, y: 88, r: 2.2 }, // Saiph (foot)
+      { x: 84, y: 92, r: 2.8 }, // Rigel (foot)
+      { x: 46, y: 72, r: 1.2 }, // Sword 1
+      { x: 48, y: 80, r: 1.0 }, // Sword 2
+    ],
+    lines: [
+      // Shoulders to belt
+      [0, 2], [1, 4],
+      // Belt
+      [2, 3], [3, 4],
+      // Belt to feet
+      [2, 5], [4, 6],
+      // Shoulders across
+      [0, 1],
+      // Sword hanging from belt
+      [3, 7], [7, 8],
+    ],
+  },
+  {
+    // Cassiopeia — upper right, classic W shape
+    name: 'Cassiopeia',
+    box: { left: 74, top: 8, width: 18, height: 10 },
+    stars: [
+      { x: 6, y: 72, r: 2.2 },
+      { x: 26, y: 32, r: 2.0 },
+      { x: 50, y: 60, r: 2.4 },
+      { x: 74, y: 28, r: 2.0 },
+      { x: 94, y: 66, r: 2.2 },
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4]],
+  },
+];
+
 /**
  * Night-seaside backdrop: twinkling stars, a large lighthouse on the left,
  * and a large centered dock extending over the sea pool. Sits above the
@@ -41,6 +113,61 @@ export default function SceneBackground() {
             animationDuration: `${s.duration}s`,
           }}
         />
+      ))}
+
+      {/* Constellations — named star groups with connecting lines */}
+      {CONSTELLATIONS.map((c, ci) => (
+        <div
+          key={c.name}
+          className="absolute"
+          style={{
+            left: `${c.box.left}%`,
+            top: `${c.box.top}%`,
+            width: `${c.box.width}%`,
+            height: `${c.box.height}%`,
+          }}
+        >
+          <svg
+            className="w-full h-full overflow-visible"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            {/* Connecting lines — very faint so they read as hints, not scaffolding */}
+            <g className="sb-constellation-lines">
+              {c.lines.map(([a, b], i) => {
+                const s1 = c.stars[a];
+                const s2 = c.stars[b];
+                return (
+                  <line
+                    key={i}
+                    x1={s1.x}
+                    y1={s1.y}
+                    x2={s2.x}
+                    y2={s2.y}
+                    stroke="rgba(196,181,253,0.28)"
+                    strokeWidth="0.35"
+                    strokeLinecap="round"
+                  />
+                );
+              })}
+            </g>
+            {/* Named stars — a touch brighter than the ambient star field */}
+            {c.stars.map((s, si) => (
+              <circle
+                key={si}
+                cx={s.x}
+                cy={s.y}
+                r={s.r}
+                fill="rgba(252,249,255,0.95)"
+                className="sb-constellation-star"
+                style={{
+                  // Staggered twinkle keyed off constellation + star index
+                  animationDelay: `${(ci * 0.7 + si * 0.4) % 3.5}s`,
+                }}
+              />
+            ))}
+          </svg>
+        </div>
       ))}
 
       {/* LIGHTHOUSE — large, on the right shore of the scene */}
@@ -141,13 +268,13 @@ export default function SceneBackground() {
         </svg>
       </div>
 
-      {/* DOCK — large, on the left side of the scene */}
+      {/* DOCK — anchored to the far left of the scene */}
       <div
         className="absolute"
         style={{
-          left: '6vw',
+          left: '0',
           top: '58vh',
-          width: 'min(54vw, 660px)',
+          width: 'min(48vw, 560px)',
           height: 'min(22vh, 180px)',
           minWidth: '220px',
           minHeight: '110px',
@@ -221,6 +348,26 @@ export default function SceneBackground() {
           0%, 100% { opacity: 0.28; transform: scale(0.8); }
           50%      { opacity: 1;    transform: scale(1.2); }
         }
+        /* Constellation stars twinkle in sync with their group */
+        :global(.sb-constellation-star) {
+          filter: drop-shadow(0 0 2px rgba(255, 250, 255, 0.8))
+                  drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+          animation: sb-star-pulse 3.5s ease-in-out infinite;
+          transform-box: fill-box;
+          transform-origin: center;
+        }
+        @keyframes sb-star-pulse {
+          0%, 100% { opacity: 0.6; }
+          50%      { opacity: 1; }
+        }
+        /* Connecting lines pulse gently */
+        :global(.sb-constellation-lines) {
+          animation: sb-lines-pulse 5s ease-in-out infinite;
+        }
+        @keyframes sb-lines-pulse {
+          0%, 100% { opacity: 0.55; }
+          50%      { opacity: 0.9; }
+        }
         .sb-dock-lamp {
           width: 9px;
           height: 9px;
@@ -236,6 +383,8 @@ export default function SceneBackground() {
         @media (prefers-reduced-motion: reduce) {
           .sb-star { animation: none; opacity: 0.8; }
           .sb-dock-lamp { animation: none; }
+          :global(.sb-constellation-star),
+          :global(.sb-constellation-lines) { animation: none; }
         }
       `}</style>
     </div>
