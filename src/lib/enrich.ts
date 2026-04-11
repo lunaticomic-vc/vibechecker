@@ -4,6 +4,7 @@ import { searchTMDBDetailed } from '@/lib/tmdb';
 import { searchAnimeJikan } from '@/lib/mal';
 import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
 import { searchRedditForTitle } from '@/lib/reddit';
+import { searchGameSteam } from '@/lib/games';
 
 import { log } from '@/lib/logger';
 import type { ContentType, Recommendation } from '@/types/index';
@@ -82,6 +83,13 @@ async function lookupExternal(title: string, type: ContentType) {
       posterUrl,
       external_id: `https://z-library.bz/s/${encodeURIComponent(title)}`,
     };
+  }
+
+  // Games — pull cover art directly from Steam (free, no auth)
+  if (type === 'game') {
+    const detail = await searchGameSteam(title);
+    if (detail) return { ...base, ...detail };
+    // fall through to Brave below if Steam returned nothing
   }
 
   // Other read types — vibe image from Brave
