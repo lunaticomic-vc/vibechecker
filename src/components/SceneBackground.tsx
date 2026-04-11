@@ -133,7 +133,7 @@ export default function SceneBackground() {
           <svg
             className="w-full h-full overflow-visible"
             viewBox="0 0 100 100"
-            preserveAspectRatio="none"
+            preserveAspectRatio="xMidYMid meet"
           >
             {/* Connecting lines — delicate, breathing softly */}
             <g className="sb-constellation-lines">
@@ -160,11 +160,11 @@ export default function SceneBackground() {
               const dur = (3 + ((ci + si) % 3) * 0.7).toFixed(2);
               return (
                 <g key={si}>
-                  {/* Outer halo — larger, barely-there glow */}
+                  {/* Outer halo — tight, barely-there glow */}
                   <circle
                     cx={s.x}
                     cy={s.y}
-                    r={s.r * 2.4}
+                    r={s.r * 1.9}
                     fill="rgba(210,195,255,0.1)"
                     className="sb-constellation-halo"
                     style={{
@@ -172,12 +172,12 @@ export default function SceneBackground() {
                       animationDuration: `${dur}s`,
                     }}
                   />
-                  {/* Core star — a touch smaller than before for elegance */}
+                  {/* Core star — small and delicate */}
                   <circle
                     cx={s.x}
                     cy={s.y}
-                    r={s.r * 0.85}
-                    fill="rgba(252,249,255,0.88)"
+                    r={s.r * 0.62}
+                    fill="rgba(252,249,255,0.9)"
                     className="sb-constellation-star"
                     style={{
                       animationDelay: `${delay}s`,
@@ -191,11 +191,11 @@ export default function SceneBackground() {
         </div>
       ))}
 
-      {/* LIGHTHOUSE — large, on the right shore of the scene */}
+      {/* LIGHTHOUSE — anchored to the far right edge of the scene */}
       <div
         className="absolute"
         style={{
-          right: '7vw',
+          right: '0',
           top: '14vh',
           width: 'min(16vw, 210px)',
           height: 'min(44vh, 480px)',
