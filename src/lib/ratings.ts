@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import type { Rating, RatingValue } from '@/types/index';
+import type { ContentType, Rating, RatingValue } from '@/types/index';
 
 export async function getRating(favoriteId: number): Promise<Rating | undefined> {
   const client = await db();
@@ -7,8 +7,17 @@ export async function getRating(favoriteId: number): Promise<Rating | undefined>
   return result.rows[0] as unknown as Rating | undefined;
 }
 
-export async function getAllRatings(): Promise<Rating[]> {
+export async function getAllRatings(type?: ContentType): Promise<Rating[]> {
   const client = await db();
+  if (type) {
+    // Filter by content type via JOIN — previously all ratings for every type were transferred
+    // on every library page load
+    const result = await client.execute({
+      sql: `SELECT r.* FROM ratings r JOIN favorites f ON f.id = r.favorite_id WHERE f.type = ? ORDER BY r.created_at DESC`,
+      args: [type],
+    });
+    return result.rows as unknown as Rating[];
+  }
   const result = await client.execute('SELECT * FROM ratings ORDER BY created_at DESC');
   return result.rows as unknown as Rating[];
 }

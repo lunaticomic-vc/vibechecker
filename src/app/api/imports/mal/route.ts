@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchMALAnimeList } from '@/lib/mal';
-import { addFavorite, getAllFavorites } from '@/lib/favorites';
+import { bulkAddFavorites, getAllFavorites } from '@/lib/favorites';
 import { verifyAuthCookie } from '@/lib/auth';
 import { log } from '@/lib/logger';
 
@@ -32,17 +32,12 @@ export async function POST(req: NextRequest) {
     const existing = await getAllFavorites('anime');
     const existingTitles = new Set(existing.map(f => f.title.toLowerCase()));
 
-    let imported = 0;
-    let skipped = 0;
-
-    for (const anime of animeList) {
-      if (existingTitles.has(anime.title.toLowerCase())) {
-        skipped++;
-        continue;
-      }
-
-      await addFavorite({
-        type: 'anime',
+    // De-dupe and prepare rows for a single bulk insert — previously this was a serial
+    // for-loop of addFavorite calls (2 round trips per row = 400 round trips for 200 anime).
+    const rowsToInsert = animeList
+      .filter(anime => !existingTitles.has(anime.title.toLowerCase()))
+      .map(anime => ({
+        type: 'anime' as const,
         title: anime.title,
         external_id: `mal:${anime.mal_id}`,
         image_url: anime.image_url,
@@ -52,9 +47,10 @@ export async function POST(req: NextRequest) {
           score: anime.score,
           status: anime.status,
         }),
-      });
-      imported++;
-    }
+      }));
+
+    const imported = await bulkAddFavorites(rowsToInsert);
+    const skipped = animeList.length - rowsToInsert.length;
 
     log.success(`MAL import done`, `imported=${imported} skipped=${skipped} total=${animeList.length}`);
     return NextResponse.json({

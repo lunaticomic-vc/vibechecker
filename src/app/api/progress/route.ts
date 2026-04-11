@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAllProgress, createProgress, updateProgress, getProgressForFavorite } from '@/lib/progress';
 import { verifyAuthCookie } from '@/lib/auth';
 import { log } from '@/lib/logger';
+import { CONTENT_TYPES, type ContentType } from '@/types/index';
 
-export async function GET() {
-  log.api('GET', '/api/progress');
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const type = url.searchParams.get('type');
+  log.api('GET', '/api/progress', type ? `type=${type}` : 'all');
   try {
-    const progress = await getAllProgress();
-    log.success(`Fetched ${progress.length} progress items`);
+    const typeFilter = type && CONTENT_TYPES.includes(type as ContentType) ? (type as ContentType) : undefined;
+    const progress = await getAllProgress(typeFilter);
+    log.success(`Fetched ${progress.length} progress items`, typeFilter ? `type=${typeFilter}` : 'all');
     return NextResponse.json(progress);
   } catch (err) {
     log.error('Failed to fetch progress', err);

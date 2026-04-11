@@ -14,8 +14,26 @@ export async function getProgressForFavorite(favoriteId: number): Promise<WatchP
   return result.rows[0] as unknown as WatchProgress | undefined;
 }
 
-export async function getAllProgress(): Promise<ProgressWithFavorite[]> {
+export async function getAllProgress(type?: ContentType): Promise<ProgressWithFavorite[]> {
   const client = await db();
+  if (type) {
+    const result = await client.execute({
+      sql: `
+        SELECT
+          wp.*,
+          f.title AS favorite_title,
+          f.type AS favorite_type,
+          f.image_url AS favorite_image,
+          f.external_id AS favorite_external_id
+        FROM watch_progress wp
+        JOIN favorites f ON f.id = wp.favorite_id
+        WHERE f.type = ?
+        ORDER BY wp.updated_at DESC
+      `,
+      args: [type],
+    });
+    return result.rows as unknown as ProgressWithFavorite[];
+  }
   const result = await client.execute(`
     SELECT
       wp.*,
@@ -36,30 +54,29 @@ export async function updateProgress(
 ): Promise<WatchProgress> {
   const client = await db();
 
-  // Only update the fields that were actually provided, preserving existing values
-  const sets: string[] = ['updated_at = datetime(\'now\')'];
-  const args: (string | number | null)[] = [];
-
-  if (data.current_season !== undefined) { sets.push('current_season = ?'); args.push(data.current_season); }
-  if (data.current_episode !== undefined) { sets.push('current_episode = ?'); args.push(data.current_episode); }
-  if (data.status !== undefined) { sets.push('status = ?'); args.push(data.status); }
-  if (data.stopped_at !== undefined) { sets.push('stopped_at = ?'); args.push(data.stopped_at); }
-
-  const existing = await getProgressForFavorite(favoriteId);
-  if (existing) {
-    args.push(favoriteId);
-    await client.execute({
-      sql: `UPDATE watch_progress SET ${sets.join(', ')} WHERE favorite_id = ?`,
-      args,
-    });
-  } else {
-    await client.execute({
-      sql: `INSERT INTO watch_progress (favorite_id, current_season, current_episode, status, updated_at)
-            VALUES (?, ?, ?, ?, datetime('now'))`,
-      args: [favoriteId, data.current_season ?? 1, data.current_episode ?? 1, data.status ?? 'watching'],
-    });
-  }
-  return (await getProgressForFavorite(favoriteId)) as WatchProgress;
+  // Single upsert with RETURNING * — replaces the old SELECT + UPDATE/INSERT + SELECT
+  // (3 round trips) with one atomic round trip. Uses COALESCE on the UPDATE branch to
+  // preserve fields the caller didn't specify.
+  const result = await client.execute({
+    sql: `INSERT INTO watch_progress (favorite_id, current_season, current_episode, status, stopped_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, datetime('now'))
+          ON CONFLICT(favorite_id) DO UPDATE SET
+            current_season = COALESCE(excluded.current_season, watch_progress.current_season),
+            current_episode = COALESCE(excluded.current_episode, watch_progress.current_episode),
+            status = COALESCE(excluded.status, watch_progress.status),
+            stopped_at = CASE WHEN ? = 1 THEN excluded.stopped_at ELSE watch_progress.stopped_at END,
+            updated_at = datetime('now')
+          RETURNING *`,
+    args: [
+      favoriteId,
+      data.current_season ?? null,
+      data.current_episode ?? null,
+      data.status ?? null,
+      data.stopped_at ?? null,
+      data.stopped_at !== undefined ? 1 : 0,
+    ],
+  });
+  return result.rows[0] as unknown as WatchProgress;
 }
 
 export async function createProgress(
@@ -67,12 +84,12 @@ export async function createProgress(
   data: { current_season?: number; current_episode?: number; total_seasons?: number; total_episodes?: number; status?: string }
 ): Promise<WatchProgress> {
   const client = await db();
+  // RETURNING * eliminates the follow-up SELECT
   const result = await client.execute({
-    sql: 'INSERT INTO watch_progress (favorite_id, current_season, current_episode, total_seasons, total_episodes, status) VALUES (?, ?, ?, ?, ?, ?)',
+    sql: 'INSERT INTO watch_progress (favorite_id, current_season, current_episode, total_seasons, total_episodes, status) VALUES (?, ?, ?, ?, ?, ?) RETURNING *',
     args: [favoriteId, data.current_season ?? 1, data.current_episode ?? 1, data.total_seasons ?? null, data.total_episodes ?? null, data.status ?? 'watching'],
   });
-  const row = await client.execute({ sql: 'SELECT * FROM watch_progress WHERE id = ?', args: [Number(result.lastInsertRowid)] });
-  return row.rows[0] as unknown as WatchProgress;
+  return result.rows[0] as unknown as WatchProgress;
 }
 
 export async function markCompleted(favoriteId: number): Promise<void> {

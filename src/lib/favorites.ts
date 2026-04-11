@@ -75,11 +75,35 @@ export async function addFavorite(data: {
   image_url?: string;
 }): Promise<Favorite> {
   const client = await db();
+  // Use RETURNING * to get the inserted row in one round trip instead of INSERT + SELECT
   const result = await client.execute({
-    sql: 'INSERT INTO favorites (type, title, external_id, metadata, image_url) VALUES (?, ?, ?, ?, ?)',
+    sql: 'INSERT INTO favorites (type, title, external_id, metadata, image_url) VALUES (?, ?, ?, ?, ?) RETURNING *',
     args: [data.type, data.title, data.external_id ?? null, data.metadata ?? null, data.image_url ?? null],
   });
-  return (await getFavoriteById(Number(result.lastInsertRowid)))!;
+  return result.rows[0] as unknown as Favorite;
+}
+
+/**
+ * Bulk insert favorites using libsql's batch API. Used by import routes to avoid
+ * the N+1 pattern of awaiting each addFavorite sequentially (400 round trips for a
+ * 200-anime MAL import). Returns the count of rows inserted.
+ */
+export async function bulkAddFavorites(rows: Array<{
+  type: ContentType;
+  title: string;
+  external_id?: string;
+  metadata?: string;
+  image_url?: string;
+}>): Promise<number> {
+  if (rows.length === 0) return 0;
+  const client = await db();
+  const statements = rows.map(r => ({
+    sql: 'INSERT INTO favorites (type, title, external_id, metadata, image_url) VALUES (?, ?, ?, ?, ?)',
+    args: [r.type, r.title, r.external_id ?? null, r.metadata ?? null, r.image_url ?? null] as (string | number | null)[],
+  }));
+  // batch() runs all statements in a single transaction — atomic + one network round trip
+  await client.batch(statements, 'write');
+  return rows.length;
 }
 
 export async function removeFavorite(id: number): Promise<void> {
@@ -109,4 +133,14 @@ export async function searchFavorites(query: string): Promise<Favorite[]> {
   const client = await db();
   const result = await client.execute({ sql: 'SELECT * FROM favorites WHERE title LIKE ? ORDER BY created_at DESC LIMIT 50', args: [`%${query}%`] });
   return result.rows as unknown as Favorite[];
+}
+
+/** Find an existing favorite by type + case-insensitive title match. */
+export async function findFavoriteByTitle(type: ContentType, title: string): Promise<Favorite | undefined> {
+  const client = await db();
+  const result = await client.execute({
+    sql: 'SELECT * FROM favorites WHERE type = ? AND LOWER(title) = LOWER(?) LIMIT 1',
+    args: [type, title],
+  });
+  return result.rows[0] as unknown as Favorite | undefined;
 }

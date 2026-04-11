@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getValidAccessToken } from '@/lib/google-auth';
-import { addFavorite, getAllFavorites } from '@/lib/favorites';
+import { bulkAddFavorites, getAllFavorites } from '@/lib/favorites';
 import { verifyAuthCookie } from '@/lib/auth';
 
 const YT_API = 'https://www.googleapis.com/youtube/v3';
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
     const existing = await getAllFavorites('youtube');
     const existingTitles = new Set(existing.map(f => f.title.toLowerCase()));
 
-    let imported = 0;
+    const toInsert: Array<{ type: 'youtube'; title: string; external_id?: string; image_url?: string; metadata?: string }> = [];
     let skipped = 0;
 
     if (mode === 'liked' || mode === 'both') {
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
         const title = item.snippet.title;
         if (existingTitles.has(title.toLowerCase())) { skipped++; continue; }
         const videoId = item.contentDetails?.videoId ?? '';
-        await addFavorite({
+        toInsert.push({
           type: 'youtube',
           title,
           external_id: videoId ? `yt:${videoId}` : undefined,
@@ -126,7 +126,6 @@ export async function POST(req: NextRequest) {
           }),
         });
         existingTitles.add(title.toLowerCase());
-        imported++;
       }
     }
 
@@ -134,7 +133,7 @@ export async function POST(req: NextRequest) {
       const subs = await fetchSubscriptions(accessToken);
       for (const sub of subs) {
         if (existingTitles.has(sub.title.toLowerCase())) { skipped++; continue; }
-        await addFavorite({
+        toInsert.push({
           type: 'youtube',
           title: sub.title,
           external_id: sub.channelId ? `ytch:${sub.channelId}` : undefined,
@@ -145,9 +144,11 @@ export async function POST(req: NextRequest) {
           }),
         });
         existingTitles.add(sub.title.toLowerCase());
-        imported++;
       }
     }
+
+    // Single batch insert instead of N awaited addFavorite calls
+    const imported = await bulkAddFavorites(toInsert);
 
     return NextResponse.json({
       imported,

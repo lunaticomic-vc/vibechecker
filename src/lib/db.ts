@@ -9,7 +9,9 @@ function dbLog(msg: string) {
 }
 
 let _client: Client | null = null;
-let _initialized = false;
+// Cache the init promise so concurrent cold-start requests share a single migration pass
+// instead of racing. Previous behavior could fire DROP TABLE favorites twice.
+let _initPromise: Promise<Client> | null = null;
 
 export function getDb(): Client {
   if (!_client) {
@@ -24,8 +26,22 @@ export function getDb(): Client {
 }
 
 export async function initDb(): Promise<Client> {
-  const db = getDb();
-  if (_initialized) return db;
+  if (_initPromise) return _initPromise;
+  _initPromise = (async () => {
+    const db = getDb();
+    await runInit(db);
+    return db;
+  })();
+  try {
+    return await _initPromise;
+  } catch (err) {
+    // Reset on failure so a retry can try again
+    _initPromise = null;
+    throw err;
+  }
+}
+
+async function runInit(db: Client): Promise<void> {
 
   const isLocal = !(process.env.TURSO_DATABASE_URL?.startsWith('libsql'));
   if (isLocal) {
@@ -119,16 +135,17 @@ export async function initDb(): Promise<Client> {
   ]);
 
   // Create indexes
+  // Note: idx_people_name, idx_interests_name, idx_ip_usage_ip are redundant (UNIQUE/PK columns
+  // already have an implicit index) but kept here for compatibility with existing DBs.
   await db.batch([
     'CREATE INDEX IF NOT EXISTS idx_favorites_type ON favorites(type)',
     'CREATE INDEX IF NOT EXISTS idx_favorites_created ON favorites(created_at)',
     'CREATE INDEX IF NOT EXISTS idx_watch_progress_favorite ON watch_progress(favorite_id)',
+    'CREATE INDEX IF NOT EXISTS idx_watch_progress_updated ON watch_progress(updated_at DESC)',
     'CREATE INDEX IF NOT EXISTS idx_ratings_favorite ON ratings(favorite_id)',
     'CREATE INDEX IF NOT EXISTS idx_rejected_title_type ON rejected_recommendations(title, type)',
-    'CREATE INDEX IF NOT EXISTS idx_ip_usage_ip ON ip_usage(ip)',
-    'CREATE INDEX IF NOT EXISTS idx_people_name ON people(name)',
-    'CREATE INDEX IF NOT EXISTS idx_interests_name ON interests(name)',
     'CREATE INDEX IF NOT EXISTS idx_accounts_platform ON accounts(platform)',
+    'CREATE INDEX IF NOT EXISTS idx_rec_history_created ON recommendation_history(created_at DESC)',
   ]);
 
   // Migration: recreate ip_usage if window_start column is missing (table may predate the column)
@@ -182,9 +199,7 @@ export async function initDb(): Promise<Client> {
     } catch { /* already exists or other issue */ }
   }
 
-  _initialized = true;
   dbLog('Tables initialized ✓');
-  return db;
 }
 
 // Helper: ensure DB is initialized before any query

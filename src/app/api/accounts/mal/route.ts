@@ -34,8 +34,12 @@ export async function POST(req: NextRequest) {
 
     const client = await db();
     log.db('SAVE MAL account', username);
-    await client.execute({ sql: "DELETE FROM accounts WHERE platform = 'myanimelist'", args: [] });
-    await client.execute({ sql: "INSERT INTO accounts (platform, username) VALUES ('myanimelist', ?)", args: [username] });
+    // Atomic upsert — previously DELETE + INSERT was two round trips and non-atomic
+    await client.execute({
+      sql: `INSERT INTO accounts (platform, username, connected_at) VALUES ('myanimelist', ?, datetime('now'))
+            ON CONFLICT(platform) DO UPDATE SET username = excluded.username, connected_at = datetime('now')`,
+      args: [username],
+    });
     return NextResponse.json({ username });
   } catch (err) {
     log.error('Failed to save MAL account', err);

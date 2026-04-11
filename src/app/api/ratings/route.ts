@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRating, setRating, removeRating, getAllRatings } from '@/lib/ratings';
 import { verifyAuthCookie } from '@/lib/auth';
 import { log } from '@/lib/logger';
+import { CONTENT_TYPES, type ContentType } from '@/types/index';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const favoriteId = url.searchParams.get('favorite_id');
-  log.api('GET', '/api/ratings', favoriteId ? `favorite_id=${favoriteId}` : 'all');
+  const type = url.searchParams.get('type');
+  log.api('GET', '/api/ratings', favoriteId ? `favorite_id=${favoriteId}` : type ? `type=${type}` : 'all');
 
   try {
     if (favoriteId) {
@@ -14,8 +16,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(rating ?? null);
     }
 
-    const ratings = await getAllRatings();
-    log.success(`Fetched ${ratings.length} ratings`);
+    const typeFilter = type && CONTENT_TYPES.includes(type as ContentType) ? (type as ContentType) : undefined;
+    const ratings = await getAllRatings(typeFilter);
+    log.success(`Fetched ${ratings.length} ratings`, typeFilter ? `type=${typeFilter}` : 'all');
     return NextResponse.json(ratings);
   } catch (err) {
     log.error('Failed to fetch ratings', err);

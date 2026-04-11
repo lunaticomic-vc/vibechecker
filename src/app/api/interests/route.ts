@@ -31,12 +31,15 @@ export async function POST(req: NextRequest) {
   const client = await db();
   log.db('ADD interest', name.trim().toLowerCase());
   try {
-    await client.execute({ sql: 'INSERT INTO interests (name) VALUES (?)', args: [name.trim().toLowerCase()] });
+    // RETURNING * eliminates the follow-up SELECT that previously re-fetched every row
+    const result = await client.execute({
+      sql: 'INSERT INTO interests (name) VALUES (?) RETURNING *',
+      args: [name.trim().toLowerCase()],
+    });
+    return NextResponse.json({ success: true, interest: result.rows[0] });
   } catch {
     return NextResponse.json({ error: 'Already exists' }, { status: 409 });
   }
-  const result = await client.execute('SELECT * FROM interests ORDER BY name');
-  return NextResponse.json(result.rows);
 }
 
 export async function DELETE(req: NextRequest) {
@@ -51,9 +54,9 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
     const client = await db();
     log.db('REMOVE interest', `id=${id}`);
+    // No re-fetch after delete — the client can optimistically prune via SWR mutate
     await client.execute({ sql: 'DELETE FROM interests WHERE id = ?', args: [Number(id)] });
-    const result = await client.execute('SELECT * FROM interests ORDER BY name');
-    return NextResponse.json(result.rows);
+    return NextResponse.json({ success: true });
   } catch (err) {
     log.error('Failed to delete interest', err);
     return NextResponse.json({ error: 'Failed to delete interest' }, { status: 500 });

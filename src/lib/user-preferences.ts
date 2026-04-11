@@ -1,19 +1,22 @@
 import { db } from '@/lib/db';
 import { getOpenAI } from '@/lib/openai';
 import { log } from '@/lib/logger';
+import { buildMemoriesSection } from '@/lib/memories';
 
 export async function buildUserPreferences(): Promise<string> {
   const client = await db();
 
-  // Fetch all favorites with ratings and notes
-  const favs = await client.execute('SELECT f.*, r.rating, r.reasoning FROM favorites f LEFT JOIN ratings r ON r.favorite_id = f.id ORDER BY f.type, r.rating LIMIT 500');
-
-  const interests = await client.execute('SELECT name FROM interests ORDER BY name LIMIT 100');
-  const progress = await client.execute(`
-    SELECT wp.status, f.title, f.type FROM watch_progress wp
-    JOIN favorites f ON f.id = wp.favorite_id
-    LIMIT 500
-  `);
+  // Fire the three independent reads in parallel — previously serial,
+  // adding ~2× Turso round-trip latency for no reason.
+  const [favs, interests, progress] = await Promise.all([
+    client.execute('SELECT f.*, r.rating, r.reasoning FROM favorites f LEFT JOIN ratings r ON r.favorite_id = f.id ORDER BY f.type, r.rating LIMIT 500'),
+    client.execute('SELECT name FROM interests ORDER BY name LIMIT 100'),
+    client.execute(`
+      SELECT wp.status, f.title, f.type FROM watch_progress wp
+      JOIN favorites f ON f.id = wp.favorite_id
+      LIMIT 500
+    `),
+  ]);
 
   // Group by type and rating, including user notes from metadata
   const byType: Record<string, { title: string; rating?: string; reasoning?: string; notes?: string }[]> = {};
@@ -60,6 +63,10 @@ export async function buildUserPreferences(): Promise<string> {
   if (interestList.length) summaryParts.push(`## INTERESTS\n${interestList.join(', ')}\n`);
   if (watching.length) summaryParts.push(`## CURRENTLY WATCHING\n${watching.join(', ')}\n`);
 
+  // Include rejection memories so the analyzer can learn from explicit dislikes
+  const memoriesSection = await buildMemoriesSection();
+  if (memoriesSection) summaryParts.push(memoriesSection, '');
+
   // Use ChatGPT to distill into a concise taste profile
   const rawData = summaryParts.join('\n');
 
@@ -70,18 +77,18 @@ export async function buildUserPreferences(): Promise<string> {
       messages: [
         {
           role: 'system',
-          content: `You are a taste profile analyzer. Given a user's media library with ratings, reasoning, and personal notes, distill it into an exhaustive personality/taste profile. Cover:
+          content: `You are a taste profile analyzer. Given a user's media library with ratings, reasoning, personal notes, and an explicit MEMORIES section listing things they pushed back on, distill it into an exhaustive personality/taste profile. Cover:
 1. **Core themes they love** — what patterns emerge from their "felt things" ratings and notes?
 2. **Humor style** — what kind of comedy resonates with them?
 3. **Emotional preferences** — do they lean toward heavy, light, bittersweet?
 4. **Storytelling preferences** — pacing, complexity, visual style
-5. **Turn-offs** — what they actively dislike and why (from ratings AND notes)
+5. **Turn-offs** — what they actively dislike and why (from ratings, notes, AND the MEMORIES rejection section)
 6. **Interests & passions** — their stated interests, what they care about deeply, recurring topics
 7. **Personality insights** — what their notes and choices reveal about them as a person
 8. **Blind spots** — genres/styles they haven't explored much
 9. **Likes & dislikes beyond media** — concepts, aesthetics, values that come through in their notes
 
-Pay special attention to user notes — these are personal thoughts that reveal taste beyond just ratings. A note like "reminded me of my childhood" or "the cinematography was breathtaking" reveals what matters to them.
+Pay special attention to user notes AND the MEMORIES section — these are personal signals that reveal taste beyond just ratings. A note like "reminded me of my childhood" reveals what matters to them; a rejection reason like "too mainstream" tells you they want depth and non-obvious picks.
 
 Write in second person ("you love...", "you tend to..."). Be specific, not generic. Reference actual titles and quote their notes as examples. Keep it under 800 words.`,
         },

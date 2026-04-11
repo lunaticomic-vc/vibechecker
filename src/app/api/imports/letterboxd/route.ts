@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseLetterboxdCSV } from '@/lib/letterboxd';
-import { addFavorite, getAllFavorites } from '@/lib/favorites';
+import { bulkAddFavorites, getAllFavorites } from '@/lib/favorites';
 import { verifyAuthCookie } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -25,23 +25,18 @@ export async function POST(req: NextRequest) {
     const existing = await getAllFavorites('movie');
     const existingTitles = new Set(existing.map(f => f.title.toLowerCase()));
 
-    let imported = 0;
-    let skipped = 0;
-
-    for (const entry of entries) {
-      if (existingTitles.has(entry.title.toLowerCase())) {
-        skipped++;
-        continue;
-      }
-
-      await addFavorite({
-        type: 'movie',
+    // Bulk insert — previously a serial for-loop of addFavorite calls
+    const rowsToInsert = entries
+      .filter(entry => !existingTitles.has(entry.title.toLowerCase()))
+      .map(entry => ({
+        type: 'movie' as const,
         title: entry.year ? `${entry.title} (${entry.year})` : entry.title,
         external_id: entry.letterboxd_uri || undefined,
         metadata: entry.rating ? JSON.stringify({ rating: entry.rating, source: 'letterboxd' }) : undefined,
-      });
-      imported++;
-    }
+      }));
+
+    const imported = await bulkAddFavorites(rowsToInsert);
+    const skipped = entries.length - rowsToInsert.length;
 
     return NextResponse.json({
       imported,
