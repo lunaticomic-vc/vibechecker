@@ -90,6 +90,27 @@ export default function Home() {
 
   const goHome = () => { setScreen('home'); setSelectedType(null); setRecommendation(null); setError(null); };
 
+  // Collapsed pill — click to re-open the iPad. Lives in the bottom-right corner.
+  if (collapsed) {
+    return (
+      <main className="min-h-screen relative overflow-y-auto">
+        <button
+          onClick={() => setCollapsed(false)}
+          aria-label="Open iPad"
+          className="fixed bottom-5 right-5 z-[60] flex items-center gap-2.5 rounded-full border border-[#d1cdd8]/60 px-4 py-3 shadow-2xl shadow-black/50 hover:scale-105 active:scale-95 transition-transform animate-[fadeIn_0.25s_ease-out]"
+          style={{ background: 'linear-gradient(145deg, #1a1a1a 0%, #0e0e0e 100%)' }}
+        >
+          {/* Tiny iPad silhouette */}
+          <div className="w-6 h-8 rounded border border-[#888] bg-[#0a0a0a] relative shrink-0">
+            <div className="absolute inset-0.5 rounded-sm bg-gradient-to-br from-[#7c3aed]/40 to-[#1a0533]/40" />
+            <div className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-0.5 rounded-full bg-[#666]" />
+          </div>
+          <span className="text-[12px] text-[#d1cdd8] font-medium tracking-wide">Open</span>
+        </button>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen relative overflow-y-auto">
       <div className="relative z-10 mx-auto flex items-center justify-center min-h-screen py-6 px-4">
@@ -175,77 +196,58 @@ export default function Home() {
                   <h1 className="text-lg font-bold text-white tracking-tight">Watch</h1>
                 </div>
 
-                {/* Featured hero banner — first type */}
+                {/* Hero banner — Surprise Me (Netflix-style featured poster) */}
                 <div className="px-6 mb-5">
-                  <button onClick={() => pickType(WATCH_TYPES[0])} className="w-full relative rounded-xl overflow-hidden group">
-                    <div className={`h-40 bg-gradient-to-r ${TYPE_THUMB[WATCH_TYPES[0]]} flex items-end p-5`}>
-                      <div>
-                        <p className="text-white text-xl font-bold">{TYPE_LABELS[WATCH_TYPES[0]]}</p>
-                        <p className="text-white/60 text-xs mt-1">{TYPE_DESC[WATCH_TYPES[0]]}</p>
+                  <button onClick={pickRandomFromActiveApp} className="w-full relative rounded-xl overflow-hidden group active:scale-[0.99] transition-transform">
+                    <div
+                      className="h-44 flex items-end p-5 relative"
+                      style={{ background: 'linear-gradient(135deg, #2d1456 0%, #7c3aed 50%, #1a0533 100%)' }}
+                    >
+                      {/* Sparkle accents */}
+                      <div className="absolute top-4 right-6 text-[#fbbf24]/60 text-2xl font-serif">✦</div>
+                      <div className="absolute top-10 right-16 text-[#c4b5fd]/40 text-sm">✦</div>
+                      <div className="absolute top-6 right-24 text-[#fbbf24]/30 text-lg">✦</div>
+                      <div className="relative">
+                        <p className="text-[#fbbf24] text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Featured</p>
+                        <p className="text-white text-3xl font-extrabold tracking-tight" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>Surprise Me</p>
+                        <p className="text-white/70 text-sm mt-1 italic">take a chance on something</p>
                       </div>
                     </div>
                     <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors" />
                   </button>
                 </div>
 
-                {/* Category rows — tarot-card thumbnails + a Surprise Me card first */}
+                {/* Category posters — full Netflix-style tiles with big readable titles */}
                 <div className="px-6 space-y-5 pb-6">
                   <p className="text-[#999] text-xs font-medium uppercase tracking-wider">Categories</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {/* Surprise Me — The Fool */}
-                    <button
-                      onClick={pickRandomFromActiveApp}
-                      className="group relative h-32 rounded-lg overflow-hidden border-2 border-[#c4b5fd]/60 hover:border-[#c4b5fd] transition-all active:scale-[0.97]"
-                      style={{
-                        background: 'linear-gradient(160deg, #2d1456 0%, #1a0533 60%, #0f0220 100%)',
-                        boxShadow: 'inset 0 0 22px rgba(196,181,253,0.2)',
-                      }}
-                    >
-                      <div className="absolute inset-1 rounded-[0.4rem] border border-[#c4b5fd]/30 pointer-events-none" />
-                      <span className="absolute top-1 left-0 right-0 text-center text-[9px] font-serif tracking-[0.3em] text-[#c4b5fd]/70">0</span>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <svg className="w-10 h-10 text-[#e9d5ff]/90" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round">
-                          <circle cx="50" cy="50" r="22" strokeDasharray="3 3" opacity="0.55" />
-                          <text x="50" y="62" fontSize="32" textAnchor="middle" fill="currentColor" stroke="none" fontFamily="serif">?</text>
-                          <path d="M22 22 L22 14 M18 18 L26 18" strokeWidth="0.8" opacity="0.55" />
-                          <path d="M78 22 L78 14 M74 18 L82 18" strokeWidth="0.8" opacity="0.55" />
-                          <path d="M22 78 L22 86 M18 82 L26 82" strokeWidth="0.8" opacity="0.55" />
-                          <path d="M78 78 L78 86 M74 82 L82 82" strokeWidth="0.8" opacity="0.55" />
-                        </svg>
-                      </div>
-                      <div className="absolute bottom-1 left-0 right-0 text-center">
-                        <p className="text-[#c4b5fd] text-[9px] font-serif tracking-[0.2em] uppercase">The Fool</p>
-                        <p className="text-[#c4b5fd]/60 text-[8px]">surprise me</p>
-                      </div>
-                    </button>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {WATCH_TYPES.map(type => (
+                      <button
+                        key={type}
+                        onClick={() => pickType(type)}
+                        className="group relative aspect-[3/4] rounded-lg overflow-hidden active:scale-[0.97] transition-transform"
+                        style={{
+                          background: `linear-gradient(180deg, ${type === 'movie' ? '#7f1d1d' : type === 'tv' ? '#1e3a8a' : type === 'anime' ? '#831843' : type === 'youtube' ? '#991b1b' : '#9f1239'} 0%, #0f0220 100%)`,
+                          boxShadow: 'inset 0 -40px 80px rgba(0,0,0,0.6), 0 4px 14px rgba(0,0,0,0.4)',
+                        }}
+                      >
+                        {/* Dark vignette gradient at bottom for title legibility */}
+                        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent" />
 
-                    {WATCH_TYPES.slice(1).map((type, i) => {
-                      const numerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
-                      const tarotNames: Record<string, string> = {
-                        tv: 'The Parlor',
-                        anime: 'The Moon',
-                        youtube: 'The Lantern',
-                        kdrama: 'The Lovers',
-                      };
-                      return (
-                        <button
-                          key={type}
-                          onClick={() => pickType(type)}
-                          className="group relative h-32 rounded-lg overflow-hidden border border-[#7c3aed]/40 hover:border-[#c4b5fd]/80 transition-all active:scale-[0.97]"
-                          style={{
-                            background: 'linear-gradient(160deg, #1a0533 0%, #0f0220 100%)',
-                            boxShadow: 'inset 0 0 18px rgba(124,58,237,0.2)',
-                          }}
-                        >
-                          <div className="absolute inset-1 rounded-[0.4rem] border border-[#c4b5fd]/20 pointer-events-none" />
-                          <span className="absolute top-1 left-0 right-0 text-center text-[9px] font-serif tracking-[0.3em] text-[#c4b5fd]/60">{numerals[i]}</span>
-                          <div className="absolute bottom-1 left-0 right-0 text-center">
-                            <p className="text-[#c4b5fd]/90 text-[9px] font-serif tracking-[0.2em] uppercase">{tarotNames[type] ?? TYPE_LABELS[type]}</p>
-                            <p className="text-[#c4b5fd]/50 text-[8px]">{TYPE_LABELS[type]}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
+                        {/* Centered type icon as large decorative element */}
+                        <div className="absolute top-3 right-3 opacity-30 text-white text-3xl">
+                          {type === 'movie' ? '🎬' : type === 'tv' ? '📺' : type === 'anime' ? '✧' : type === 'youtube' ? '▶' : '❀'}
+                        </div>
+
+                        {/* Big readable title — Netflix poster style */}
+                        <div className="absolute inset-x-3 bottom-3">
+                          <h3 className="text-white text-xl sm:text-2xl font-black leading-[1.05] tracking-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
+                            {TYPE_LABELS[type]}
+                          </h3>
+                          <p className="text-white/70 text-[10px] mt-1">{TYPE_DESC[type]}</p>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -267,11 +269,11 @@ export default function Home() {
                   <p className="text-[11px] font-semibold text-[#FF6122] uppercase tracking-wider mb-3">Browse by category</p>
                 </div>
 
-                {/* Antique chapbook covers — Surprise Me prepended */}
+                {/* Antique chapbook covers — TYPE_LABEL printed directly on the book */}
                 <div className="flex-1 px-6 pb-6">
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    {/* Surprise Me — An Anthology */}
-                    <button onClick={pickRandomFromActiveApp} className="group flex flex-col items-center gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                    {/* Surprise Me book */}
+                    <button onClick={pickRandomFromActiveApp} className="group block">
                       <div
                         className="w-full aspect-[3/4] rounded-sm relative overflow-hidden border-2 border-[#6b5d3f] shadow-md group-hover:shadow-lg group-hover:scale-[1.03] transition-all"
                         style={{
@@ -281,47 +283,33 @@ export default function Home() {
                       >
                         <div className="absolute inset-1.5 border border-[#6b5d3f]/55 pointer-events-none" />
                         <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
-                          <p className="text-[6px] uppercase tracking-[0.25em] text-[#6b5d3f]/70 mb-1" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>— an —</p>
-                          <h3 className="text-[13px] leading-[1.05] text-[#3d3220]" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 700 }}>Anthology</h3>
-                          <div className="w-5 h-px bg-[#6b5d3f]/45 my-1" />
-                          <p className="text-[6px] italic text-[#6b5d3f]/80" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>chosen by fate</p>
+                          <p className="text-[7px] uppercase tracking-[0.25em] text-[#6b5d3f]/70 mb-1.5" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>— pick —</p>
+                          <h3 className="text-[17px] leading-[1.05] text-[#3d3220]" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 700 }}>Surprise<br />Me</h3>
+                          <div className="w-6 h-px bg-[#6b5d3f]/45 my-1.5" />
+                          <p className="text-[8px] italic text-[#6b5d3f]/75" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>chosen by fate</p>
                         </div>
                       </div>
-                      <p className="text-[10px] text-[#FF6122]">Surprise me</p>
                     </button>
 
-                    {READ_TYPES.map(type => {
-                      const bookTitles: Record<string, { title: string; subtitle: string }> = {
-                        substack: { title: 'Dispatches', subtitle: 'letters, sent late' },
-                        book: { title: 'A Novel', subtitle: 'a volume of rooms' },
-                        manga: { title: 'Inkbloom', subtitle: 'panels from the east' },
-                        comic: { title: 'Four-Color', subtitle: 'graphic tales' },
-                        poetry: { title: 'Verses', subtitle: 'lines & small truths' },
-                        short_story: { title: 'Little Fictions', subtitle: 'stories under ten pages' },
-                        essay: { title: 'Essays', subtitle: 'arguments & meanders' },
-                      };
-                      const meta = bookTitles[type] ?? { title: TYPE_LABELS[type], subtitle: TYPE_DESC[type] };
-                      return (
-                        <button key={type} onClick={() => pickType(type)} className="group flex flex-col items-center gap-2">
-                          <div
-                            className="w-full aspect-[3/4] rounded-sm relative overflow-hidden border border-[#8b7a4f]/70 shadow-md group-hover:shadow-lg group-hover:scale-[1.03] transition-all"
-                            style={{
-                              background: 'linear-gradient(180deg, #f5ecd4 0%, #f0e4c0 50%, #e4d4a8 100%)',
-                              boxShadow: 'inset 0 0 28px rgba(139,122,79,0.15), 0 3px 10px rgba(0,0,0,0.12)',
-                            }}
-                          >
-                            <div className="absolute inset-1.5 border border-[#6b5d3f]/40 pointer-events-none" />
-                            <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
-                              <p className="text-[6px] uppercase tracking-[0.25em] text-[#6b5d3f]/70 mb-1" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>— a —</p>
-                              <h3 className="text-[13px] leading-[1.05] text-[#3d3220]" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 700 }}>{meta.title}</h3>
-                              <div className="w-5 h-px bg-[#6b5d3f]/45 my-1" />
-                              <p className="text-[6px] italic text-[#6b5d3f]/80 leading-tight" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>{meta.subtitle}</p>
-                            </div>
+                    {READ_TYPES.map(type => (
+                      <button key={type} onClick={() => pickType(type)} className="group block">
+                        <div
+                          className="w-full aspect-[3/4] rounded-sm relative overflow-hidden border border-[#8b7a4f]/70 shadow-md group-hover:shadow-lg group-hover:scale-[1.03] transition-all"
+                          style={{
+                            background: 'linear-gradient(180deg, #f5ecd4 0%, #f0e4c0 50%, #e4d4a8 100%)',
+                            boxShadow: 'inset 0 0 28px rgba(139,122,79,0.15), 0 3px 10px rgba(0,0,0,0.12)',
+                          }}
+                        >
+                          <div className="absolute inset-1.5 border border-[#6b5d3f]/40 pointer-events-none" />
+                          <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
+                            <p className="text-[7px] uppercase tracking-[0.25em] text-[#6b5d3f]/70 mb-1.5" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>on</p>
+                            <h3 className="text-[17px] leading-[1.05] text-[#3d3220]" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 700 }}>{TYPE_LABELS[type]}</h3>
+                            <div className="w-6 h-px bg-[#6b5d3f]/45 my-1.5" />
+                            <p className="text-[8px] italic text-[#6b5d3f]/75 leading-tight" style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}>{TYPE_DESC[type]}</p>
                           </div>
-                          <p className="text-[10px] text-[#888]">{TYPE_LABELS[type]}</p>
-                        </button>
-                      );
-                    })}
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -337,52 +325,49 @@ export default function Home() {
                   </button>
                   <p className="text-[10px] font-semibold text-[#4ade80]/40 uppercase tracking-widest mb-4">Activities</p>
                   <div className="flex flex-col gap-2">
-                    {/* Surprise Me — cinematic "roll the dice" */}
-                    <button
-                      onClick={pickRandomFromActiveApp}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-left hover:bg-[#2a1a3a] transition-colors group border border-[#fbbf24]/40"
-                    >
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #2d1456, #451a7c)' }}>
-                        <span className="text-[#fbbf24] text-lg">?</span>
-                      </div>
-                      <div>
-                        <p className="text-white text-sm font-semibold group-hover:text-[#fbbf24] transition-colors" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', letterSpacing: '0.05em' }}>Unknown</p>
-                        <p className="text-[#fbbf24]/60 text-[9px] italic">something unexpected</p>
-                      </div>
-                    </button>
-
-                    {DO_TYPES.map(type => {
-                      const titles: Record<string, { main: string; tag: string; accent: string }> = {
-                        research: { main: 'The Archive', tag: 'every question leads to another', accent: '#fbbf24' },
-                        podcast: { main: 'Night Signal', tag: 'someone else is still up', accent: '#f9a8d4' },
-                        game: { main: 'Another World', tag: 'take as long as you need', accent: '#86efac' },
-                      };
-                      const meta = titles[type] ?? { main: TYPE_LABELS[type], tag: TYPE_DESC[type], accent: '#4ade80' };
-                      return (
-                        <button key={type} onClick={() => pickType(type)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-left hover:bg-[#1a3a1a] transition-colors group">
-                          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${TYPE_THUMB[type]} flex items-center justify-center shrink-0`}>
-                            <span className="text-white text-lg">{type === 'game' ? '◈' : type === 'podcast' ? '◉' : '✦'}</span>
-                          </div>
-                          <div>
-                            <p className="text-white text-sm font-semibold group-hover:text-[#4ade80] transition-colors" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', letterSpacing: '0.04em' }}>{meta.main}</p>
-                            <p className="text-[10px] italic" style={{ color: `${meta.accent}99` }}>{meta.tag}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
+                    {DO_TYPES.map(type => (
+                      <button key={type} onClick={() => pickType(type)} className="flex items-center gap-3 px-3 py-3 rounded-xl text-left hover:bg-[#1a3a1a] transition-colors group">
+                        <div className={`w-11 h-11 rounded-lg bg-gradient-to-br ${TYPE_THUMB[type]} flex items-center justify-center shrink-0`}>
+                          <span className="text-white text-xl">{type === 'game' ? '◈' : type === 'podcast' ? '◉' : '✦'}</span>
+                        </div>
+                        <div>
+                          <p className="text-white text-base font-bold group-hover:text-[#4ade80] transition-colors leading-tight">{TYPE_LABELS[type]}</p>
+                          <p className="text-[#4a6a4a] text-[10px] italic leading-tight">{TYPE_DESC[type]}</p>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Right hero */}
+                {/* Right hero — Surprise Me action card */}
                 <div className="flex-1 flex items-center justify-center p-6">
-                  <div className="text-center">
-                    <div className="w-32 h-32 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#107C10] to-[#1a9c1a] flex items-center justify-center shadow-lg shadow-green-900/30">
-                      <svg className="w-16 h-16 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                      </svg>
+                  <button
+                    onClick={pickRandomFromActiveApp}
+                    className="group text-center transition-transform active:scale-95"
+                  >
+                    <div
+                      className="w-40 h-40 mx-auto mb-5 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-900/50 group-hover:scale-105 transition-transform relative overflow-hidden"
+                      style={{ background: 'linear-gradient(135deg, #451a7c 0%, #7c3aed 50%, #2d1456 100%)' }}
+                    >
+                      {/* Sparkles */}
+                      <div className="absolute top-3 right-4 text-[#fbbf24] text-lg opacity-70">✦</div>
+                      <div className="absolute bottom-4 left-5 text-[#fbbf24] text-sm opacity-50">✦</div>
+                      <div className="absolute top-10 left-3 text-[#c4b5fd] text-xs opacity-60">✦</div>
+                      <span
+                        className="text-white text-6xl font-serif"
+                        style={{ textShadow: '0 2px 12px rgba(0,0,0,0.5)', fontFamily: 'var(--font-playfair), Georgia, serif' }}
+                      >
+                        ?
+                      </span>
                     </div>
-                    <p className="text-white/40 text-xs">pick something to do</p>
-                  </div>
+                    <p
+                      className="text-white text-2xl font-bold tracking-tight"
+                      style={{ fontFamily: 'var(--font-playfair), Georgia, serif', textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}
+                    >
+                      Surprise Me
+                    </p>
+                    <p className="text-[#fbbf24]/60 text-[11px] italic mt-1">something unexpected</p>
+                  </button>
                 </div>
               </div>
             )}
