@@ -37,40 +37,53 @@ export default function Header() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Dithered moon canvas — static on mobile, animated on desktop
+  // Dithered moon canvas — ImageData-based, pauses when tab hidden, respects reduced-motion
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const size = isMobile ? 44 : 52;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    ctx.scale(dpr, dpr);
-    let animId: number;
+    const pxSize = Math.floor(size * dpr);
+    canvas.width = pxSize;
+    canvas.height = pxSize;
+    // Pre-allocate one ImageData buffer — write RGBA directly, blit with putImageData.
+    // Replaces ~10,816 fillRect(1,1) calls per frame with a single blit.
+    const imageData = ctx.createImageData(pxSize, pxSize);
+    const data = imageData.data;
+
+    let animId: number | null = null;
+    let hidden = false;
     let time = 0;
 
-    function draw() {
-      const s = size;
-      const cx = s / 2;
-      const cy = s / 2;
-      const r = s / 2 - 2;
-      ctx!.clearRect(0, 0, s, s);
-      time += 0.015;
+    function renderFrame() {
+      const cxLogical = size / 2;
+      const cyLogical = size / 2;
+      const rLogical = size / 2 - 2;
       const isActive = hovering || open;
 
-      for (let y = 0; y < s; y += 1) {
-        for (let x = 0; x < s; x += 1) {
-          const dx = x - cx;
-          const dy = y - cy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > r + 1) continue;
+      // Clear buffer to transparent
+      for (let i = 0; i < data.length; i += 4) { data[i + 3] = 0; }
 
-          const crescentFade = Math.max(0, Math.min(1, (dx + r * 0.3) / (r * 1.2)));
-          const nx = x / s;
-          const ny = y / s;
+      const moonCenters: Array<[number, number, number]> = [
+        [4, -5, 4], [-6, 3, 3], [2, 8, 2.5],
+      ];
+
+      for (let py = 0; py < pxSize; py++) {
+        const y = py / dpr;
+        const dy = y - cyLogical;
+        for (let px = 0; px < pxSize; px++) {
+          const x = px / dpr;
+          const dx = x - cxLogical;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > rLogical + 1) continue;
+
+          const crescentFade = Math.max(0, Math.min(1, (dx + rLogical * 0.3) / (rLogical * 1.2)));
+          const nx = x / size;
+          const ny = y / size;
           const wave = isMobile ? 0 : Math.sin(nx * 10 + time * 2) * 0.1 + Math.sin(ny * 12 - time * 1.5) * 0.08;
           const lightAngle = Math.atan2(dy, dx);
           const lightFade = (Math.cos(lightAngle + 2.4) + 1) * 0.5;
@@ -78,42 +91,77 @@ export default function Header() {
           const glow = isActive ? 0.15 : 0;
           const dither = (Math.random() - 0.5) * 0.08;
           const val = Math.max(0, Math.min(1, base + dither + glow));
-          const edgeFade = dist > r - 1.5 ? Math.max(0, (r + 1 - dist) / 2.5) : 1;
+          const edgeFade = dist > rLogical - 1.5 ? Math.max(0, (rLogical + 1 - dist) / 2.5) : 1;
 
-          const rr = Math.round(195 + val * 55);
-          const gg = Math.round(185 + val * 60);
-          const bb = Math.round(215 + val * 38);
-          const alpha = edgeFade * (isActive ? 1 : 0.85);
+          let rr = Math.round(195 + val * 55);
+          let gg = Math.round(185 + val * 60);
+          let bb = Math.round(215 + val * 38);
+          let alpha = Math.round(edgeFade * (isActive ? 255 : 217));
 
-          ctx!.fillStyle = `rgba(${rr}, ${gg}, ${bb}, ${alpha})`;
-          ctx!.fillRect(x, y, 1, 1);
-
-          const c1 = Math.sqrt((x - cx + 4) ** 2 + (y - cy - 5) ** 2);
-          const c2 = Math.sqrt((x - cx - 6) ** 2 + (y - cy + 3) ** 2);
-          const c3 = Math.sqrt((x - cx + 2) ** 2 + (y - cy + 8) ** 2);
-          if ((c1 < 4 || c2 < 3 || c3 < 2.5) && Math.random() > 0.5) {
-            ctx!.fillStyle = `rgba(170, 160, 195, ${0.15 * edgeFade})`;
-            ctx!.fillRect(x, y, 1, 1);
+          // Craters — blend the darker tone on top when random threshold met
+          let inCrater = false;
+          for (const [cX, cY, cR] of moonCenters) {
+            const cd = Math.sqrt((x - cxLogical + cX) ** 2 + (y - cyLogical - cY) ** 2);
+            if (cd < cR) { inCrater = true; break; }
           }
+          if (inCrater && Math.random() > 0.5) {
+            const a2 = 0.15 * edgeFade;
+            rr = Math.round(rr * (1 - a2) + 170 * a2);
+            gg = Math.round(gg * (1 - a2) + 160 * a2);
+            bb = Math.round(bb * (1 - a2) + 195 * a2);
+          }
+
+          const i = (py * pxSize + px) * 4;
+          data[i] = rr;
+          data[i + 1] = gg;
+          data[i + 2] = bb;
+          data[i + 3] = alpha;
         }
       }
 
+      ctx!.putImageData(imageData, 0, 0);
+
+      // Overlay glow via the 2D canvas context (still efficient — one fillRect)
       if (isActive) {
-        const gradient = ctx!.createRadialGradient(cx, cy, r * 0.8, cx, cy, r * 1.8);
+        // Temporarily set transform to logical coordinates for the gradient
+        ctx!.save();
+        ctx!.scale(dpr, dpr);
+        const gradient = ctx!.createRadialGradient(cxLogical, cyLogical, rLogical * 0.8, cxLogical, cyLogical, rLogical * 1.8);
         gradient.addColorStop(0, 'rgba(196, 181, 253, 0.15)');
         gradient.addColorStop(0.5, 'rgba(196, 181, 253, 0.06)');
         gradient.addColorStop(1, 'rgba(196, 181, 253, 0)');
         ctx!.fillStyle = gradient;
-        ctx!.fillRect(0, 0, s, s);
+        ctx!.fillRect(0, 0, size, size);
+        ctx!.restore();
       }
-
-      // On mobile, only re-render when active state changes (no continuous animation)
-      if (isMobile) return;
-      animId = requestAnimationFrame(draw);
     }
 
-    draw();
-    return () => { if (animId) cancelAnimationFrame(animId); };
+    function tick() {
+      if (hidden) return;
+      time += 0.015;
+      renderFrame();
+      if (!isMobile && !reducedMotion) {
+        animId = requestAnimationFrame(tick);
+      }
+    }
+
+    function onVis() {
+      hidden = document.hidden;
+      if (!hidden && !isMobile && !reducedMotion && animId === null) {
+        animId = requestAnimationFrame(tick);
+      }
+    }
+
+    // Kick off: render once then loop if appropriate
+    renderFrame();
+    if (!isMobile && !reducedMotion) {
+      animId = requestAnimationFrame(tick);
+    }
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      if (animId !== null) cancelAnimationFrame(animId);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [hovering, open, isMobile]);
 
   function navClick() {

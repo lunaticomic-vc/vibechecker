@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Favorite, RatingValue } from '@/types/index';
 import { parseFavoriteMetadata } from '@/types/index';
@@ -26,7 +26,7 @@ interface FavoriteCardProps {
 
 type AccordionSection = 'about' | 'vibe' | 'rating' | 'reddit' | null;
 
-export default function FavoriteCard({ favorite, rating, currentStatus, showTypeLabel, showDirectLink, landscape, isGuest, onDelete, onRate, onStatusChange }: FavoriteCardProps) {
+function FavoriteCardInner({ favorite, rating, currentStatus, showTypeLabel, showDirectLink, landscape, isGuest, onDelete, onRate, onStatusChange }: FavoriteCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [openSection, setOpenSection] = useState<AccordionSection>(null);
@@ -60,10 +60,18 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
     onDelete(favorite.id);
   }
 
-  const meta = parseFavoriteMetadata(favorite.metadata);
+  // Parse metadata once per favorite.metadata change — previously ran on every keystroke/render
+  const meta = useMemo(() => parseFavoriteMetadata(favorite.metadata), [favorite.metadata]);
   const isEnriched = meta !== null && 'source' in meta && (meta.source === 'recommendation' || meta.source === 'manual');
   const recMeta = isEnriched ? (meta as { source: string; description?: string; reasoning?: string; interests?: string[]; actors?: string[]; year?: string; redditInsights?: { subreddit: string; comment: string; score: number }[] }) : null;
   const plainNotes = meta !== null && 'notes' in meta ? meta.notes : undefined;
+
+  // Cache viewport midpoints for the flip animation so we don't re-evaluate window.innerWidth
+  // on every render while expanded
+  const viewport = useMemo(() => ({
+    w: typeof window !== 'undefined' ? window.innerWidth / 2 : 0,
+    h: typeof window !== 'undefined' ? window.innerHeight / 2 : 0,
+  }), []);
 
   const chevron = (open: boolean) => (
     <svg className={`w-3 h-3 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -103,7 +111,7 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
           <div className="group bg-white border-2 border-[#e9e4f5] rounded-xl overflow-hidden hover:border-[#c4b5fd] hover:shadow-sm transition-colors cursor-pointer relative">
             <div className={landscape ? 'aspect-video bg-[#f5f3ff] overflow-hidden relative' : 'aspect-[2/3] bg-[#f5f3ff] overflow-hidden relative'}>
               {favorite.image_url ? (
-                <img src={favorite.image_url} alt={favorite.title} draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <img src={favorite.image_url} alt={favorite.title} loading="lazy" decoding="async" draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[#c4b5fd]">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -167,6 +175,7 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
 
       {/* Expanded overlay */}
       <AnimatePresence>
+      {/* eslint-disable-next-line @next/next/no-img-element -- next/image not set up for all poster CDNs */}
       {expanded && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={() => setExpanded(false)}>
           <motion.div
@@ -181,16 +190,16 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
               rotateY: 180,
               scale: 0.3,
               opacity: 0,
-              x: cardOrigin.x - (typeof window !== 'undefined' ? window.innerWidth / 2 : 0),
-              y: cardOrigin.y - (typeof window !== 'undefined' ? window.innerHeight / 2 : 0),
+              x: cardOrigin.x - viewport.w,
+              y: cardOrigin.y - viewport.h,
             }}
             animate={{ rotateY: 0, scale: 1, opacity: 1, x: 0, y: 0 }}
             exit={{
               rotateY: -180,
               scale: 0.3,
               opacity: 0,
-              x: cardOrigin.x - (typeof window !== 'undefined' ? window.innerWidth / 2 : 0),
-              y: cardOrigin.y - (typeof window !== 'undefined' ? window.innerHeight / 2 : 0),
+              x: cardOrigin.x - viewport.w,
+              y: cardOrigin.y - viewport.h,
             }}
             transition={{ type: 'spring', stiffness: 250, damping: 22, mass: 0.8 }}
             style={{ perspective: '1200px' }}
@@ -302,3 +311,7 @@ export default function FavoriteCard({ favorite, rating, currentStatus, showType
     </>
   );
 }
+
+// Memoize the card so a grid of 25 doesn't re-render when the parent's search/filter state changes
+const FavoriteCard = memo(FavoriteCardInner);
+export default FavoriteCard;

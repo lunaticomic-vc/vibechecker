@@ -29,28 +29,50 @@ const GRADIENTS = [
 export default function FloatingCircle({ src, alt, size = 120, initialX, initialY, delay = 0 }: Props) {
   const [hovering, setHovering] = useState(false);
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [imgError, setImgError] = useState(false);
   const sparkleId = useRef(0);
-  const animRef = useRef<number>();
+  const animRef = useRef<number | null>(null);
   const timeRef = useRef(delay * 100);
+  const outerRef = useRef<HTMLDivElement>(null);
 
   const isGradient = src.startsWith('gradient:');
   const gradientIdx = isGradient ? parseInt(src.split(':')[1]) % GRADIENTS.length : 0;
 
-  // Floating animation
+  // Floating animation — writes transform directly to the DOM node to avoid
+  // 60fps React reconciliation. Also pauses on hidden tabs and respects reduced-motion.
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     function animate() {
       timeRef.current += 0.015;
       const t = timeRef.current;
-      setOffset({
-        x: Math.sin(t * 0.5 + delay) * 12 + Math.cos(t * 0.3) * 8,
-        y: Math.cos(t * 0.4 + delay * 2) * 14 + Math.sin(t * 0.25) * 6,
-      });
+      const x = Math.sin(t * 0.5 + delay) * 12 + Math.cos(t * 0.3) * 8;
+      const y = Math.cos(t * 0.4 + delay * 2) * 14 + Math.sin(t * 0.25) * 6;
+      if (outerRef.current) {
+        outerRef.current.style.transform = `translate(${x}px, ${y}px)`;
+      }
       animRef.current = requestAnimationFrame(animate);
     }
-    animate();
-    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+
+    function onVis() {
+      if (document.hidden) {
+        if (animRef.current !== null) cancelAnimationFrame(animRef.current);
+        animRef.current = null;
+      } else if (animRef.current === null && !reducedMotion) {
+        animRef.current = requestAnimationFrame(animate);
+      }
+    }
+
+    if (!reducedMotion) {
+      animRef.current = requestAnimationFrame(animate);
+    }
+    document.addEventListener('visibilitychange', onVis);
+
+    return () => {
+      if (animRef.current !== null) cancelAnimationFrame(animRef.current);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [delay]);
 
   // Sparkles on hover
@@ -79,11 +101,11 @@ export default function FloatingCircle({ src, alt, size = 120, initialX, initial
 
   return (
     <div
-      className="transition-all duration-700 ease-out"
+      ref={outerRef}
+      className="transition-[width,height] duration-700 ease-out will-change-transform"
       style={{
         width: currentSize,
         height: currentSize,
-        transform: `translate(${offset.x}px, ${offset.y}px)`,
         zIndex: hovering ? 20 : 10,
       }}
       onMouseEnter={() => setHovering(true)}
