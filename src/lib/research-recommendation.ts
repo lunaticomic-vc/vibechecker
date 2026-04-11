@@ -64,6 +64,7 @@ export async function getResearchRecommendation(vibe: string): Promise<Recommend
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     temperature: 0.7,
+    response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',

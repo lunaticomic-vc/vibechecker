@@ -12,7 +12,8 @@ import type { YouTubeResult } from '@/lib/youtube';
 import { searchAnimeJikan, searchAnimeJikanMulti } from '@/lib/mal';
 import type { JikanSearchResult } from '@/lib/mal';
 import type { ContentType, DiscoveryMode, Favorite, WatchProgress, Rating, Recommendation } from '@/types/index';
-import { getDb } from '@/lib/db';
+import { db } from '@/lib/db';
+import { searchMangaJikanMulti, searchSteamGamesMulti } from '@/lib/mal';
 import { getAllPeople } from '@/lib/people';
 import { getUserPreferences } from '@/lib/user-preferences';
 import { log } from '@/lib/logger';
@@ -64,8 +65,19 @@ export function buildRecommendationPrompt(
   const ratingsMap = new Map<number, Rating>();
   for (const r of ratings) ratingsMap.set(r.favorite_id, r);
 
+  // Cap the per-type flat list at ~100 items and prioritize loved/enjoyed to avoid
+  // token bomb: previously the full library (up to 10k titles) was inlined.
+  const RATING_WEIGHT: Record<string, number> = { felt_things: 0, enjoyed: 1, watched: 2, not_my_thing: 3 };
+  const prioritizedFavs = [...favorites]
+    .sort((a, b) => {
+      const ra = ratingsMap.get(a.id)?.rating ?? 'watched';
+      const rb = ratingsMap.get(b.id)?.rating ?? 'watched';
+      return (RATING_WEIGHT[ra] ?? 2) - (RATING_WEIGHT[rb] ?? 2);
+    })
+    .slice(0, 100);
+
   const byType: Record<string, string[]> = {};
-  for (const fav of favorites) {
+  for (const fav of prioritizedFavs) {
     if (!byType[fav.type]) byType[fav.type] = [];
     const rating = ratingsMap.get(fav.id);
     let entry = fav.title;
@@ -93,6 +105,12 @@ export function buildRecommendationPrompt(
       const r = ratingsMap.get(f.id);
       return `  "${f.title}"${r?.reasoning ? ` — what made it special: "${r.reasoning}"` : ''}`;
     });
+
+  // New: treat "enjoyed" as a positive-but-lighter signal so it isn't collapsed with "watched".
+  const enjoyed = favorites
+    .filter(f => ratingsMap.get(f.id)?.rating === 'enjoyed')
+    .map(f => `  "${f.title}"`)
+    .slice(0, 40);
 
   const progressSection = watchProgress
     .slice(0, 5)
@@ -136,6 +154,8 @@ export function buildRecommendationPrompt(
     '',
     loved.length > 0 ? `Content that deeply resonated with the user ("made me feel things"):\n${loved.join('\n')}\n\nANALYZE the above carefully. The reasons they gave reveal their taste — what themes, humor, emotions, storytelling styles they connect with. Your recommendation MUST match this sensibility. If they loved something for dark humor, recommend something with similar wit. If they loved something for emotional depth, match that intensity. Their "felt things" list IS their personality profile.` : '',
     '',
+    enjoyed.length > 0 ? `Content the user ENJOYED (positive signal, lighter weight than "felt things"):\n${enjoyed.join('\n')}\n\nThese represent the user's baseline taste — recommend in a similar vein, but the "felt things" list above takes priority.` : '',
+    '',
     disliked.length > 0 ? `Content the user DISLIKED (AVOID recommending similar things):\n${disliked.join('\n')}\n\nThe reasons above reveal what turns them off. Actively avoid these qualities.` : '',
     '',
     progressSection
@@ -144,8 +164,7 @@ export function buildRecommendationPrompt(
     '',
     discoveryMode === 'from_library'
       ? `IMPORTANT: You MUST recommend something from the user's existing library/favorites listed above. Pick one that best fits the vibe. For YouTube, pick from their saved channels/videos.`
-      : `IMPORTANT: Recommend something NEW that the user has NOT seen/watched yet. Do NOT suggest anything already in their library above. For YouTube, suggest channels or creators they are NOT subscribed to.
-NEVER recommend any of these rejected titles: ${[...favorites.map(f => f.title)].join(', ')}`,
+      : `IMPORTANT: Recommend something NEW that the user has NOT seen/watched yet. Do NOT suggest anything already in their library above. For YouTube, suggest channels or creators they are NOT subscribed to.`,
     '',
     `Your task: ${instructions[contentType]}`,
     '',
@@ -177,6 +196,7 @@ NEVER recommend any of these rejected titles: ${[...favorites.map(f => f.title)]
 }
 
 async function expandVibe(openai: ReturnType<typeof getOpenAI>, vibe: string, interests: string[], tasteProfile: string | null): Promise<string> {
+  // Plain text response — no JSON schema needed here.
   const res = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     temperature: 0.8,
@@ -228,6 +248,7 @@ async function decomposeVibe(openai: ReturnType<typeof getOpenAI>, vibe: string)
     const res = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.5,
+      response_format: { type: 'json_object' },
       messages: [
         {
           role: 'system',
@@ -285,10 +306,11 @@ async function getYouTubeRecommendation(
   const queryResponse = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     temperature: 0.9,
+    response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',
-        content: `Generate YouTube search queries to find full-length videos (NOT Shorts). Return ONLY a JSON array of 4-5 specific search strings. No markdown.`,
+        content: `Generate YouTube search queries to find full-length videos (NOT Shorts). Return ONLY a JSON object with a "queries" field: {"queries": ["query1", "query2", ...]}. 4-5 specific search strings.`,
       },
       {
         role: 'user',
@@ -298,7 +320,10 @@ async function getYouTubeRecommendation(
   });
 
   let queries: string[];
-  try { queries = JSON.parse(queryResponse.choices[0]?.message?.content ?? '[]'); } catch { queries = [vibe]; }
+  try {
+    const parsedQ = JSON.parse(queryResponse.choices[0]?.message?.content ?? '{}');
+    queries = Array.isArray(parsedQ) ? parsedQ : (parsedQ.queries ?? [vibe]);
+  } catch { queries = [vibe]; }
 
   // Step 2: Search YouTube for real videos (excludes Shorts via duration filter)
   const allResults: YouTubeResult[] = [];
@@ -327,6 +352,7 @@ async function getYouTubeRecommendation(
     const pickResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.7,
+      response_format: { type: 'json_object' },
       messages: [
         {
           role: 'system',
@@ -367,10 +393,11 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
       const retryResponse = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         temperature: 0.9,
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
-            content: `The previous YouTube search for "${vibe}" returned irrelevant results. Generate 3 MORE SPECIFIC search queries that will find videos actually about "${vibe}". Be very literal and precise. Return ONLY a JSON array of strings.`,
+            content: `The previous YouTube search for "${vibe}" returned irrelevant results. Generate 3 MORE SPECIFIC search queries that will find videos actually about "${vibe}". Be very literal and precise. Return ONLY a JSON object: {"queries": ["q1","q2","q3"]}.`,
           },
           {
             role: 'user',
@@ -380,7 +407,10 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
       });
 
       let retryQueries: string[];
-      try { retryQueries = JSON.parse(retryResponse.choices[0]?.message?.content ?? '[]'); } catch { retryQueries = [`${vibe} video essay`]; }
+      try {
+        const parsed = JSON.parse(retryResponse.choices[0]?.message?.content ?? '{}');
+        retryQueries = Array.isArray(parsed) ? parsed : (parsed.queries ?? [`${vibe} video essay`]);
+      } catch { retryQueries = [`${vibe} video essay`]; }
 
       const retryResults: YouTubeResult[] = [];
       const retrySeen = new Set(seen);
@@ -399,6 +429,7 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
         const retryPick = await openai.chat.completions.create({
           model: 'gpt-4o-mini',
           temperature: 0.7,
+          response_format: { type: 'json_object' },
           messages: [
             {
               role: 'system',
@@ -477,10 +508,11 @@ async function getSubstackRecommendation(
   const queryResponse = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     temperature: 0.9,
+    response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',
-        content: `You generate search queries to find high-quality, niche Substack articles — not surface-level hits. Target specific intellectual spaces, respected voices, and deep cuts. Return ONLY a JSON array of 5-6 search strings. No markdown.`,
+        content: `You generate search queries to find high-quality, niche Substack articles — not surface-level hits. Target specific intellectual spaces, respected voices, and deep cuts. Return ONLY a JSON object: {"queries": ["q1","q2",...]} with 5-6 search strings.`,
       },
       {
         role: 'user',
@@ -499,7 +531,8 @@ ALL queries stay rooted in "${vibe}". Aim for depth and quality over popularity.
 
   let queries: string[];
   try {
-    queries = JSON.parse(queryResponse.choices[0]?.message?.content ?? '[]');
+    const parsed = JSON.parse(queryResponse.choices[0]?.message?.content ?? '{}');
+    queries = Array.isArray(parsed) ? parsed : (parsed.queries ?? [vibe, ...interests.slice(0, 2)]);
   } catch {
     queries = [vibe, ...interests.slice(0, 2)];
   }
@@ -516,6 +549,7 @@ ALL queries stay rooted in "${vibe}". Aim for depth and quality over popularity.
     const pickResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.7,
+      response_format: { type: 'json_object' },
       messages: [
         {
           role: 'system',
@@ -565,6 +599,7 @@ Pick the article averaging highest. Return ONLY JSON: {"pick": <number>, "reason
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.9 + attempt * 0.02,
+      response_format: { type: 'json_object' },
       messages: [
         {
           role: 'system',
@@ -639,10 +674,11 @@ async function getScreenRecommendation(
   const queryResponse = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     temperature: 0.9,
+    response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',
-        content: `You are a ${contentLabel} expert with deep knowledge of mainstream hits, cult classics, international gems, and obscure picks. Suggest 10-12 REAL ${contentLabel} TITLES that match the vibe. Return ONLY a JSON array of title strings. No markdown.
+        content: `You are a ${contentLabel} expert with deep knowledge of mainstream hits, cult classics, international gems, and obscure picks. Suggest 10-12 REAL ${contentLabel} TITLES that match the vibe. Return ONLY a JSON object: {"titles": ["title1", "title2", ...]} with 10-12 entries.
 
 CRITICAL: Every suggestion MUST be a ${contentLabel} — not a different content type. For example, if asked for books, do NOT suggest essays, articles, or films. If asked for poems, do NOT suggest song lyrics or novels. If asked for short stories, do NOT suggest novels or novellas. Be precise about the medium.
 
@@ -666,28 +702,50 @@ DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maxim
   });
 
   let queries: string[];
-  try { queries = JSON.parse(queryResponse.choices[0]?.message?.content ?? '[]'); } catch { queries = [vibe]; }
+  try {
+    const parsed = JSON.parse(queryResponse.choices[0]?.message?.content ?? '{}');
+    queries = Array.isArray(parsed) ? parsed : (parsed.titles ?? [vibe]);
+  } catch { queries = [vibe]; }
 
   // Step 3: Search for real content
   type Candidate = { title: string; year: string | null; description: string; score?: number; genres?: string[] };
   let candidates: Candidate[] = [];
 
+  // In from_library mode, candidates MUST come from the user's library, so skip the
+  // "not in existingTitles" filter that would otherwise remove everything.
+  const excludeExisting = discoveryMode !== 'from_library';
+
   if (contentType === 'anime') {
     const results = await searchAnimeJikanMulti(queries);
     candidates = results
-      .filter(r => !existingTitles.includes(r.title))
+      .filter(r => excludeExisting ? !existingTitles.includes(r.title) : true)
       .slice(0, 15)
       .map(r => ({ title: r.title, year: r.year, description: r.description, score: r.score, genres: r.genres }));
+  } else if (contentType === 'manga') {
+    const results = await searchMangaJikanMulti(queries);
+    candidates = results
+      .filter(r => excludeExisting ? !existingTitles.includes(r.title) : true)
+      .slice(0, 15)
+      .map(r => ({ title: r.title, year: r.year, description: r.description, score: r.score }));
+  } else if (contentType === 'game') {
+    const results = await searchSteamGamesMulti(queries);
+    candidates = results
+      .filter(r => excludeExisting ? !existingTitles.includes(r.title) : true)
+      .slice(0, 15)
+      .map(r => ({ title: r.title, year: r.year, description: r.description }));
+  } else if (contentType === 'comic') {
+    // No public catalog API for comics — let the GPT-direct path handle it
+    candidates = [];
   } else {
     const tmdbType = contentType === 'movie' ? 'movie' as const : 'tv' as const;
     const results = await searchTMDBMulti(queries, tmdbType);
     candidates = results
-      .filter(r => !existingTitles.includes(r.title))
+      .filter(r => excludeExisting ? !existingTitles.includes(r.title) : true)
       .slice(0, 15)
       .map(r => ({ title: r.title, year: r.year, description: r.description, score: r.voteAverage }));
   }
 
-  if (candidates.length === 0) {
+  if (candidates.length === 0 && contentType !== 'comic') {
     // Fallback: broader title-based queries
     queries = [
       `best ${contentLabel} ${facets.mood}`,
@@ -697,6 +755,12 @@ DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maxim
     if (contentType === 'anime') {
       const results = await searchAnimeJikanMulti(queries);
       candidates = results.slice(0, 10).map(r => ({ title: r.title, year: r.year, description: r.description, score: r.score, genres: r.genres }));
+    } else if (contentType === 'manga') {
+      const results = await searchMangaJikanMulti(queries);
+      candidates = results.slice(0, 10).map(r => ({ title: r.title, year: r.year, description: r.description, score: r.score }));
+    } else if (contentType === 'game') {
+      const results = await searchSteamGamesMulti(queries);
+      candidates = results.slice(0, 10).map(r => ({ title: r.title, year: r.year, description: r.description }));
     } else {
       const tmdbType = contentType === 'movie' ? 'movie' as const : 'tv' as const;
       const results = await searchTMDBMulti(queries, tmdbType);
@@ -719,6 +783,7 @@ DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maxim
     const pickResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature,
+      response_format: { type: 'json_object' },
       messages: [
         {
           role: 'system',
@@ -802,6 +867,7 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
       const directResponse = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         temperature: 0.8,
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
@@ -863,8 +929,12 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
     actionUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(title)}`;
     actionLabel = 'Search on Google Scholar';
   } else if (contentType === 'manga') {
-    actionUrl = `https://mangadex.org/search?q=${encodeURIComponent(title)}`;
-    actionLabel = 'Find on MangaDex';
+    // Try the direct Mangago URL first — falls back to search if the slug 404s.
+    const slug = title.toLowerCase().replace(/[:\-–—!?.,'"()\[\]]/g, '').replace(/\s+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+    const directUrl = `https://www.mangago.me/read-manga/${slug}/`;
+    const isValid = await verifyUrl(directUrl);
+    actionUrl = isValid ? directUrl : `https://www.mangago.me/r/l_search/?name=${encodeURIComponent(title)}`;
+    actionLabel = 'Read on Mangago';
   } else if (contentType === 'comic') {
     actionUrl = `https://readcomiconline.li/Search/Comic?keyword=${encodeURIComponent(title)}`;
     actionLabel = 'Find on ReadComicOnline';
@@ -953,7 +1023,7 @@ export async function getRecommendation(
 ): Promise<Recommendation> {
   vibe = vibe.replace(/[\r\n]+/g, ' ').trim().slice(0, 1000);
 
-  const client = getDb();
+  const client = await db();
 
   const [
     favorites,

@@ -7,6 +7,7 @@ import {
   getBookRecommendation,
   getEssayRecommendation,
   getPodcastRecommendation,
+  type ReadingContext,
 } from '@/lib/reading-recommendation';
 import { enrichRecommendation } from '@/lib/enrich';
 import { db } from '@/lib/db';
@@ -14,6 +15,9 @@ import { verifyAuthCookie } from '@/lib/auth';
 import { consumeRateLimit } from '@/lib/rate-limit';
 import { log } from '@/lib/logger';
 import { CONTENT_TYPES, type ContentType, type Recommendation } from '@/types/index';
+import { getAllFavorites } from '@/lib/favorites';
+import { getAllRatings } from '@/lib/ratings';
+import { getUserPreferences } from '@/lib/user-preferences';
 
 export async function POST(req: NextRequest) {
   log.api('POST', '/api/recommend');
@@ -67,7 +71,7 @@ export async function POST(req: NextRequest) {
   try {
     log.ai('Calling OpenAI gpt-4o-mini...');
 
-    const READING_TYPES: Record<string, (vibe: string) => Promise<Recommendation>> = {
+    const READING_TYPES: Record<string, (vibe: string, ctx?: ReadingContext) => Promise<Recommendation>> = {
       poetry: getPoetryRecommendation,
       short_story: getShortStoryRecommendation,
       book: getBookRecommendation,
@@ -81,7 +85,14 @@ export async function POST(req: NextRequest) {
       raw = await getResearchRecommendation(vibe.trim());
       isSimpleType = true;
     } else if (contentType in READING_TYPES) {
-      raw = await READING_TYPES[contentType](vibe.trim());
+      // Build taste context for reading types — previously these had ZERO personalization.
+      // We scope to same-type favorites (books get book history, poems get poem history, etc.)
+      // to keep token budget tight while still giving the recommender real signal.
+      const ctx = await buildReadingContext(contentType as ContentType).catch(err => {
+        log.warn('Failed to build reading context', String(err));
+        return undefined;
+      });
+      raw = await READING_TYPES[contentType](vibe.trim(), ctx);
       isSimpleType = true;
     } else {
       raw = await getRecommendation(vibe.trim(), contentType as ContentType, (discoveryMode as 'from_library' | 'something_new') ?? 'something_new', useInterests);
@@ -105,8 +116,43 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ...recommendation, ...(guestRemaining !== null ? { remaining: guestRemaining } : {}) });
   } catch (error) {
-    console.error('Recommendation failed:', error);
     log.error('Recommendation failed', error);
     return NextResponse.json({ error: 'Recommendation failed' }, { status: 500 });
   }
+}
+
+/**
+ * Build a ReadingContext for reading-type recommendations. Pulls same-type favorites
+ * (e.g. only books for a book rec), groups by rating, and caps size for token budget.
+ */
+async function buildReadingContext(contentType: ContentType): Promise<ReadingContext> {
+  const [favs, ratings, tasteProfile] = await Promise.all([
+    getAllFavorites(contentType, 300).catch(() => []),
+    getAllRatings(contentType).catch(() => []),
+    getUserPreferences().catch(() => null),
+  ]);
+
+  const ratingsMap = new Map(ratings.map(r => [r.favorite_id, r]));
+
+  const loved: { title: string; reasoning?: string }[] = [];
+  const enjoyed: string[] = [];
+  const disliked: { title: string; reasoning?: string }[] = [];
+  const exclusionList: string[] = [];
+
+  for (const f of favs) {
+    exclusionList.push(f.title);
+    const r = ratingsMap.get(f.id);
+    if (!r) continue;
+    if (r.rating === 'felt_things') loved.push({ title: f.title, reasoning: r.reasoning });
+    else if (r.rating === 'enjoyed') enjoyed.push(f.title);
+    else if (r.rating === 'not_my_thing') disliked.push({ title: f.title, reasoning: r.reasoning });
+  }
+
+  return {
+    tasteProfile,
+    lovedItems: loved,
+    enjoyedItems: enjoyed,
+    dislikedItems: disliked,
+    exclusionList,
+  };
 }
