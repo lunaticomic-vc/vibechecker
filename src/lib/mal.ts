@@ -143,6 +143,34 @@ export async function searchAnimeJikan(
   }
 }
 
+export async function searchMangaJikan(
+  title: string
+): Promise<{ title: string | null; posterUrl: string | null; year: string | null; description: string | null; actors: string[] } | null> {
+  const JIKAN_BASE = 'https://api.jikan.moe/v4';
+
+  try {
+    const res = await fetch(
+      `${JIKAN_BASE}/manga?q=${encodeURIComponent(title)}&limit=1&sfw=true`
+    );
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const top = json.data?.[0];
+    if (!top) return null;
+
+    const posterUrl = top.images?.jpg?.large_image_url ?? top.images?.jpg?.image_url ?? null;
+    const year = top.published?.from ? top.published.from.slice(0, 4) : null;
+    const description = top.synopsis ?? null;
+    const authors = (top.authors ?? []).map((a: { name: string }) => a.name).slice(0, 3);
+    const canonicalTitle = top.title_english ?? top.title ?? null;
+
+    return { title: canonicalTitle, posterUrl, year, description, actors: authors };
+  } catch (error) {
+    console.warn('Failed to search manga via Jikan', error);
+    return null;
+  }
+}
+
 // Jikan fallback (no API key needed, but requires public list)
 async function fetchViaJikan(
   username: string,

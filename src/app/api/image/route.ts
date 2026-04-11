@@ -65,6 +65,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ image_url: null });
     }
 
+    // Manga — use Jikan (MyAnimeList) API for cover art
+    if (type === 'manga') {
+      try {
+        const jikanRes = await fetch(
+          `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(title)}&limit=1&sfw=true`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (jikanRes.ok) {
+          const jikanData = await jikanRes.json();
+          const top = jikanData.data?.[0];
+          const coverUrl = top?.images?.jpg?.large_image_url ?? top?.images?.jpg?.image_url;
+          if (coverUrl) {
+            log.success('Found Jikan manga image for', `"${title}"`);
+            return NextResponse.json({ image_url: coverUrl });
+          }
+        }
+      } catch { /* fallback to Brave */ }
+    }
+
     // Games — search Steam Store API for cover art
     if (type === 'game') {
       try {

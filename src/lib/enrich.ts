@@ -1,7 +1,7 @@
 import { getOpenAI } from '@/lib/openai';
 import { getUserPreferences } from '@/lib/user-preferences';
 import { searchTMDBDetailed } from '@/lib/tmdb';
-import { searchAnimeJikan } from '@/lib/mal';
+import { searchAnimeJikan, searchMangaJikan } from '@/lib/mal';
 import { searchYouTube, buildYouTubeWatchUrl } from '@/lib/youtube';
 import { searchRedditForTitle } from '@/lib/reddit';
 
@@ -40,6 +40,11 @@ async function lookupExternal(title: string, type: ContentType) {
   if (type === 'anime') {
     const detail = await searchAnimeJikan(title);
     if (detail) return { ...base, ...detail };
+  }
+
+  if (type === 'manga') {
+    const detail = await searchMangaJikan(title);
+    if (detail) return { ...base, ...detail, backdropUrls: [] };
   }
 
   if (type === 'movie' || type === 'tv' || type === 'kdrama') {
