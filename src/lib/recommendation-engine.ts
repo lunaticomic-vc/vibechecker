@@ -195,6 +195,60 @@ export function buildRecommendationPrompt(
   ].join('\n');
 }
 
+// Activity/situation patterns that describe what the user is DOING, not
+// what they want content about. These get stripped from the vibe before any
+// LLM sees it — relying on rules in the system prompt to "ignore activity
+// words" was unreliable, so we just remove the trigger words mechanically
+// and reattach a safe pacing/intensity hint instead.
+const ACTIVITY_PATTERNS: Array<{ re: RegExp; hint: string }> = [
+  {
+    re: /\b(?:i['']?m\s+)?(?:currently\s+)?(?:while\s+)?(?:having\s+)?(?:lunch|dinner|breakfast|brunch|eating|snacking|having a meal|at the table)\b/gi,
+    hint: 'background-friendly, low-medium intensity, not emotionally heavy',
+  },
+  {
+    re: /\b(?:i['']?m\s+)?(?:while\s+)?(?:cooking|making food|in the kitchen)\b/gi,
+    hint: 'works while hands are busy, low-medium intensity',
+  },
+  {
+    re: /\b(?:i['']?m\s+)?(?:while\s+)?(?:commuting|on the bus|on the train|on a plane|traveling|driving)\b/gi,
+    hint: 'episodic or audio-forward, medium intensity',
+  },
+  {
+    re: /\b(?:i['']?m\s+)?(?:while\s+)?(?:working out|at the gym|running|exercising|lifting)\b/gi,
+    hint: 'high energy, motivating, fast-paced',
+  },
+  {
+    re: /\b(?:in bed|before sleep|bedtime|winding down|falling asleep|can['']?t sleep)\b/gi,
+    hint: 'calm, slow-burn, not anxiety-inducing',
+  },
+];
+
+function extractActivityContext(vibe: string): { cleanedVibe: string; situationHint: string } {
+  let cleaned = vibe;
+  const hints: string[] = [];
+  for (const { re, hint } of ACTIVITY_PATTERNS) {
+    // Build a fresh regex so lastIndex from one call doesn't bleed into another
+    const regex = new RegExp(re.source, re.flags);
+    if (regex.test(cleaned)) {
+      cleaned = cleaned.replace(new RegExp(re.source, re.flags), '');
+      if (!hints.includes(hint)) hints.push(hint);
+    }
+  }
+  // Tidy up leftover whitespace, punctuation, and orphan connectors
+  cleaned = cleaned
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+,/g, ',')
+    .replace(/,\s*,/g, ',')
+    .replace(/^(?:and|while|so|but)\s+/i, '')
+    .replace(/\s+(?:and|while|so|but)\s*$/i, '')
+    .replace(/^[\s,.;-]+|[\s,.;-]+$/g, '')
+    .trim();
+  return {
+    cleanedVibe: cleaned || vibe,
+    situationHint: hints.join(', '),
+  };
+}
+
 async function expandVibe(openai: ReturnType<typeof getOpenAI>, vibe: string, interests: string[], tasteProfile: string | null): Promise<string> {
   // Plain text response — no JSON schema needed here.
   const res = await openai.chat.completions.create({
@@ -1022,6 +1076,18 @@ export async function getRecommendation(
   useInterests: boolean = true
 ): Promise<Recommendation> {
   vibe = vibe.replace(/[\r\n]+/g, ' ').trim().slice(0, 1000);
+
+  // Strip activity/situation phrases ("eating", "on the bus", "in bed", etc.)
+  // before any LLM sees the vibe — otherwise "eating" alone can steer the
+  // model toward food content despite the guidance in every system prompt.
+  // The stripped phrase is translated into a bracketed pacing/intensity hint
+  // the LLM treats as guidance rather than a topic keyword.
+  {
+    const { cleanedVibe, situationHint } = extractActivityContext(vibe);
+    vibe = situationHint
+      ? `${cleanedVibe} [viewing context: ${situationHint}]`
+      : cleanedVibe;
+  }
 
   const client = await db();
 

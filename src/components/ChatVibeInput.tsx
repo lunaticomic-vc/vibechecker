@@ -56,8 +56,10 @@ export default function ChatVibeInput({ contentType, onVibeReady, loading, isOwn
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const [useInterests, setUseInterests] = useState(true);
+  const [inputFocused, setInputFocused] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -179,6 +181,15 @@ export default function ChatVibeInput({ contentType, onVibeReady, loading, isOwn
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); send(); } }}
+              onFocus={() => {
+                if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+                setInputFocused(true);
+              }}
+              onBlur={() => {
+                // Short delay so tapping a keyboard key (which briefly blurs the
+                // input) doesn't close the keyboard before the click registers.
+                blurTimerRef.current = setTimeout(() => setInputFocused(false), 180);
+              }}
               placeholder={messages.length === 0 ? 'type your vibe...' : 'reply...'}
               disabled={loading}
               className="flex-1 rounded-full bg-[#f5f3ff] border border-[#e9e4f5] px-4 py-2 text-[13px] text-[#2d2640] placeholder-[#c4b5fd] focus:outline-none focus:border-[#c4b5fd] disabled:opacity-40"
@@ -201,14 +212,15 @@ export default function ChatVibeInput({ contentType, onVibeReady, loading, isOwn
         </div>
       </div>
 
-      {/* Suggestion keyboard — keys below the chat, disappears after first submit */}
+      {/* Suggestion keyboard — slides up when the input is focused, slides
+          down after the user sends their first message (like a real phone). */}
       <AnimatePresence>
-        {messages.filter(m => m.role === 'user').length === 0 && (
+        {inputFocused && messages.filter(m => m.role === 'user').length === 0 && (
           <motion.div
             key="vibe-keyboard"
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 24, scale: 0.94 }}
+            exit={{ opacity: 0, y: 40 }}
             transition={{ duration: 0.32, ease: [0.22, 0.9, 0.32, 1] }}
             className="mt-4 px-1"
           >
@@ -217,7 +229,14 @@ export default function ChatVibeInput({ contentType, onVibeReady, loading, isOwn
                 <button
                   key={example}
                   type="button"
-                  onClick={() => { setInput(example); inputRef.current?.focus(); }}
+                  // Prevent the mousedown from stealing focus from the input so
+                  // the keyboard stays open while the user taps a key.
+                  onMouseDown={e => e.preventDefault()}
+                  onTouchStart={e => e.preventDefault()}
+                  onClick={() => {
+                    setInput(example);
+                    inputRef.current?.focus();
+                  }}
                   className="vibe-key"
                 >
                   {example}
