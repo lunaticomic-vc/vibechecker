@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import type { ContentType } from '@/types/index';
-import { useIsOwner } from '@/lib/useIsOwner';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function SettingsPage() {
-  const isOwner = useIsOwner();
+  const { isOwner } = useAuth();
   const [bulkText, setBulkText] = useState('');
   const [bulkType, setBulkType] = useState<ContentType>('movie');
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -23,6 +23,11 @@ export default function SettingsPage() {
   const [tasteProfile, setTasteProfile] = useState<string | null>(null);
   const [tasteLoading, setTasteLoading] = useState(false);
   const [tasteFetched, setTasteFetched] = useState(false);
+  const [imgFiles, setImgFiles] = useState<File[]>([]);
+  const [imgExtracting, setImgExtracting] = useState(false);
+  const [imgResults, setImgResults] = useState<{ title: string; type: ContentType; confidence: string; selected: boolean }[]>([]);
+  const [imgAdding, setImgAdding] = useState(false);
+  const [imgMessage, setImgMessage] = useState('');
 
   useEffect(() => {
     fetch('/api/accounts/mal').then(r => r.json()).then(d => { if (d.username) setLastMalUser(d.username); }).catch(() => {});
@@ -308,6 +313,125 @@ export default function SettingsPage() {
               </button>
               {lbMessage && <span className={`text-xs ${msgClass(lbMessage)}`}>{lbMessage}</span>}
             </div>
+          </div>
+
+          {/* Screenshot Import */}
+          <div className="bg-white border-2 border-[#e9e4f5] rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <SectionIcon>
+                <svg width="18" height="18" viewBox="0 0 72 72" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="14" y="18" width="44" height="36" rx="3" />
+                  <circle cx="30" cy="34" r="6" />
+                  <path d="M14 46 L26 38 L34 44 L46 32 L58 42" />
+                </svg>
+              </SectionIcon>
+              <h3 className="text-sm font-semibold text-[#2d2640]">Import from Screenshots</h3>
+            </div>
+            <p className="text-xs text-[#7c7291] mb-3">Upload screenshots of your Netflix queue, Steam library, bookshelf, etc. AI will extract media titles.</p>
+
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={e => { setImgFiles(Array.from(e.target.files ?? [])); setImgResults([]); setImgMessage(''); }}
+              className={`w-full mb-3 ${inputClass}`}
+            />
+
+            {imgFiles.length > 0 && imgResults.length === 0 && (
+              <button
+                onClick={async () => {
+                  setImgExtracting(true);
+                  setImgMessage('');
+                  try {
+                    const dataUrls = await Promise.all(
+                      imgFiles.map(f => new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result as string);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(f);
+                      }))
+                    );
+                    const res = await fetch('/api/imports/images', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ images: dataUrls }),
+                    });
+                    const data = await res.json();
+                    if (data.items?.length) {
+                      setImgResults(data.items.map((item: { title: string; type: ContentType; confidence: string }) => ({ ...item, selected: true })));
+                    } else {
+                      setImgMessage('No media found in the images.');
+                    }
+                  } catch { setImgMessage('Failed to process images.'); }
+                  setImgExtracting(false);
+                }}
+                disabled={imgExtracting}
+                className="px-4 py-2 text-sm text-[#7c3aed] rounded-lg transition-all backdrop-blur-md bg-white/40 border border-white/50 hover:bg-white/60 shadow-sm disabled:opacity-40"
+              >
+                {imgExtracting ? `Analyzing ${imgFiles.length} image${imgFiles.length > 1 ? 's' : ''}...` : `Extract from ${imgFiles.length} image${imgFiles.length > 1 ? 's' : ''}`}
+              </button>
+            )}
+
+            {imgResults.length > 0 && (
+              <div className="space-y-2 mt-3">
+                <p className="text-xs text-[#7c7291]">Found {imgResults.length} items — uncheck any you don&apos;t want to add:</p>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {imgResults.map((item, i) => (
+                    <label key={i} className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-[#f5f3ff] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={item.selected}
+                        onChange={() => setImgResults(prev => prev.map((r, j) => j === i ? { ...r, selected: !r.selected } : r))}
+                        className="w-3.5 h-3.5 rounded accent-[#8b5cf6]"
+                      />
+                      <span className="text-xs text-[#2d2640] flex-1">{item.title}</span>
+                      <span className="text-[10px] text-[#b8b0c8]">{item.type}</span>
+                      {item.confidence !== 'high' && <span className="text-[9px] text-[#d4a017]">{item.confidence}</span>}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    onClick={async () => {
+                      const selected = imgResults.filter(r => r.selected);
+                      if (!selected.length) return;
+                      setImgAdding(true);
+                      let added = 0;
+                      for (const item of selected) {
+                        try {
+                          let image_url: string | undefined;
+                          try {
+                            const imgRes = await fetch(`/api/image?title=${encodeURIComponent(item.title)}&type=${item.type}`);
+                            const imgData = await imgRes.json();
+                            if (imgData.image_url) image_url = imgData.image_url;
+                          } catch {}
+                          await fetch('/api/favorites', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ type: item.type, title: item.title, image_url }),
+                          });
+                          added++;
+                        } catch {}
+                      }
+                      setImgResults([]);
+                      setImgFiles([]);
+                      setImgMessage(`Added ${added} item${added !== 1 ? 's' : ''} to library.`);
+                      setImgAdding(false);
+                      setTimeout(() => setImgMessage(''), 5000);
+                    }}
+                    disabled={imgAdding || !imgResults.some(r => r.selected)}
+                    className="px-4 py-2 text-sm bg-[#6b9a65] hover:bg-[#5a8956] disabled:opacity-40 text-white rounded-lg transition-colors"
+                  >
+                    {imgAdding ? 'Adding...' : `Add ${imgResults.filter(r => r.selected).length} items`}
+                  </button>
+                  <button onClick={() => { setImgResults([]); setImgFiles([]); }} className="px-4 py-2 text-sm text-[#7c7291] hover:text-[#2d2640] transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {imgMessage && <p className={`text-xs mt-2 ${msgClass(imgMessage)}`}>{imgMessage}</p>}
           </div>
 
           {/* Bulk */}
