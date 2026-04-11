@@ -20,6 +20,21 @@ export function buildLetterboxdSearchUrl(title: string): string {
   return `https://letterboxd.com/search/${encodeURIComponent(title)}`;
 }
 
+/** Build a Mangago slug: lowercase, underscores for spaces, strip punctuation. */
+export function mangagoSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[:\-–—!?.,'"()\[\]]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+}
+
+/** Build a direct Mangago read URL from a title. */
+export function buildMangagoUrl(title: string): string {
+  return `https://www.mangago.me/read-manga/${mangagoSlug(title)}/`;
+}
+
 /** Build a direct link for a favorite based on its external_id or content type. */
 export function buildDirectLink(type: ContentType, title: string, externalId?: string): string {
   if (externalId) return externalId;
@@ -37,7 +52,7 @@ export function buildDirectLink(type: ContentType, title: string, externalId?: s
     case 'essay': return `https://www.google.com/search?q=${t}+essay+read+online`;
     case 'podcast': return `https://open.spotify.com/search/${t}/podcasts`;
     case 'research': return `https://scholar.google.com/scholar?q=${t}`;
-    case 'manga': return `https://mangadex.org/search?q=${t}`;
+    case 'manga': return buildMangagoUrl(title);
     case 'comic': return `https://readcomiconline.li/Search/Comic?keyword=${t}`;
     default: return `https://www.google.com/search?q=${t}`;
   }

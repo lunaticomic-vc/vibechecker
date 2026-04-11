@@ -3,6 +3,7 @@ import { Inter, Playfair_Display, Caveat } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import Particles from '@/components/Particles';
+import SceneBackground from '@/components/SceneBackground';
 import GuestCat from '@/components/GuestCat';
 import MobileGuestCounter from '@/components/MobileGuestCounter';
 import { AuthProvider } from '@/components/AuthProvider';
@@ -31,6 +32,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} ${playfair.variable} ${caveat.variable} min-h-screen`}>
         <Particles />
+        <SceneBackground />
         <AuthProvider>
           <Header />
           {children}

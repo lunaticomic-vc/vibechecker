@@ -12,6 +12,17 @@ interface Dot {
   jitterY: number;
 }
 
+// Pre-bucketed alpha strings — avoids ~1.7M string allocations/sec at 60fps
+const ALPHA_BUCKETS = 20;
+const FILL_STYLES: string[] = Array.from({ length: ALPHA_BUCKETS + 1 }, (_, i) => {
+  const a = i / ALPHA_BUCKETS;
+  return `rgba(180, 175, 195, ${a.toFixed(2)})`;
+});
+function styleForAlpha(alpha: number): string {
+  const idx = Math.round(Math.max(0, Math.min(1, alpha)) * ALPHA_BUCKETS);
+  return FILL_STYLES[idx];
+}
+
 export default function Particles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -21,30 +32,52 @@ export default function Particles() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Respect reduced-motion — static render only
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const isMobile = window.innerWidth < 768;
-    let animationId: number;
+    const dpr = window.devicePixelRatio || 1;
+
+    let animationId: number | null = null;
     let time = 0;
     let dots: Dot[] = [];
     let ripples: { x: number; y: number; time: number }[] = [];
     let frameCount = 0;
+    let logicalW = window.innerWidth;
+    let logicalH = window.innerHeight;
 
     function resize() {
-      canvas!.width = window.innerWidth;
-      canvas!.height = window.innerHeight;
+      logicalW = window.innerWidth;
+      logicalH = window.innerHeight;
+      // Apply devicePixelRatio scaling — fixes blurry canvas on retina
+      canvas!.width = Math.floor(logicalW * dpr);
+      canvas!.height = Math.floor(logicalH * dpr);
+      canvas!.style.width = `${logicalW}px`;
+      canvas!.style.height = `${logicalH}px`;
+      ctx!.setTransform(1, 0, 0, 1, 0, 0);
+      ctx!.scale(dpr, dpr);
       initDots();
     }
 
+    // Sea rectangle — full-width lower portion of the viewport, starting at
+    // the dock's plank surface so the dock visually rests on the waves.
+    const SEA_LEFT = 0;
+    const SEA_RIGHT = 1;
+    const SEA_TOP = 0.58;
+    const SEA_BOTTOM = 1;
+
     function initDots() {
-      const w = canvas!.width;
-      const h = canvas!.height;
+      const w = logicalW;
+      const h = logicalH;
       const spacing = isMobile ? 14 : 7;
       dots = [];
 
-      for (let y = 0; y < h; y += spacing) {
-        for (let x = 0; x < w; x += spacing) {
-          // Only create dots for potential sea area (right ~40% of screen + margin)
-          if (x < w * 0.3) continue;
+      const x0 = w * SEA_LEFT;
+      const x1 = w * SEA_RIGHT;
+      const y0 = h * SEA_TOP;
+      const y1 = h * SEA_BOTTOM;
 
+      for (let y = y0; y < y1; y += spacing) {
+        for (let x = x0; x < x1; x += spacing) {
           dots.push({
             baseX: x,
             baseY: y,
@@ -58,16 +91,6 @@ export default function Particles() {
       }
     }
 
-    function shorelineX(y: number, h: number, t: number): number {
-      const ny = y / h;
-      const base = 0.45;
-      const curve1 = Math.sin(ny * 4 + t * 0.4) * 0.04;
-      const curve2 = Math.sin(ny * 7 - t * 0.6) * 0.02;
-      const curve3 = Math.sin(ny * 2 + t * 0.2) * 0.03;
-      const lap = Math.sin(t * 2.0) * 0.03 + Math.sin(t * 3.2) * 0.015;
-      return base + curve1 + curve2 + curve3 + lap;
-    }
-
     function draw() {
       frameCount++;
       // On mobile, only draw every other frame to save CPU
@@ -75,22 +98,15 @@ export default function Particles() {
         animationId = requestAnimationFrame(draw);
         return;
       }
-      const w = canvas!.width;
-      const h = canvas!.height;
+      const w = logicalW;
+      const h = logicalH;
       time += 0.006;
 
-      // Clear with shore color
+      // Paint the dark night-sea background across the full canvas
       ctx!.fillStyle = '#1a1025';
       ctx!.fillRect(0, 0, w, h);
 
       for (const dot of dots) {
-        const shore = shorelineX(dot.baseY, h, time) * w;
-        const distFromShore = dot.baseX - shore;
-        const foamWidth = 25 + Math.sin(dot.baseY * 0.02 + time * 2) * 8;
-
-        // Skip if on shore side
-        if (distFromShore < -foamWidth) continue;
-
         const nx = dot.baseX / w;
         const ny = dot.baseY / h;
 
@@ -119,36 +135,20 @@ export default function Particles() {
           }
         }
 
-        if (distFromShore < 0) {
-          // Foam
-          const foamIntensity = 1 - Math.abs(distFromShore) / foamWidth;
-          const alpha = 0.15 + foamIntensity * 0.4;
-          const v = dot.brightness + 30;
-          ctx!.beginPath();
-          ctx!.arc(drawX + rippleOffset, drawY, dot.radius * 0.8, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(180, 175, 195, ${alpha})`;
-          ctx!.fill();
-        } else {
-          // Sea
-          const seaDepth = Math.min(1, distFromShore / (w * 0.5));
+        const wave1 = Math.sin(nx * 6 + ny * 3 + time * 1.2) * 0.12;
+        const wave2 = Math.sin(nx * 4 - ny * 5 + time * 0.9) * 0.08;
+        const waveVal = wave1 + wave2;
 
-          const wave1 = Math.sin(nx * 6 + ny * 3 + time * 1.2) * 0.12;
-          const wave2 = Math.sin(nx * 4 - ny * 5 + time * 0.9) * 0.08;
-          const waveVal = wave1 + wave2;
+        // Dithered density — fade out dots whose phase bucket is too high
+        const density = 0.45 + waveVal;
+        if ((dot.phase / (Math.PI * 2)) > density) continue;
 
-          // Fade out particles that are too sparse
-          const density = 0.2 + seaDepth * 0.35 + waveVal;
-          if ((dot.phase / (Math.PI * 2)) > density) continue;
+        const alpha = 0.3 + waveVal * 0.25;
 
-          const v = dot.brightness + waveVal * 20 + rippleOffset;
-          const alpha = 0.15 + seaDepth * 0.35 + waveVal * 0.15;
-          const r = dot.radius + seaDepth;
-
-          ctx!.beginPath();
-          ctx!.arc(drawX + rippleOffset, drawY, r, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(180, 175, 195, ${Math.min(0.65, Math.max(0.08, alpha))})`;
-          ctx!.fill();
-        }
+        ctx!.beginPath();
+        ctx!.arc(drawX + rippleOffset, drawY, dot.radius, 0, Math.PI * 2);
+        ctx!.fillStyle = styleForAlpha(Math.min(0.7, Math.max(0.12, alpha)));
+        ctx!.fill();
       }
 
       // Draw ripple rings (skip on mobile)
@@ -162,7 +162,7 @@ export default function Particles() {
             if (radius < 0) continue;
             ctx!.beginPath();
             ctx!.arc(rip.x, rip.y, radius, 0, Math.PI * 2);
-            ctx!.strokeStyle = `rgba(180, 175, 195, ${fade * 0.3 * (1 - ring * 0.3)})`;
+            ctx!.strokeStyle = styleForAlpha(fade * 0.3 * (1 - ring * 0.3));
             ctx!.lineWidth = 1.5 - ring * 0.4;
             ctx!.stroke();
           }
@@ -176,18 +176,40 @@ export default function Particles() {
     function handleClick(e: MouseEvent) { ripples.push({ x: e.clientX, y: e.clientY, time }); }
     function handleTouch(e: TouchEvent) { ripples.push({ x: e.touches[0].clientX, y: e.touches[0].clientY, time }); }
 
+    function handleVisibility() {
+      if (document.hidden) {
+        // Pause the loop to stop burning CPU on a hidden tab
+        if (animationId !== null) cancelAnimationFrame(animationId);
+        animationId = null;
+      } else if (animationId === null && !reducedMotion) {
+        animationId = requestAnimationFrame(draw);
+      }
+    }
+
     resize();
-    draw();
+
+    if (reducedMotion) {
+      // Render a single static frame — no rAF loop
+      draw();
+      // Prevent the loop from being scheduled again
+      if (animationId !== null) cancelAnimationFrame(animationId);
+      animationId = null;
+    } else {
+      animationId = requestAnimationFrame(draw);
+    }
 
     window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', handleVisibility);
     if (!isMobile) {
+      // passive: true lets the browser scroll without waiting on our handler
       window.addEventListener('click', handleClick);
-      window.addEventListener('touchstart', handleTouch);
+      window.addEventListener('touchstart', handleTouch, { passive: true });
     }
 
     return () => {
-      cancelAnimationFrame(animationId);
+      if (animationId !== null) cancelAnimationFrame(animationId);
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibility);
       if (!isMobile) {
         window.removeEventListener('click', handleClick);
         window.removeEventListener('touchstart', handleTouch);

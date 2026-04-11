@@ -44,7 +44,20 @@ async function lookupExternal(title: string, type: ContentType) {
 
   if (type === 'manga') {
     const detail = await searchMangaJikan(title);
-    if (detail) return { ...base, ...detail, backdropUrls: [] };
+    if (detail) {
+      // Use the canonical Jikan title for the Mangago slug when available
+      const slugTitle = (detail.title ?? title).toLowerCase()
+        .replace(/[:\-–—!?.,'"()\[\]]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+      return {
+        ...base,
+        ...detail,
+        backdropUrls: [],
+        external_id: `https://www.mangago.me/read-manga/${slugTitle}/`,
+      };
+    }
   }
 
   if (type === 'movie' || type === 'tv' || type === 'kdrama') {

@@ -363,7 +363,7 @@ export default function GuestCat() {
       ref={catRef}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
-      className="fixed bottom-3 left-3 z-50 cursor-pointer select-none"
+      className="fixed bottom-[42vh] left-[30vw] -translate-x-1/2 z-50 cursor-pointer select-none"
     >
       <div className="relative">
         {/* Ethereal glow — warmer when purring */}

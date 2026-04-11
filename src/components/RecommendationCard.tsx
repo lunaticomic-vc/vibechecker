@@ -178,6 +178,12 @@ async function autoAddToProgress(rec: Recommendation) {
 interface Props {
   recommendation: Recommendation;
   onAccept?: () => void;
+  /**
+   * When true, force the mobile/inline layout regardless of viewport width.
+   * Used when the card is rendered inside a constrained container (e.g. the phone UI on page.tsx)
+   * so the fixed-position desktop poster/screencaps don't overflow the frame.
+   */
+  compact?: boolean;
 }
 
 type AccordionSection = 'description' | 'vibe' | 'reddit' | null;
@@ -319,15 +325,16 @@ function ScreencapCard({ src, alt, width, delay }: { src: string; alt: string; w
   );
 }
 
-export default function RecommendationCard({ recommendation, onAccept }: Props) {
+export default function RecommendationCard({ recommendation, onAccept, compact = false }: Props) {
   const [isMobile, setIsMobile] = useState(false);
   const [openSection, setOpenSection] = useState<AccordionSection>('description');
 
   useEffect(() => {
-    const mobile = window.innerWidth < 768;
+    // compact mode forces mobile layout (no floating posters) so the card fits inside the phone frame
+    const mobile = compact || window.innerWidth < 768;
     setIsMobile(mobile);
     if (mobile) setOpenSection(null);
-  }, []);
+  }, [compact]);
 
   if (recommendation.type === 'research') {
     return <ResearchCard recommendation={recommendation} />;

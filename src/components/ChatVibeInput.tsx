@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { ContentType } from '@/types/index';
 
 interface ChatMessage {
@@ -158,23 +159,6 @@ export default function ChatVibeInput({ contentType, onVibeReady, loading, isOwn
           )}
         </div>
 
-        {/* Suggestion chips — visible until first message sent */}
-        {messages.filter(m => m.role === 'user').length === 0 && (
-          <div className="border-t border-[#e9e4f5]/40 px-3 pt-2 pb-1 bg-[#faf8ff]/80">
-            <div className="flex flex-wrap gap-1.5">
-              {(VIBES_BY_TYPE[contentType] ?? []).map(example => (
-                <button
-                  key={example}
-                  onClick={() => { setInput(example); inputRef.current?.focus(); }}
-                  className="rounded-full border border-[#e9e4f5] bg-white/70 px-2.5 py-1 text-[10px] text-[#b8b0c8] hover:border-[#c4b5fd] hover:text-[#7c3aed] hover:bg-white transition-all"
-                >
-                  {example}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Input area */}
         <div className="border-t border-[#e9e4f5]/60 px-3 py-2.5 bg-white/50">
           {isOwner && (
@@ -216,6 +200,82 @@ export default function ChatVibeInput({ contentType, onVibeReady, loading, isOwn
           <div className="w-16 h-1 rounded-full bg-[#e9e4f5]" />
         </div>
       </div>
+
+      {/* Suggestion keyboard — keys below the chat, disappears after first submit */}
+      <AnimatePresence>
+        {messages.filter(m => m.role === 'user').length === 0 && (
+          <motion.div
+            key="vibe-keyboard"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24, scale: 0.94 }}
+            transition={{ duration: 0.32, ease: [0.22, 0.9, 0.32, 1] }}
+            className="mt-4 px-1"
+          >
+            <div className="grid grid-cols-2 gap-2.5">
+              {(VIBES_BY_TYPE[contentType] ?? []).map(example => (
+                <button
+                  key={example}
+                  type="button"
+                  onClick={() => { setInput(example); inputRef.current?.focus(); }}
+                  className="vibe-key"
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style jsx>{`
+        .vibe-key {
+          background: linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%);
+          border: 1px solid rgba(196, 181, 253, 0.55);
+          border-bottom-width: 3px;
+          border-bottom-color: rgba(155, 135, 200, 0.55);
+          border-radius: 12px;
+          padding: 12px 10px;
+          min-height: 52px;
+          font-size: 11px;
+          font-weight: 500;
+          color: #5a5270;
+          letter-spacing: 0.01em;
+          line-height: 1.35;
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow:
+            0 2px 0 rgba(196, 181, 253, 0.4),
+            0 5px 12px rgba(196, 181, 253, 0.22),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+          transition:
+            transform 0.12s ease,
+            box-shadow 0.15s ease,
+            border-color 0.2s,
+            color 0.2s;
+          cursor: pointer;
+          user-select: none;
+        }
+        .vibe-key:hover {
+          transform: translateY(-2px);
+          border-color: rgba(124, 58, 237, 0.45);
+          color: #7c3aed;
+          box-shadow:
+            0 4px 0 rgba(155, 135, 200, 0.55),
+            0 8px 18px rgba(196, 181, 253, 0.32),
+            inset 0 1px 0 rgba(255, 255, 255, 0.95);
+        }
+        .vibe-key:active {
+          transform: translateY(1px);
+          border-bottom-width: 2px;
+          box-shadow:
+            0 1px 0 rgba(155, 135, 200, 0.4),
+            0 2px 5px rgba(196, 181, 253, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+      `}</style>
     </div>
   );
 }
