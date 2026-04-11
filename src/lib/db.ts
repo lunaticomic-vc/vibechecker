@@ -152,6 +152,8 @@ export async function initDb(): Promise<Client> {
 
   if (!tableSql.includes("'substack'") || !tableSql.includes("'kdrama'") || !tableSql.includes("'podcast'") || !tableSql.includes("'game'")) {
     dbLog('Migrating favorites table to update type CHECK constraint...');
+    // Disable foreign keys during migration to prevent CASCADE deletes when dropping the old table
+    await db.execute('PRAGMA foreign_keys = OFF');
     await db.batch([
       `CREATE TABLE favorites_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -166,6 +168,7 @@ export async function initDb(): Promise<Client> {
       `DROP TABLE favorites`,
       `ALTER TABLE favorites_new RENAME TO favorites`,
     ]);
+    await db.execute('PRAGMA foreign_keys = ON');
     dbLog('Favorites table migrated ✓');
   }
 
