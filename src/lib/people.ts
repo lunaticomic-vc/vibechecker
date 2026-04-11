@@ -111,8 +111,7 @@ export async function searchPersonBrave(name: string): Promise<BravePersonResult
       const resultTitle = ((results[0] as Record<string, unknown>).title as string) ?? '';
       const cleaned = resultTitle
         .replace(/\s*[\(\[].*?[\)\]]\s*/g, ' ')
-        .replace(/\s*[-–—|:].*(imdb|wiki|tmdb|youtube|instagram|twitter).*/i, '')
-        .replace(/\s*[-–—|].*$/i, '')
+        .replace(/\s*[-–—|:]\s*(imdb|wiki|wikipedia|tmdb|youtube|instagram|twitter|biography|filmography|rotten|metacritic|fandom|actor|actress|director).*/i, '')
         .trim();
       if (cleaned && cleaned.length > 1 && cleaned.length < 100) {
         fixedName = cleaned;
