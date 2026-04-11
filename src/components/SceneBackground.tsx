@@ -119,12 +119,15 @@ export default function SceneBackground() {
       {CONSTELLATIONS.map((c, ci) => (
         <div
           key={c.name}
-          className="absolute"
+          className="sb-constellation absolute"
           style={{
             left: `${c.box.left}%`,
             top: `${c.box.top}%`,
             width: `${c.box.width}%`,
             height: `${c.box.height}%`,
+            // Each constellation drifts on its own schedule so they never sync
+            animationDelay: `${(ci * 2.7).toFixed(2)}s`,
+            animationDuration: `${18 + ci * 4}s`,
           }}
         >
           <svg
@@ -132,7 +135,7 @@ export default function SceneBackground() {
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
           >
-            {/* Connecting lines — very faint so they read as hints, not scaffolding */}
+            {/* Connecting lines — delicate, breathing softly */}
             <g className="sb-constellation-lines">
               {c.lines.map(([a, b], i) => {
                 const s1 = c.stars[a];
@@ -144,28 +147,46 @@ export default function SceneBackground() {
                     y1={s1.y}
                     x2={s2.x}
                     y2={s2.y}
-                    stroke="rgba(196,181,253,0.28)"
-                    strokeWidth="0.35"
+                    stroke="rgba(230,220,255,0.22)"
+                    strokeWidth="0.22"
                     strokeLinecap="round"
                   />
                 );
               })}
             </g>
-            {/* Named stars — a touch brighter than the ambient star field */}
-            {c.stars.map((s, si) => (
-              <circle
-                key={si}
-                cx={s.x}
-                cy={s.y}
-                r={s.r}
-                fill="rgba(252,249,255,0.95)"
-                className="sb-constellation-star"
-                style={{
-                  // Staggered twinkle keyed off constellation + star index
-                  animationDelay: `${(ci * 0.7 + si * 0.4) % 3.5}s`,
-                }}
-              />
-            ))}
+            {/* Named stars — soft halo + tight core, staggered twinkle */}
+            {c.stars.map((s, si) => {
+              const delay = ((ci * 1.7 + si * 0.9) % 4).toFixed(2);
+              const dur = (3 + ((ci + si) % 3) * 0.7).toFixed(2);
+              return (
+                <g key={si}>
+                  {/* Outer halo — larger, barely-there glow */}
+                  <circle
+                    cx={s.x}
+                    cy={s.y}
+                    r={s.r * 2.4}
+                    fill="rgba(210,195,255,0.1)"
+                    className="sb-constellation-halo"
+                    style={{
+                      animationDelay: `${delay}s`,
+                      animationDuration: `${dur}s`,
+                    }}
+                  />
+                  {/* Core star — a touch smaller than before for elegance */}
+                  <circle
+                    cx={s.x}
+                    cy={s.y}
+                    r={s.r * 0.85}
+                    fill="rgba(252,249,255,0.88)"
+                    className="sb-constellation-star"
+                    style={{
+                      animationDelay: `${delay}s`,
+                      animationDuration: `${dur}s`,
+                    }}
+                  />
+                </g>
+              );
+            })}
           </svg>
         </div>
       ))}
@@ -348,25 +369,51 @@ export default function SceneBackground() {
           0%, 100% { opacity: 0.28; transform: scale(0.8); }
           50%      { opacity: 1;    transform: scale(1.2); }
         }
-        /* Constellation stars twinkle in sync with their group */
+        /* Whole constellations drift very slightly on their own schedule */
+        .sb-constellation {
+          animation-name: sb-constellation-drift;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+          will-change: transform;
+        }
+        @keyframes sb-constellation-drift {
+          0%, 100% { transform: translate(0, 0); }
+          25%      { transform: translate(0.7px, -0.4px); }
+          50%      { transform: translate(-0.4px, 0.6px); }
+          75%      { transform: translate(0.5px, 0.3px); }
+        }
+        /* Core stars — elegant scale + opacity twinkle */
         :global(.sb-constellation-star) {
-          filter: drop-shadow(0 0 2px rgba(255, 250, 255, 0.8))
-                  drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
-          animation: sb-star-pulse 3.5s ease-in-out infinite;
+          animation-name: sb-star-elegant;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+          transform-box: fill-box;
+          transform-origin: center;
+          filter: drop-shadow(0 0 1.5px rgba(255, 250, 255, 0.55));
+        }
+        @keyframes sb-star-elegant {
+          0%, 100% { opacity: 0.55; transform: scale(0.9); }
+          50%      { opacity: 1;    transform: scale(1.1); }
+        }
+        /* Halos bloom slightly out of phase with their cores */
+        :global(.sb-constellation-halo) {
+          animation-name: sb-halo-bloom;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
           transform-box: fill-box;
           transform-origin: center;
         }
-        @keyframes sb-star-pulse {
-          0%, 100% { opacity: 0.6; }
-          50%      { opacity: 1; }
+        @keyframes sb-halo-bloom {
+          0%, 100% { opacity: 0.08; transform: scale(0.85); }
+          50%      { opacity: 0.28; transform: scale(1.18); }
         }
-        /* Connecting lines pulse gently */
+        /* Connecting lines breathe gently */
         :global(.sb-constellation-lines) {
-          animation: sb-lines-pulse 5s ease-in-out infinite;
+          animation: sb-lines-soft 6s ease-in-out infinite;
         }
-        @keyframes sb-lines-pulse {
-          0%, 100% { opacity: 0.55; }
-          50%      { opacity: 0.9; }
+        @keyframes sb-lines-soft {
+          0%, 100% { opacity: 0.4; }
+          50%      { opacity: 0.7; }
         }
         .sb-dock-lamp {
           width: 9px;

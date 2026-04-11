@@ -110,12 +110,26 @@ export default function Particles() {
         const nx = dot.baseX / w;
         const ny = dot.baseY / h;
 
-        // Wave displacement
+        // Per-dot fine wave displacement
         const waveX = Math.sin(ny * 3 + time * 1.2 + dot.phase) * 4;
         const waveY = Math.cos(nx * 4 + time * 0.9 + dot.phase) * 2;
 
+        // Surface wave — the sea's top rises and falls like a real water line.
+        // Stacked sines moving in opposite directions at different wavelengths
+        // read as a natural undulating surface.
+        const surfaceWave =
+          Math.sin(nx * 6 + time * 1.5) * 5 +
+          Math.sin(nx * 11 - time * 2.2) * 2.5 +
+          Math.sin(nx * 3 + time * 0.8) * 2;
+        // Depth falloff — full effect at the top of the sea, small residual
+        // swell in the deep water. `^1.5` curve keeps the top band lively
+        // without making deep dots jitter.
+        const seaDepth01 = Math.max(0, Math.min(1, (ny - SEA_TOP) / (1 - SEA_TOP)));
+        const surfaceFalloff = Math.pow(1 - seaDepth01, 1.5);
+        const surfaceShift = surfaceWave * (0.25 + surfaceFalloff * 1.4);
+
         const drawX = dot.baseX + dot.jitterX + waveX;
-        const drawY = dot.baseY + dot.jitterY + waveY;
+        const drawY = dot.baseY + dot.jitterY + waveY + surfaceShift;
 
         // Click ripple effects (skip on mobile)
         let rippleOffset = 0;
