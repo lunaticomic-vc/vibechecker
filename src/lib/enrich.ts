@@ -44,11 +44,31 @@ async function lookupExternal(title: string, type: ContentType) {
 
   if (type === 'movie' || type === 'tv' || type === 'kdrama') {
     const tmdbType = type === 'movie' ? 'movie' as const : 'tv' as const;
-    const detail = await searchTMDBDetailed(title, tmdbType);
+    const searchQuery = type === 'kdrama' ? `${title} korean drama` : title;
+    const detail = await searchTMDBDetailed(searchQuery, tmdbType);
     if (detail) return { ...base, ...detail };
   }
 
   if (type === 'youtube') {
+    // If user pasted a YouTube URL, extract video ID and use it directly
+    const ytUrlMatch = title.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]+)/);
+    if (ytUrlMatch) {
+      const videoId = ytUrlMatch[1];
+      // Look up video details by searching with the ID
+      const results = await searchYouTube(videoId);
+      if (results.length > 0) {
+        const top = results[0];
+        return {
+          ...base,
+          title: top.title,
+          posterUrl: top.thumbnail,
+          description: `By ${top.channelTitle}`,
+          external_id: buildYouTubeWatchUrl(videoId),
+        };
+      }
+      // Even if lookup fails, preserve the URL as external_id
+      return { ...base, external_id: `https://www.youtube.com/watch?v=${videoId}` };
+    }
     const results = await searchYouTube(title);
     if (results.length > 0) {
       const top = results[0];
@@ -134,11 +154,13 @@ async function gptEnrich(title: string, type: ContentType, context: { year?: str
         role: 'system',
         content: `You enrich a manually-added ${label} with metadata. Return ONLY JSON, no markdown.
 
+CRITICAL: This item is a ${label.toUpperCase()}. Only return information about a ${label} with this title. Do NOT confuse it with items from other categories. For example, "Goblin" as a K-Drama is the Korean drama "Guardian: The Lonely and Great God", NOT the anime "Goblin Slayer". Always match the EXACT content type: ${type}.
+
 REQUIRED fields:
-- "description": A compelling 2-3 sentence summary of "${title}". ${externalDesc ? `Use your knowledge and this reference: "${externalDesc}". Do NOT just copy — write something engaging.` : 'Use your knowledge to write something engaging.'}
+- "description": A compelling 2-3 sentence summary of "${title}" as a ${label}. ${externalDesc ? `Use your knowledge and this reference: "${externalDesc}". Do NOT just copy — write something engaging.` : 'Use your knowledge to write something engaging.'}
 - "reasoning": 2-3 sentences explaining why this ${label} fits the user's taste based on their profile below. Be specific — reference themes, tropes, or titles they love.
-- "author": The creator/author/artist name. For books/poems/essays/short stories, the writer. For podcasts, the host. For research, the primary author or institution. Return the most well-known name. If unknown, return null.
-- "canonicalTitle": The correct, properly formatted title. Fix any typos, capitalization, or abbreviations. Return the standard title as it would appear in a library catalog or official source.
+- "author": The creator/author/artist name. For books/poems/essays/short stories, the writer. For podcasts, the host. For research, the primary author or institution. For games, the developer/studio. For K-Dramas, the director. Return the most well-known name. If unknown, return null.
+- "canonicalTitle": The correct, properly formatted title for this specific ${label}. Fix any typos, capitalization, or abbreviations. Return the standard title as it would appear in an official source. Do NOT return a title from a different content type.
 ${tasteProfile ? `\nUser taste profile:\n${tasteProfile.slice(0, 1500)}` : '\nNo taste profile available — write a general appeal instead.'}
 
 Return: {"description": "...", "reasoning": "...", "interests": ["tag1", "tag2", "tag3"], "author": "...", "canonicalTitle": "..."}`,
