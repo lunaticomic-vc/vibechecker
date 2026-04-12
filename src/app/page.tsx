@@ -508,14 +508,7 @@ function InlineChat({ contentType, onVibeReady, loading, isOwner }: { contentTyp
 
   const examples = VIBES_BY_TYPE[contentType] ?? [];
   const hasSent = messages.some(m => m.role === 'user');
-  const showKeyboard = !hasSent; // keyboard collapses after first send
-
-  // Visual keyboard layout — 3 rows of keys
-  const KB_ROWS = [
-    'q w e r t y u i o p'.split(' '),
-    'a s d f g h j k l'.split(' '),
-    'z x c v b n m'.split(' '),
-  ];
+  const showKeyboard = !hasSent; // suggestion tray collapses after first send
 
   return (
     <>
@@ -552,66 +545,22 @@ function InlineChat({ contentType, onVibeReady, loading, isOwner }: { contentTyp
         </div>
       </div>
 
-      {/* Virtual iPad keyboard — slides up before first send, collapses after */}
+      {/* Suggestion tray — keyboard-shaped tray that slides up with example vibes, collapses after first send */}
       <div
-        className={`transition-all duration-500 ease-out overflow-hidden ${showKeyboard ? 'max-h-[260px] opacity-100' : 'max-h-0 opacity-0'}`}
+        className={`transition-all duration-500 ease-out overflow-hidden ${showKeyboard ? 'max-h-[120px] opacity-100' : 'max-h-0 opacity-0'}`}
         style={{ background: '#d1d3d9' }}
       >
-        {/* Prediction / suggestion bar — the example vibes live here */}
-        {examples.length > 0 && (
-          <div className="flex gap-1 px-1.5 pt-1.5 pb-1 overflow-x-auto scrollbar-none">
-            {examples.map(ex => (
-              <button
-                key={ex}
-                onClick={() => { setInput(ex); inputRef.current?.focus(); }}
-                className="shrink-0 rounded-md bg-white px-3 py-1.5 text-[12px] text-[#333] shadow-sm hover:bg-[#f0edff] active:bg-[#e8e4ff] transition-colors"
-                style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.15)' }}
-              >
-                {ex}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Visual key rows — decorative, clicking a key types the letter */}
-        <div className="flex flex-col items-center gap-[5px] px-1 py-1.5">
-          {KB_ROWS.map((row, ri) => (
-            <div key={ri} className="flex gap-[5px] justify-center">
-              {ri === 2 && (
-                <div className="w-9 h-[34px] rounded-md bg-white/90 flex items-center justify-center shadow-sm" style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.2)' }}>
-                  <svg className="w-3.5 h-3.5 text-[#555]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
-                </div>
-              )}
-              {row.map(key => (
-                <button
-                  key={key}
-                  onClick={() => { setInput(prev => prev + key); inputRef.current?.focus(); }}
-                  className="w-[28px] sm:w-[32px] h-[34px] rounded-md bg-white text-[14px] text-[#333] shadow-sm active:bg-[#bbb] transition-colors flex items-center justify-center"
-                  style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.25)' }}
-                >
-                  {key}
-                </button>
-              ))}
-              {ri === 2 && (
-                <button
-                  onClick={() => setInput(prev => prev.slice(0, -1))}
-                  className="w-9 h-[34px] rounded-md bg-white/80 flex items-center justify-center shadow-sm active:bg-[#bbb] transition-colors"
-                  style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.2)' }}
-                >
-                  <svg className="w-4 h-4 text-[#555]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9.75L14.25 12m0 0l2.25 2.25M14.25 12l2.25-2.25M14.25 12L12 14.25m-2.58 4.92l-6.375-6.375a1.125 1.125 0 010-1.59L9.42 4.83c.211-.211.498-.33.796-.33H19.5a2.25 2.25 0 012.25 2.25v10.5a2.25 2.25 0 01-2.25 2.25h-9.284c-.298 0-.585-.119-.796-.33z" /></svg>
-                </button>
-              )}
-            </div>
+        <div className="flex flex-wrap gap-1.5 px-2 py-2.5 justify-center">
+          {examples.map(ex => (
+            <button
+              key={ex}
+              onClick={() => { setInput(ex); inputRef.current?.focus(); }}
+              className="rounded-lg bg-white px-3 py-2 text-[12px] text-[#333] shadow-sm hover:bg-[#f0edff] active:bg-[#e8e4ff] transition-colors"
+              style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.18)' }}
+            >
+              {ex}
+            </button>
           ))}
-          {/* Bottom row: space bar */}
-          <div className="flex gap-[5px] justify-center">
-            <button onClick={() => setInput(prev => prev + ' ')} className="w-44 sm:w-52 h-[34px] rounded-md bg-white text-[12px] text-[#999] shadow-sm active:bg-[#bbb] transition-colors" style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.25)' }}>
-              space
-            </button>
-            <button onClick={send} disabled={!input.trim()} className="h-[34px] px-4 rounded-md bg-[#8b5cf6] text-white text-[12px] font-semibold shadow-sm active:bg-[#7c3aed] disabled:opacity-40 transition-colors" style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.25)' }}>
-              send
-            </button>
-          </div>
         </div>
       </div>
     </>
