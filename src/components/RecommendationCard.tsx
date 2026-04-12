@@ -62,7 +62,7 @@ const DIFFICULTY_STYLES: Record<KnowledgeChecklistItem['difficulty'], string> = 
   advanced: 'bg-[#fee2e2] text-[#991b1b] border-[#fecaca]',
 };
 
-function ResearchCard({ recommendation }: { recommendation: Recommendation }) {
+function ResearchCard({ recommendation, compact = false }: { recommendation: Recommendation; compact?: boolean }) {
   const { title, description, researchLinks = [], knowledgeChecklist = [] } = recommendation;
   const [checked, setChecked] = useState<Record<number, boolean>>({});
 
@@ -330,14 +330,14 @@ export default function RecommendationCard({ recommendation, onAccept, compact =
   const [openSection, setOpenSection] = useState<AccordionSection>('description');
 
   useEffect(() => {
-    // compact mode forces mobile layout (no floating posters) so the card fits inside the phone frame
     const mobile = compact || window.innerWidth < 768;
     setIsMobile(mobile);
-    if (mobile) setOpenSection(null);
+    // In compact mode keep description open so the card isn't empty
+    if (mobile && !compact) setOpenSection(null);
   }, [compact]);
 
   if (recommendation.type === 'research') {
-    return <ResearchCard recommendation={recommendation} />;
+    return <ResearchCard recommendation={recommendation} compact={compact} />;
   }
 
   const { title, type, description, reasoning, actionUrl, actionLabel, thumbnailUrl, imageUrls, actors, year, episodeInfo, redditInsights, interests, tropes, channelName } = recommendation;

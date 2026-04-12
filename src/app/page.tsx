@@ -456,21 +456,21 @@ export default function Home() {
 /* ─── Inline Chat (renders inside the tablet frame) ─── */
 
 const VIBES_BY_TYPE: Partial<Record<ContentType, string[]>> = {
-  movie: ['something light while i eat', 'need a good cry', 'rainy day, slow and pretty'],
-  tv: ['sleepover binge', 'something addictive', 'cozy and feel-good'],
-  anime: ['beautiful animation', 'unhinged and chaotic', 'emotional and bittersweet'],
-  youtube: ['something light ~20 mins', 'deep dive niche', 'procrastinating, unhinged'],
-  kdrama: ['enemies to lovers', 'funny and lighthearted', 'cozy romance'],
-  substack: ['makes me think differently', 'personal essay, raw', 'sharp cultural criticism'],
-  book: ['something immersive', 'short and beautiful', 'cozy like a warm blanket'],
-  poetry: ['heartbreak but beautiful', 'nature and stillness', 'angry and raw'],
-  short_story: ['surreal and dreamlike', 'twist ending', 'quiet and melancholy'],
-  essay: ['philosophical and deep', 'vulnerable and real', 'sharp commentary'],
-  podcast: ['true crime but thoughtful', 'funny for commute', 'deep conversation'],
-  research: ['rabbit hole', 'mind-blowing', 'niche topic'],
-  manga: ['beautiful art', 'dark psychological', 'wholesome slice of life'],
-  comic: ['gritty noir', 'classic superhero', 'indie and artistic'],
-  game: ['story-driven', 'cozy and relaxing', 'open world to explore'],
+  movie: ['i\'m having lunch, need something light and fun', 'need a good cry, something emotionally devastating', 'rainy evening, give me something slow and beautiful'],
+  tv: ['sleepover binge, something i can\'t stop watching', 'cozy and feel-good, zero drama or stress', 'something addictive with a mystery to solve'],
+  anime: ['something with breathtaking animation and a slow burn', 'unhinged and chaotic, surprise me completely', 'emotional and bittersweet, the kind that stays with you'],
+  youtube: ['something light and interesting while i eat, around 20 min', 'a deep dive into something niche and fascinating', 'i\'m procrastinating, give me something unhinged and funny'],
+  kdrama: ['enemies to lovers with a slow burn that kills me', 'something funny and lighthearted after a long day', 'cozy romance, nothing too heavy or dramatic'],
+  substack: ['something that completely changes how i think about things', 'a raw personal essay that feels uncomfortably honest', 'sharp cultural criticism with real wit'],
+  book: ['something so immersive i forget where i am', 'short and beautifully written, under 200 pages', 'cozy and comforting, like being wrapped in a warm blanket'],
+  poetry: ['heartbreak but make it devastatingly beautiful', 'something about nature and stillness and being alone', 'angry and raw, no polished edges, just feeling'],
+  short_story: ['surreal and dreamlike, like waking from a strange dream', 'a twist ending that haunts me for days', 'quiet and melancholy, the beauty in sadness'],
+  essay: ['something philosophical that makes me question everything', 'vulnerable and real, someone baring their soul', 'sharp cultural commentary with teeth'],
+  podcast: ['true crime but thoughtful and respectful, not sensational', 'something genuinely funny for my commute', 'a deep conversation about life that feels like eavesdropping'],
+  research: ['a rabbit hole i can get completely lost in', 'something mind-blowing about how the universe works', 'a niche topic nobody talks about that deserves attention'],
+  manga: ['beautiful art and slow pacing, something meditative', 'dark and psychological, mess me up a little', 'wholesome slice of life that makes me smile'],
+  comic: ['gritty noir with morally grey characters', 'colorful and fun, classic superhero vibes', 'indie and artistic, something different from the mainstream'],
+  game: ['story-driven, something that makes me feel things', 'cozy and relaxing, a world i can escape into', 'open world to explore at my own pace, no pressure'],
 };
 
 interface ChatMessage { role: 'user' | 'assistant'; content: string }
@@ -545,17 +545,17 @@ function InlineChat({ contentType, onVibeReady, loading, isOwner }: { contentTyp
         </div>
       </div>
 
-      {/* Suggestion tray — keyboard-shaped tray that slides up with example vibes, collapses after first send */}
+      {/* Suggestion tray — stacked vertically like a keyboard prediction area, collapses after first send */}
       <div
-        className={`transition-all duration-500 ease-out overflow-hidden ${showKeyboard ? 'max-h-[120px] opacity-100' : 'max-h-0 opacity-0'}`}
+        className={`transition-all duration-500 ease-out overflow-hidden ${showKeyboard ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}
         style={{ background: '#d1d3d9' }}
       >
-        <div className="flex flex-wrap gap-1.5 px-2 py-2.5 justify-center">
+        <div className="flex flex-col gap-1.5 px-3 py-2.5 overflow-y-auto max-h-[190px] scrollbar-thin">
           {examples.map(ex => (
             <button
               key={ex}
               onClick={() => { setInput(ex); inputRef.current?.focus(); }}
-              className="rounded-lg bg-white px-3 py-2 text-[12px] text-[#333] shadow-sm hover:bg-[#f0edff] active:bg-[#e8e4ff] transition-colors"
+              className="w-full text-left rounded-lg bg-white px-3 py-2 text-[12px] text-[#333] leading-snug shadow-sm hover:bg-[#f0edff] active:bg-[#e8e4ff] transition-colors"
               style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.18)' }}
             >
               {ex}
