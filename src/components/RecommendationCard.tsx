@@ -368,6 +368,138 @@ export default function RecommendationCard({ recommendation, onAccept, compact =
     window.open(actionUrl, '_blank');
   }
 
+  // ─── COMPACT MODE (iPad) — everything fits without scrolling ─── //
+  if (compact) {
+    // Icon-based section switcher for compact mode
+    const sections: { key: AccordionSection; icon: React.ReactNode; label: string; color: string; content: React.ReactNode | null }[] = [
+      description ? {
+        key: 'description' as AccordionSection, label: 'About', color: '#7c7291',
+        icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>,
+        content: <p className="text-[11px] text-[#5a5270] leading-relaxed">{description}</p>,
+      } : null,
+      reasoning ? {
+        key: 'vibe' as AccordionSection, label: 'Vibe', color: '#6b9a65',
+        icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>,
+        content: <p className="text-[11px] italic text-[#4a7044] leading-relaxed">{reasoning}</p>,
+      } : null,
+      redditInsights && redditInsights.length > 0 ? {
+        key: 'reddit' as AccordionSection, label: 'Reddit', color: '#b0a8c4',
+        icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" /></svg>,
+        content: redditInsights.length > 0 ? (
+          <div className="text-[10px] text-[#5a5270] leading-relaxed">
+            <span className="text-[9px] text-[#c4b5fd] font-medium">r/{redditInsights[0].subreddit}</span>
+            <span className="text-[9px] text-[#d0cadc] ml-1">+{redditInsights[0].score}</span>
+            <p className="mt-0.5">&ldquo;{redditInsights[0].comment}&rdquo;</p>
+          </div>
+        ) : null,
+      } : null,
+    ].filter((s): s is NonNullable<typeof s> => s !== null);
+
+    const activeSection = sections.find(s => s.key === openSection) ?? sections[0] ?? null;
+
+    // YouTube compact — thumbnail left, info right
+    if (isYouTube) {
+      return (
+        <div className="relative z-10 flex gap-3 w-full">
+          {thumbnailUrl && (
+            <div className="w-[38%] shrink-0 cursor-pointer" onClick={handleWatch}>
+              <img src={thumbnailUrl} alt={title} className="w-full rounded-xl border border-[#e9e4f5] object-cover" style={{ aspectRatio: '16/9' }} />
+            </div>
+          )}
+          <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+            <h2 className="text-sm font-bold text-[#2d2640] leading-tight line-clamp-2">{title}</h2>
+            {channelName && <p className="text-[10px] text-[#7c7291]">{channelName}</p>}
+            {interests && interests.length > 0 && (
+              <div className="flex flex-wrap gap-0.5">{interests.slice(0, 3).map((t, i) => <span key={i} className="text-[8px] text-[#7c3aed] bg-[#f5f3ff] border border-[#e9e4f5] px-1 py-0.5 rounded-full">{t}</span>)}</div>
+            )}
+            {reasoning && <p className="text-[10px] italic text-[#4a7044] leading-snug line-clamp-2">{reasoning}</p>}
+            <button onClick={handleWatch} className="mt-auto flex items-center justify-center gap-1.5 rounded-lg bg-[#8b5cf6] px-3 py-1.5 font-semibold text-white text-[11px] hover:bg-[#7c3aed] active:scale-[0.98]">
+              Watch <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Reading / Substack compact — no image, concise single card
+    if (isReadingType || isSubstack) {
+      return (
+        <div className="relative z-10 rounded-xl border border-[#e9e4f5] bg-white/92 backdrop-blur-sm p-4 flex flex-col gap-2 w-full">
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full border px-2 py-0.5 text-[9px] font-medium ${TYPE_COLORS[type] ?? ''}`}>{TYPE_LABELS[type] ?? type}</span>
+          </div>
+          <h2 className="text-base font-bold text-[#2d2640] leading-tight">{title}</h2>
+          {description && <p className="text-[11px] text-[#5a5270] leading-relaxed line-clamp-3">{description}</p>}
+          {reasoning && <p className="text-[11px] italic text-[#4a7044] leading-relaxed line-clamp-2">{reasoning}</p>}
+          <button onClick={handleWatch} className="flex items-center justify-center gap-1.5 rounded-lg bg-[#8b5cf6] px-3 py-1.5 font-semibold text-white text-[11px] hover:bg-[#7c3aed] active:scale-[0.98]">
+            {actionLabel} <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+          </button>
+        </div>
+      );
+    }
+
+    // Screen content compact (movie/tv/anime/kdrama/manga/comic/game) — poster left, info right
+    return (
+      <div className="relative z-10 flex gap-3 w-full">
+        {/* Left: poster */}
+        {poster && (
+          <div className="w-[32%] shrink-0">
+            <img src={poster} alt={`${title} poster`} className="w-full rounded-xl border border-[#e9e4f5] object-cover shadow-sm" style={{ aspectRatio: '2/3' }} />
+          </div>
+        )}
+        {/* Right: info */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+          <h2 className="text-sm font-bold text-[#2d2640] leading-tight line-clamp-2">{title}</h2>
+          <div className="flex flex-wrap items-center gap-1">
+            <span className={`rounded-full border px-1.5 py-0.5 text-[8px] font-medium ${TYPE_COLORS[type] ?? ''}`}>{TYPE_LABELS[type] ?? type}</span>
+            {year && <span className="text-[9px] text-[#7c7291]">{year}</span>}
+            {episodeInfo && <span className="text-[8px] text-[#8b5cf6]">{episodeInfo}</span>}
+          </div>
+          {actors && actors.length > 0 && (
+            <p className="text-[9px] text-[#7c7291] leading-tight">{actors.join(' · ')}</p>
+          )}
+          {interests && interests.length > 0 && (
+            <div className="flex flex-wrap gap-0.5">{interests.slice(0, 4).map((t, i) => <span key={i} className="text-[8px] text-[#7c3aed] bg-[#f5f3ff] border border-[#e9e4f5] px-1 py-0.5 rounded-full">{t}</span>)}</div>
+          )}
+
+          {/* Section icon switcher — one expanded at a time */}
+          {sections.length > 0 && (
+            <div className="flex gap-1 mt-1">
+              {sections.map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setOpenSection(prev => prev === s.key ? null : s.key)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] transition-all ${
+                    openSection === s.key
+                      ? 'bg-[#f5f3ff] border border-[#c4b5fd] text-[#7c3aed]'
+                      : 'bg-white/60 border border-[#e9e4f5] text-[#b0a8c4] hover:text-[#7c7291]'
+                  }`}
+                  style={{ color: openSection === s.key ? undefined : s.color }}
+                >
+                  {s.icon}
+                  {openSection === s.key && <span className="font-medium">{s.label}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Expanded section content */}
+          {activeSection && openSection === activeSection.key && (
+            <div className="max-h-[80px] overflow-y-auto scrollbar-thin rounded-md bg-[#faf8ff] border border-[#e9e4f5] p-2 mt-0.5">
+              {activeSection.content}
+            </div>
+          )}
+
+          <button onClick={handleWatch} className="mt-auto flex items-center justify-center gap-1.5 rounded-lg bg-[#8b5cf6] px-3 py-1.5 font-semibold text-white text-[11px] hover:bg-[#7c3aed] active:scale-[0.98]">
+            {actionLabel ?? 'Watch'} <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── NON-COMPACT MODE (full page) ─── //
+
   // Reading types (poetry, short_story, book, essay, podcast): simple card, no images
   if (isReadingType) {
     return (
