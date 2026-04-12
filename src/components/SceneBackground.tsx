@@ -2,7 +2,7 @@
 
 // Deterministic star field — computed with Math.sin so server-rendered
 // HTML matches client hydration exactly (no mismatch warnings).
-const STARS = Array.from({ length: 32 }, (_, i) => {
+const STARS = Array.from({ length: 60 }, (_, i) => {
   const rand = (k: number) => (Math.sin(i * 9301 + k * 49297) + 1) / 2;
   return {
     x: 1 + rand(1) * 98,              // 1%..99% width
@@ -29,7 +29,7 @@ const CONSTELLATIONS: Constellation[] = [
   // ─── TOP BAND (y ~2-16) ─────────────────────────────────────────────────
   {
     name: 'Big Dipper',
-    box: { left: 2, top: 4, width: 22, height: 11 },
+    box: { left: 1, top: 2, width: 20, height: 11 },
     stars: [
       { x: 10, y: 70, r: 2.4 }, // Dubhe
       { x: 28, y: 55, r: 2.0 }, // Merak
@@ -43,7 +43,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Ursa Minor',
-    box: { left: 27, top: 2, width: 18, height: 13 },
+    box: { left: 24, top: 1, width: 16, height: 12 },
     // Little Dipper — tighter version of the Big Dipper with Polaris at the tip
     stars: [
       { x: 18, y: 75, r: 1.4 },
@@ -58,7 +58,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Cassiopeia',
-    box: { left: 48, top: 3, width: 18, height: 9 },
+    box: { left: 44, top: 5, width: 16, height: 8 },
     stars: [
       { x: 6, y: 72, r: 2.0 },
       { x: 26, y: 32, r: 1.8 },
@@ -70,7 +70,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Cepheus',
-    box: { left: 70, top: 2, width: 14, height: 14 },
+    box: { left: 64, top: 3, width: 14, height: 12 },
     // House shape (pentagon)
     stars: [
       { x: 50, y: 10, r: 2.0 },
@@ -83,7 +83,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Lyra',
-    box: { left: 86, top: 4, width: 12, height: 12 },
+    box: { left: 82, top: 6, width: 12, height: 10 },
     // Parallelogram anchored by bright Vega
     stars: [
       { x: 50, y: 8, r: 2.4 }, // Vega
@@ -99,7 +99,7 @@ const CONSTELLATIONS: Constellation[] = [
   // ─── MIDDLE BAND (y ~18-34) ─────────────────────────────────────────────
   {
     name: 'Cygnus',
-    box: { left: 4, top: 18, width: 20, height: 16 },
+    box: { left: 2, top: 16, width: 18, height: 15 },
     // Northern Cross
     stars: [
       { x: 50, y: 8, r: 2.4 },  // Deneb
@@ -112,7 +112,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Orion',
-    box: { left: 28, top: 17, width: 20, height: 18 },
+    box: { left: 25, top: 18, width: 18, height: 16 },
     stars: [
       { x: 18, y: 12, r: 2.4 }, // Betelgeuse
       { x: 82, y: 20, r: 2.2 }, // Bellatrix
@@ -131,7 +131,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Leo',
-    box: { left: 52, top: 18, width: 24, height: 14 },
+    box: { left: 48, top: 20, width: 22, height: 12 },
     // Sickle + triangle body
     stars: [
       { x: 12, y: 45, r: 2.2 }, // Regulus
@@ -146,7 +146,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Pegasus',
-    box: { left: 80, top: 20, width: 18, height: 14 },
+    box: { left: 76, top: 22, width: 16, height: 12 },
     // The Great Square
     stars: [
       { x: 12, y: 15, r: 2.0 },
@@ -160,7 +160,7 @@ const CONSTELLATIONS: Constellation[] = [
   // ─── LOWER BAND (y ~36-50, just above the dock) ─────────────────────────
   {
     name: 'Corona Borealis',
-    box: { left: 3, top: 38, width: 14, height: 10 },
+    box: { left: 5, top: 36, width: 13, height: 9 },
     // Arc of stars forming a crown
     stars: [
       { x: 10, y: 65, r: 1.2 },
@@ -173,7 +173,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Gemini',
-    box: { left: 22, top: 36, width: 18, height: 14 },
+    box: { left: 22, top: 38, width: 16, height: 12 },
     // Twin stick figures (Castor + Pollux)
     stars: [
       { x: 25, y: 10, r: 2.0 }, // Castor
@@ -189,7 +189,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Taurus',
-    box: { left: 46, top: 36, width: 22, height: 14 },
+    box: { left: 42, top: 37, width: 20, height: 12 },
     // V of the Hyades anchored by Aldebaran, horns on either side
     stars: [
       { x: 8, y: 20, r: 1.4 },  // left horn tip
@@ -204,7 +204,7 @@ const CONSTELLATIONS: Constellation[] = [
   },
   {
     name: 'Scorpius',
-    box: { left: 72, top: 38, width: 26, height: 12 },
+    box: { left: 66, top: 40, width: 24, height: 10 },
     // Curvy J — head to bright Antares to the stinger
     stars: [
       { x: 4, y: 20, r: 1.4 },

@@ -175,8 +175,8 @@ export default function Header() {
 
   return (
     <div ref={menuRef} className="fixed top-0 left-0 right-0 z-[60] pointer-events-none">
-      {/* Moon — top left */}
-      <div className={`transition-all duration-500 ease-out absolute left-4 sm:left-5 ${open ? 'top-3' : 'top-4 sm:top-5'}`}>
+      {/* Moon — top right */}
+      <div className={`transition-all duration-500 ease-out absolute right-4 sm:right-5 ${open ? 'top-3' : 'top-4 sm:top-5'}`}>
         <button
           onClick={() => setOpen(v => !v)}
           onMouseEnter={() => !isMobile && setHovering(true)}
@@ -199,7 +199,7 @@ export default function Header() {
         className={`transition-all duration-500 ease-out absolute ${
           isMobile
             ? `left-3 right-3 top-[56px] ${open ? 'opacity-100 pointer-events-auto translate-y-0' : 'opacity-0 pointer-events-none -translate-y-4'}`
-            : `left-[75px] top-5 ${open ? 'opacity-100 pointer-events-auto translate-x-0' : 'opacity-0 pointer-events-none -translate-x-4'}`
+            : `right-[75px] top-5 ${open ? 'opacity-100 pointer-events-auto translate-x-0' : 'opacity-0 pointer-events-none translate-x-4'}`
         }`}
       >
         <div

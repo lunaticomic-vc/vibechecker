@@ -52,7 +52,7 @@ async function runInit(db: Client): Promise<void> {
   await db.batch([
     `CREATE TABLE IF NOT EXISTS favorites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'poetry', 'short_story', 'book', 'essay', 'podcast')),
+      type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'research', 'poetry', 'short_story', 'book', 'essay', 'podcast', 'manga', 'comic', 'game')),
       title TEXT NOT NULL,
       external_id TEXT,
       metadata TEXT,
@@ -167,7 +167,7 @@ async function runInit(db: Client): Promise<void> {
   const tableInfo = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='favorites'");
   const tableSql = (tableInfo.rows[0] as unknown as { sql: string })?.sql ?? '';
 
-  if (!tableSql.includes("'substack'") || !tableSql.includes("'kdrama'") || !tableSql.includes("'podcast'") || !tableSql.includes("'game'")) {
+  if (!tableSql.includes("'substack'") || !tableSql.includes("'kdrama'") || !tableSql.includes("'podcast'") || !tableSql.includes("'game'") || !tableSql.includes("'research'")) {
     dbLog('Migrating favorites table to update type CHECK constraint...');
     // Disable foreign keys during migration to prevent CASCADE deletes when dropping the old table
     await db.execute('PRAGMA foreign_keys = OFF');
