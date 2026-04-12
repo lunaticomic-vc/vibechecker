@@ -72,7 +72,7 @@ export async function buildUserPreferences(): Promise<string> {
 
   try {
     const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1',
       temperature: 0.3,
       messages: [
         {

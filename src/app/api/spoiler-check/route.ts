@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const numbered = truncated.map((c: string, i: number) => `${i + 1}. "${c}"`).join('\n');
 
     const res = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1',
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [

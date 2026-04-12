@@ -186,7 +186,7 @@ async function gptEnrich(title: string, type: ContentType, context: { year?: str
   const { year, actors, externalDesc } = context;
 
   const res = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1',
     temperature: 0.5,
     messages: [
       {
@@ -357,7 +357,7 @@ async function fillMissingFields(rec: Recommendation) {
   if (missing.length === 0) return null;
 
   const res = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1',
     temperature: 0.5,
     messages: [
       {

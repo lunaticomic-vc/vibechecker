@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    log.ai('Calling OpenAI gpt-4o-mini...');
+    log.ai('Calling OpenAI gpt-4.1...');
 
     const READING_TYPES: Record<string, (vibe: string, ctx?: ReadingContext) => Promise<Recommendation>> = {
       poetry: getPoetryRecommendation,

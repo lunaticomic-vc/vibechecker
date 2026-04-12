@@ -382,7 +382,7 @@ function extractActivityContext(vibe: string): { cleanedVibe: string; situationH
 async function expandVibe(openai: ReturnType<typeof getOpenAI>, vibe: string, interests: string[], tasteProfile: string | null): Promise<string> {
   // Plain text response — no JSON schema needed here.
   const res = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1',
     temperature: 0.8,
     messages: [
       {
@@ -430,7 +430,7 @@ interface VibeFacets {
 async function decomposeVibe(openai: ReturnType<typeof getOpenAI>, vibe: string): Promise<VibeFacets> {
   try {
     const res = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1',
       temperature: 0.5,
       response_format: { type: 'json_object' },
       messages: [
@@ -500,7 +500,7 @@ async function getYouTubeRecommendation(
 
   // Step 1: GPT generates search queries from VIBE ONLY — no interests pollution
   const queryResponse = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1',
     temperature: 0.9,
     response_format: { type: 'json_object' },
     messages: [
@@ -574,7 +574,7 @@ async function getYouTubeRecommendation(
       : '';
 
     const pickResponse = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1',
       temperature: 0.7,
       response_format: { type: 'json_object' },
       messages: [
@@ -615,7 +615,7 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
     // If GPT said none match (pick=0 → -1 after subtract), retry with more targeted queries
     if (pick < 0 || pick >= candidates.length) {
       const retryResponse = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1',
         temperature: 0.9,
         response_format: { type: 'json_object' },
         messages: [
@@ -651,7 +651,7 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
         ).join('\n');
 
         const retryPick = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4.1',
           temperature: 0.7,
           response_format: { type: 'json_object' },
           messages: [
@@ -732,7 +732,7 @@ async function getSubstackRecommendation(
 
   // Step 1: GPT generates search queries from the expanded concept
   const queryResponse = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1',
     temperature: 0.9,
     response_format: { type: 'json_object' },
     messages: [
@@ -773,7 +773,7 @@ ALL queries stay rooted in "${vibe}". Aim for depth and quality over popularity.
     ).join('\n');
 
     const pickResponse = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1',
       temperature: 0.7,
       response_format: { type: 'json_object' },
       messages: [
@@ -823,7 +823,7 @@ Pick the article averaging highest. Return ONLY JSON: {"pick": <number>, "reason
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1',
       temperature: 0.9 + attempt * 0.02,
       response_format: { type: 'json_object' },
       messages: [
@@ -904,7 +904,7 @@ async function getScreenRecommendation(
 
   // Step 2: Generate actual title suggestions from facets (TMDB needs titles, not vibes)
   const queryResponse = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4.1',
     temperature: 0.9,
     response_format: { type: 'json_object' },
     messages: [
@@ -1013,7 +1013,7 @@ DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maxim
     const temperature = 0.7 + attempt * 0.15; // #7: temperature ladder
 
     const pickResponse = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4.1',
       temperature,
       response_format: { type: 'json_object' },
       messages: [
@@ -1097,7 +1097,7 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
   if (!title) {
     try {
       const directResponse = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1',
         temperature: 0.8,
         response_format: { type: 'json_object' },
         messages: [

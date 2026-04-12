@@ -2,14 +2,27 @@
 
 // Deterministic star field — computed with Math.sin so server-rendered
 // HTML matches client hydration exactly (no mismatch warnings).
-const STARS = Array.from({ length: 60 }, (_, i) => {
+const STARS = Array.from({ length: 140 }, (_, i) => {
   const rand = (k: number) => (Math.sin(i * 9301 + k * 49297) + 1) / 2;
   return {
     x: 1 + rand(1) * 98,              // 1%..99% width
-    y: 1 + rand(2) * 48,              // 1%..49% height (upper sky)
+    y: 1 + rand(2) * 56,              // 1%..57% height (full sky above sea)
     size: 1 + Math.round(rand(3) * 18) / 10, // 1..2.8 px
     delay: rand(4) * 4,
     duration: 2.5 + rand(5) * 2.8,
+  };
+});
+
+// Shooting stars — deterministic start positions + angles, animated via CSS
+const SHOOTING_STARS = Array.from({ length: 4 }, (_, i) => {
+  const rand = (k: number) => (Math.sin(i * 7919 + k * 6271) + 1) / 2;
+  return {
+    x: 5 + rand(1) * 70,              // start 5%..75% from left
+    y: 2 + rand(2) * 25,              // start 2%..27% from top
+    angle: 15 + rand(3) * 30,         // 15°..45° downward
+    delay: 8 + i * 12 + rand(4) * 6,  // staggered 8-50s initial delay
+    duration: 0.8 + rand(5) * 0.6,    // streak lasts 0.8-1.4s
+    cycle: 18 + rand(6) * 24,         // reappears every 18-42s
   };
 });
 
@@ -26,7 +39,6 @@ interface Constellation {
 }
 
 const CONSTELLATIONS: Constellation[] = [
-  // ─── TOP BAND (y ~2-16) ─────────────────────────────────────────────────
   {
     name: 'Big Dipper',
     box: { left: 1, top: 2, width: 20, height: 11 },
@@ -42,8 +54,32 @@ const CONSTELLATIONS: Constellation[] = [
     lines: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]],
   },
   {
+    name: 'Cassiopeia',
+    box: { left: 48, top: 1, width: 16, height: 8 },
+    stars: [
+      { x: 6, y: 72, r: 2.0 },
+      { x: 26, y: 32, r: 1.8 },
+      { x: 50, y: 60, r: 2.4 },
+      { x: 74, y: 28, r: 1.8 },
+      { x: 94, y: 66, r: 2.0 },
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4]],
+  },
+  {
+    name: 'Pegasus',
+    box: { left: 80, top: 4, width: 16, height: 12 },
+    // The Great Square
+    stars: [
+      { x: 12, y: 15, r: 2.0 },
+      { x: 80, y: 12, r: 2.2 },
+      { x: 85, y: 70, r: 2.0 },
+      { x: 10, y: 68, r: 2.0 },
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 0]],
+  },
+  {
     name: 'Ursa Minor',
-    box: { left: 24, top: 1, width: 16, height: 12 },
+    box: { left: 24, top: 13, width: 16, height: 12 },
     // Little Dipper — tighter version of the Big Dipper with Polaris at the tip
     stars: [
       { x: 18, y: 75, r: 1.4 },
@@ -57,49 +93,8 @@ const CONSTELLATIONS: Constellation[] = [
     lines: [[0, 1], [1, 2], [2, 3], [3, 0], [2, 4], [4, 5], [5, 6]],
   },
   {
-    name: 'Cassiopeia',
-    box: { left: 44, top: 5, width: 16, height: 8 },
-    stars: [
-      { x: 6, y: 72, r: 2.0 },
-      { x: 26, y: 32, r: 1.8 },
-      { x: 50, y: 60, r: 2.4 },
-      { x: 74, y: 28, r: 1.8 },
-      { x: 94, y: 66, r: 2.0 },
-    ],
-    lines: [[0, 1], [1, 2], [2, 3], [3, 4]],
-  },
-  {
-    name: 'Cepheus',
-    box: { left: 64, top: 3, width: 14, height: 12 },
-    // House shape (pentagon)
-    stars: [
-      { x: 50, y: 10, r: 2.0 },
-      { x: 18, y: 38, r: 1.6 },
-      { x: 82, y: 38, r: 1.6 },
-      { x: 22, y: 85, r: 1.8 },
-      { x: 78, y: 85, r: 1.8 },
-    ],
-    lines: [[0, 1], [0, 2], [1, 3], [2, 4], [3, 4]],
-  },
-  {
-    name: 'Lyra',
-    box: { left: 82, top: 6, width: 12, height: 10 },
-    // Parallelogram anchored by bright Vega
-    stars: [
-      { x: 50, y: 8, r: 2.4 }, // Vega
-      { x: 32, y: 28, r: 1.4 },
-      { x: 66, y: 30, r: 1.4 },
-      { x: 22, y: 62, r: 1.2 },
-      { x: 52, y: 68, r: 1.4 },
-      { x: 72, y: 55, r: 1.2 },
-    ],
-    lines: [[0, 1], [0, 2], [1, 3], [2, 5], [3, 4], [4, 5]],
-  },
-
-  // ─── MIDDLE BAND (y ~18-34) ─────────────────────────────────────────────
-  {
     name: 'Cygnus',
-    box: { left: 2, top: 16, width: 18, height: 15 },
+    box: { left: 64, top: 10, width: 18, height: 15 },
     // Northern Cross
     stars: [
       { x: 50, y: 8, r: 2.4 },  // Deneb
@@ -111,8 +106,37 @@ const CONSTELLATIONS: Constellation[] = [
     lines: [[0, 1], [1, 2], [3, 1], [1, 4]],
   },
   {
+    name: 'Leo',
+    box: { left: 4, top: 22, width: 22, height: 12 },
+    // Sickle + triangle body
+    stars: [
+      { x: 12, y: 45, r: 2.2 }, // Regulus
+      { x: 18, y: 22, r: 1.4 },
+      { x: 30, y: 10, r: 1.4 },
+      { x: 44, y: 18, r: 1.4 },
+      { x: 48, y: 38, r: 1.6 },
+      { x: 78, y: 52, r: 1.8 }, // Denebola
+      { x: 86, y: 76, r: 1.4 },
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [5, 6]],
+  },
+  {
+    name: 'Lyra',
+    box: { left: 84, top: 20, width: 12, height: 10 },
+    // Parallelogram anchored by bright Vega
+    stars: [
+      { x: 50, y: 8, r: 2.4 }, // Vega
+      { x: 32, y: 28, r: 1.4 },
+      { x: 66, y: 30, r: 1.4 },
+      { x: 22, y: 62, r: 1.2 },
+      { x: 52, y: 68, r: 1.4 },
+      { x: 72, y: 55, r: 1.2 },
+    ],
+    lines: [[0, 1], [0, 2], [1, 3], [2, 5], [3, 4], [4, 5]],
+  },
+  {
     name: 'Orion',
-    box: { left: 25, top: 18, width: 18, height: 16 },
+    box: { left: 36, top: 19, width: 18, height: 16 },
     stars: [
       { x: 18, y: 12, r: 2.4 }, // Betelgeuse
       { x: 82, y: 20, r: 2.2 }, // Bellatrix
@@ -130,50 +154,8 @@ const CONSTELLATIONS: Constellation[] = [
     ],
   },
   {
-    name: 'Leo',
-    box: { left: 48, top: 20, width: 22, height: 12 },
-    // Sickle + triangle body
-    stars: [
-      { x: 12, y: 45, r: 2.2 }, // Regulus
-      { x: 18, y: 22, r: 1.4 },
-      { x: 30, y: 10, r: 1.4 },
-      { x: 44, y: 18, r: 1.4 },
-      { x: 48, y: 38, r: 1.6 },
-      { x: 78, y: 52, r: 1.8 }, // Denebola
-      { x: 86, y: 76, r: 1.4 },
-    ],
-    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [5, 6]],
-  },
-  {
-    name: 'Pegasus',
-    box: { left: 76, top: 22, width: 16, height: 12 },
-    // The Great Square
-    stars: [
-      { x: 12, y: 15, r: 2.0 },
-      { x: 80, y: 12, r: 2.2 },
-      { x: 85, y: 70, r: 2.0 },
-      { x: 10, y: 68, r: 2.0 },
-    ],
-    lines: [[0, 1], [1, 2], [2, 3], [3, 0]],
-  },
-
-  // ─── LOWER BAND (y ~36-50, just above the dock) ─────────────────────────
-  {
-    name: 'Corona Borealis',
-    box: { left: 5, top: 36, width: 13, height: 9 },
-    // Arc of stars forming a crown
-    stars: [
-      { x: 10, y: 65, r: 1.2 },
-      { x: 28, y: 35, r: 1.4 },
-      { x: 50, y: 18, r: 2.0 }, // Alphecca
-      { x: 72, y: 32, r: 1.4 },
-      { x: 90, y: 55, r: 1.2 },
-    ],
-    lines: [[0, 1], [1, 2], [2, 3], [3, 4]],
-  },
-  {
     name: 'Gemini',
-    box: { left: 22, top: 38, width: 16, height: 12 },
+    box: { left: 54, top: 32, width: 16, height: 12 },
     // Twin stick figures (Castor + Pollux)
     stars: [
       { x: 25, y: 10, r: 2.0 }, // Castor
@@ -188,23 +170,34 @@ const CONSTELLATIONS: Constellation[] = [
     lines: [[0, 1], [0, 2], [2, 4], [2, 5], [1, 3], [3, 6], [3, 7]],
   },
   {
-    name: 'Taurus',
-    box: { left: 42, top: 37, width: 20, height: 12 },
-    // V of the Hyades anchored by Aldebaran, horns on either side
+    name: 'Cepheus',
+    box: { left: 14, top: 36, width: 14, height: 12 },
+    // House shape (pentagon)
     stars: [
-      { x: 8, y: 20, r: 1.4 },  // left horn tip
-      { x: 25, y: 30, r: 1.6 },
-      { x: 42, y: 50, r: 2.4 }, // Aldebaran
-      { x: 58, y: 60, r: 1.6 },
-      { x: 75, y: 48, r: 1.6 },
-      { x: 90, y: 30, r: 1.4 }, // right horn tip
-      { x: 55, y: 82, r: 1.4 }, // nose
+      { x: 50, y: 10, r: 2.0 },
+      { x: 18, y: 38, r: 1.6 },
+      { x: 82, y: 38, r: 1.6 },
+      { x: 22, y: 85, r: 1.8 },
+      { x: 78, y: 85, r: 1.8 },
     ],
-    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [3, 6]],
+    lines: [[0, 1], [0, 2], [1, 3], [2, 4], [3, 4]],
+  },
+  {
+    name: 'Corona Borealis',
+    box: { left: 38, top: 42, width: 13, height: 9 },
+    // Arc of stars forming a crown
+    stars: [
+      { x: 10, y: 65, r: 1.2 },
+      { x: 28, y: 35, r: 1.4 },
+      { x: 50, y: 18, r: 2.0 }, // Alphecca
+      { x: 72, y: 32, r: 1.4 },
+      { x: 90, y: 55, r: 1.2 },
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4]],
   },
   {
     name: 'Scorpius',
-    box: { left: 66, top: 40, width: 24, height: 10 },
+    box: { left: 72, top: 38, width: 24, height: 10 },
     // Curvy J — head to bright Antares to the stinger
     stars: [
       { x: 4, y: 20, r: 1.4 },
@@ -218,6 +211,21 @@ const CONSTELLATIONS: Constellation[] = [
       { x: 92, y: 74, r: 1.6 }, // stinger
     ],
     lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8]],
+  },
+  {
+    name: 'Taurus',
+    box: { left: 2, top: 44, width: 20, height: 12 },
+    // V of the Hyades anchored by Aldebaran, horns on either side
+    stars: [
+      { x: 8, y: 20, r: 1.4 },  // left horn tip
+      { x: 25, y: 30, r: 1.6 },
+      { x: 42, y: 50, r: 2.4 }, // Aldebaran
+      { x: 58, y: 60, r: 1.6 },
+      { x: 75, y: 48, r: 1.6 },
+      { x: 90, y: 30, r: 1.4 }, // right horn tip
+      { x: 55, y: 82, r: 1.4 }, // nose
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [3, 6]],
   },
 ];
 
@@ -325,6 +333,22 @@ export default function SceneBackground() {
             })}
           </svg>
         </div>
+      ))}
+
+      {/* Shooting stars — brief bright streaks across the sky */}
+      {SHOOTING_STARS.map((s, i) => (
+        <div
+          key={`shoot-${i}`}
+          className="sb-shooting-star"
+          style={{
+            left: `${s.x}%`,
+            top: `${s.y}%`,
+            ['--shoot-angle' as string]: `${s.angle}deg`,
+            animationDelay: `${s.delay}s`,
+            animationDuration: `${s.cycle}s`,
+            ['--streak-duration' as string]: `${s.duration}s`,
+          }}
+        />
       ))}
 
       {/* DOCK — anchored to the far left of the scene */}
@@ -465,9 +489,41 @@ export default function SceneBackground() {
           0%, 100% { opacity: 0.75; }
           50%      { opacity: 1; }
         }
+        /* Shooting stars — invisible most of the time, brief bright streak */
+        .sb-shooting-star {
+          position: absolute;
+          width: 0;
+          height: 0;
+          opacity: 0;
+          animation-name: sb-shoot-cycle;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
+        @keyframes sb-shoot-cycle {
+          /* Invisible for most of the cycle */
+          0%, 94% { opacity: 0; width: 0; height: 1px; transform: rotate(var(--shoot-angle)) translateX(0); }
+          /* Brief flash: grow tail, streak across, fade out */
+          95% {
+            opacity: 1;
+            width: 80px;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0), rgba(252,249,255,0.95) 40%, rgba(210,195,255,0.7));
+            box-shadow: 0 0 6px rgba(245,240,255,0.6), 0 0 12px rgba(196,181,253,0.3);
+            transform: rotate(var(--shoot-angle)) translateX(0);
+          }
+          98% {
+            opacity: 0.8;
+            width: 80px;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0), rgba(252,249,255,0.95) 40%, rgba(210,195,255,0.7));
+            transform: rotate(var(--shoot-angle)) translateX(120px);
+          }
+          99% { opacity: 0; width: 0; transform: rotate(var(--shoot-angle)) translateX(160px); }
+        }
         @media (prefers-reduced-motion: reduce) {
           .sb-star { animation: none; opacity: 0.8; }
           .sb-dock-lamp { animation: none; }
+          .sb-shooting-star { display: none; }
           :global(.sb-constellation-star),
           :global(.sb-constellation-lines) { animation: none; }
         }
