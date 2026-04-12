@@ -456,21 +456,81 @@ export default function Home() {
 /* ─── Inline Chat (renders inside the tablet frame) ─── */
 
 const VIBES_BY_TYPE: Partial<Record<ContentType, string[]>> = {
-  movie: ['i\'m having lunch, need something light and fun', 'need a good cry, something emotionally devastating', 'rainy evening, give me something slow and beautiful'],
-  tv: ['sleepover binge, something i can\'t stop watching', 'cozy and feel-good, zero drama or stress', 'something addictive with a mystery to solve'],
-  anime: ['something with breathtaking animation and a slow burn', 'unhinged and chaotic, surprise me completely', 'emotional and bittersweet, the kind that stays with you'],
-  youtube: ['something light and interesting while i eat, around 20 min', 'a deep dive into something niche and fascinating', 'i\'m procrastinating, give me something unhinged and funny'],
-  kdrama: ['enemies to lovers with a slow burn that kills me', 'something funny and lighthearted after a long day', 'cozy romance, nothing too heavy or dramatic'],
-  substack: ['something that completely changes how i think about things', 'a raw personal essay that feels uncomfortably honest', 'sharp cultural criticism with real wit'],
-  book: ['something so immersive i forget where i am', 'short and beautifully written, under 200 pages', 'cozy and comforting, like being wrapped in a warm blanket'],
-  poetry: ['heartbreak but make it devastatingly beautiful', 'something about nature and stillness and being alone', 'angry and raw, no polished edges, just feeling'],
-  short_story: ['surreal and dreamlike, like waking from a strange dream', 'a twist ending that haunts me for days', 'quiet and melancholy, the beauty in sadness'],
-  essay: ['something philosophical that makes me question everything', 'vulnerable and real, someone baring their soul', 'sharp cultural commentary with teeth'],
-  podcast: ['true crime but thoughtful and respectful, not sensational', 'something genuinely funny for my commute', 'a deep conversation about life that feels like eavesdropping'],
-  research: ['a rabbit hole i can get completely lost in', 'something mind-blowing about how the universe works', 'a niche topic nobody talks about that deserves attention'],
-  manga: ['beautiful art and slow pacing, something meditative', 'dark and psychological, mess me up a little', 'wholesome slice of life that makes me smile'],
-  comic: ['gritty noir with morally grey characters', 'colorful and fun, classic superhero vibes', 'indie and artistic, something different from the mainstream'],
-  game: ['story-driven, something that makes me feel things', 'cozy and relaxing, a world i can escape into', 'open world to explore at my own pace, no pressure'],
+  movie: [
+    'i\'m eating dinner, need something fun and easy to follow, not too intense',
+    'the kind of movie where every shot looks like a painting and the story breaks you quietly',
+    'something unsettling that crawls under my skin and stays there, psychological not gory',
+  ],
+  tv: [
+    'i need a show i physically cannot stop watching, the kind where i say "one more episode" at 3am',
+    'something warm and gentle, like a hug — no villains, no trauma, just people being kind',
+    'morally complex characters doing terrible things and somehow i\'m rooting for all of them',
+  ],
+  anime: [
+    'the kind of anime where the animation makes you pause just to stare at a frame',
+    'completely unhinged — absurd humor, chaotic energy, nothing makes sense and i love it',
+    'a slow devastating emotional arc that builds for 12 episodes then destroys me in the last two',
+  ],
+  youtube: [
+    'something interesting to watch while i eat, about 20 minutes, not too heavy',
+    'a deep dive video essay into something i never knew i cared about until now',
+    'chaotic unhinged energy, the kind of creator who shouldn\'t be allowed to have a camera',
+  ],
+  kdrama: [
+    'enemies to lovers where the tension builds so slowly it\'s physically painful in the best way',
+    'something that makes me laugh out loud after a terrible day, peak comedic timing',
+    'a romance that feels like autumn — warm and melancholy and a little bit heartbreaking',
+  ],
+  substack: [
+    'an essay that rewires my brain — i want to think about something completely differently after reading it',
+    'someone writing about their life so honestly it feels like reading a diary i wasn\'t supposed to find',
+    'ruthlessly smart cultural criticism that makes me feel seen and slightly attacked at the same time',
+  ],
+  book: [
+    'i want to disappear into another world for days and come back a different person',
+    'something devastatingly beautiful but under 250 pages, every sentence deliberately chosen',
+    'the literary equivalent of a warm blanket and rain on the window — cozy but not shallow',
+  ],
+  poetry: [
+    'the kind of poem you read once and your whole chest aches and you have to read it again immediately',
+    'something about being alone in nature that somehow makes the loneliness feel holy',
+    'raw and furious, someone screaming on the page with no filter and no apologies',
+  ],
+  short_story: [
+    'something surreal and dreamlike where reality bends and i\'m not sure what\'s real by the end',
+    'a story with a twist that recontextualizes everything and keeps me up thinking about it',
+    'small and quiet and devastating — the kind where nothing dramatic happens but everything changes',
+  ],
+  essay: [
+    'something that takes a simple question and spirals it into an existential crisis in the best way',
+    'a personal essay so vulnerable it feels like the writer is sitting across from me at 2am confessing',
+    'cultural criticism that\'s funny and vicious and makes me rethink something i took for granted',
+  ],
+  podcast: [
+    'true crime that treats victims with dignity and actually investigates, not just sensationalism',
+    'genuinely funny, the kind where i laugh out loud on public transport and don\'t even care',
+    'two people having the kind of deep honest conversation i wish i had with my own friends',
+  ],
+  research: [
+    'a topic that starts simple and keeps going deeper until i\'ve been reading for 3 hours and can\'t stop',
+    'something about the universe or physics or math that makes reality feel genuinely surreal',
+    'an extremely niche subject that a tiny passionate community obsesses over and nobody else knows about',
+  ],
+  manga: [
+    'gorgeous art where every panel is composed like a painting, slow pacing that lets you breathe',
+    'dark psychological thriller that makes me question every character\'s sanity including my own',
+    'pure comfort — wholesome daily life, gentle humor, characters i want to be friends with',
+  ],
+  comic: [
+    'noir detective story where everyone is morally compromised and the city is basically a character',
+    'bold colorful art with classic hero energy — not ironic or deconstructed, just earnestly epic',
+    'something from outside the mainstream, artistic and weird and doing things only comics can do',
+  ],
+  game: [
+    'a story-driven game that makes me emotionally attached to characters and then hurts me with it',
+    'something cozy and relaxing where i can just exist in a beautiful space with no pressure at all',
+    'a vast open world that rewards curiosity — every mountain and cave has something worth finding',
+  ],
 };
 
 interface ChatMessage { role: 'user' | 'assistant'; content: string }
