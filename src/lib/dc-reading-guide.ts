@@ -53,13 +53,13 @@ export const CHARACTER_LABELS: Record<GuideCharacter, string> = {
 };
 
 export const CHARACTER_ICONS: Record<GuideCharacter, string> = {
-  'batman': '🦇',
+  'batman': '◆',
   'superman': '◇',
-  'wonder-woman': '⭐',
-  'flash': '⚡',
+  'wonder-woman': '★',
+  'flash': '✦',
   'green-lantern': '◉',
-  'aquaman': '🔱',
-  'justice-league': '★',
+  'aquaman': '⊹',
+  'justice-league': '✸',
   'teen-titans': '▽',
   'swamp-thing': '❧',
   'constantine': '♠',

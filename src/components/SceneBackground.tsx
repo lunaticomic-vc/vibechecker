@@ -26,62 +26,198 @@ interface Constellation {
 }
 
 const CONSTELLATIONS: Constellation[] = [
+  // ─── TOP BAND (y ~2-16) ─────────────────────────────────────────────────
   {
-    // Big Dipper (Ursa Major) — upper left quadrant
     name: 'Big Dipper',
-    box: { left: 3, top: 6, width: 22, height: 14 },
-    // Classic 7-star ladle: 4-star bowl + 3-star handle
+    box: { left: 2, top: 4, width: 22, height: 11 },
     stars: [
-      { x: 10, y: 70, r: 2.4 }, // Dubhe (bowl top-left)
-      { x: 28, y: 55, r: 2.0 }, // Merak (bowl bottom-left)
-      { x: 42, y: 60, r: 1.8 }, // Phecda (bowl bottom-right)
-      { x: 38, y: 82, r: 1.6 }, // Megrez (bowl top-right, handle base)
-      { x: 56, y: 78, r: 2.2 }, // Alioth (handle 1)
-      { x: 74, y: 66, r: 1.8 }, // Mizar (handle 2)
-      { x: 92, y: 48, r: 2.4 }, // Alkaid (handle tip)
+      { x: 10, y: 70, r: 2.4 }, // Dubhe
+      { x: 28, y: 55, r: 2.0 }, // Merak
+      { x: 42, y: 60, r: 1.8 }, // Phecda
+      { x: 38, y: 82, r: 1.6 }, // Megrez
+      { x: 56, y: 78, r: 2.2 }, // Alioth
+      { x: 74, y: 66, r: 1.8 }, // Mizar
+      { x: 92, y: 48, r: 2.4 }, // Alkaid
     ],
     lines: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]],
   },
   {
-    // Orion — top center, slightly larger
-    name: 'Orion',
-    box: { left: 38, top: 5, width: 24, height: 26 },
+    name: 'Ursa Minor',
+    box: { left: 27, top: 2, width: 18, height: 13 },
+    // Little Dipper — tighter version of the Big Dipper with Polaris at the tip
     stars: [
-      { x: 18, y: 12, r: 2.6 }, // Betelgeuse (shoulder)
-      { x: 82, y: 20, r: 2.4 }, // Bellatrix (shoulder)
-      { x: 36, y: 50, r: 1.6 }, // Belt 1 — Alnitak
-      { x: 50, y: 52, r: 1.6 }, // Belt 2 — Alnilam
-      { x: 64, y: 54, r: 1.6 }, // Belt 3 — Mintaka
-      { x: 16, y: 88, r: 2.2 }, // Saiph (foot)
-      { x: 84, y: 92, r: 2.8 }, // Rigel (foot)
-      { x: 46, y: 72, r: 1.2 }, // Sword 1
-      { x: 48, y: 80, r: 1.0 }, // Sword 2
+      { x: 18, y: 75, r: 1.4 },
+      { x: 34, y: 60, r: 1.2 },
+      { x: 46, y: 72, r: 1.2 },
+      { x: 38, y: 85, r: 1.2 },
+      { x: 56, y: 65, r: 1.4 },
+      { x: 72, y: 50, r: 1.4 },
+      { x: 90, y: 28, r: 2.2 }, // Polaris
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 0], [2, 4], [4, 5], [5, 6]],
+  },
+  {
+    name: 'Cassiopeia',
+    box: { left: 48, top: 3, width: 18, height: 9 },
+    stars: [
+      { x: 6, y: 72, r: 2.0 },
+      { x: 26, y: 32, r: 1.8 },
+      { x: 50, y: 60, r: 2.4 },
+      { x: 74, y: 28, r: 1.8 },
+      { x: 94, y: 66, r: 2.0 },
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4]],
+  },
+  {
+    name: 'Cepheus',
+    box: { left: 70, top: 2, width: 14, height: 14 },
+    // House shape (pentagon)
+    stars: [
+      { x: 50, y: 10, r: 2.0 },
+      { x: 18, y: 38, r: 1.6 },
+      { x: 82, y: 38, r: 1.6 },
+      { x: 22, y: 85, r: 1.8 },
+      { x: 78, y: 85, r: 1.8 },
+    ],
+    lines: [[0, 1], [0, 2], [1, 3], [2, 4], [3, 4]],
+  },
+  {
+    name: 'Lyra',
+    box: { left: 86, top: 4, width: 12, height: 12 },
+    // Parallelogram anchored by bright Vega
+    stars: [
+      { x: 50, y: 8, r: 2.4 }, // Vega
+      { x: 32, y: 28, r: 1.4 },
+      { x: 66, y: 30, r: 1.4 },
+      { x: 22, y: 62, r: 1.2 },
+      { x: 52, y: 68, r: 1.4 },
+      { x: 72, y: 55, r: 1.2 },
+    ],
+    lines: [[0, 1], [0, 2], [1, 3], [2, 5], [3, 4], [4, 5]],
+  },
+
+  // ─── MIDDLE BAND (y ~18-34) ─────────────────────────────────────────────
+  {
+    name: 'Cygnus',
+    box: { left: 4, top: 18, width: 20, height: 16 },
+    // Northern Cross
+    stars: [
+      { x: 50, y: 8, r: 2.4 },  // Deneb
+      { x: 50, y: 40, r: 1.6 },
+      { x: 50, y: 75, r: 2.0 }, // Albireo
+      { x: 18, y: 40, r: 1.6 },
+      { x: 82, y: 42, r: 1.6 },
+    ],
+    lines: [[0, 1], [1, 2], [3, 1], [1, 4]],
+  },
+  {
+    name: 'Orion',
+    box: { left: 28, top: 17, width: 20, height: 18 },
+    stars: [
+      { x: 18, y: 12, r: 2.4 }, // Betelgeuse
+      { x: 82, y: 20, r: 2.2 }, // Bellatrix
+      { x: 36, y: 50, r: 1.5 }, // Belt 1
+      { x: 50, y: 52, r: 1.5 }, // Belt 2
+      { x: 64, y: 54, r: 1.5 }, // Belt 3
+      { x: 16, y: 88, r: 2.0 }, // Saiph
+      { x: 84, y: 92, r: 2.6 }, // Rigel
+      { x: 46, y: 72, r: 1.1 }, // Sword 1
+      { x: 48, y: 82, r: 1.0 }, // Sword 2
     ],
     lines: [
-      // Shoulders to belt
-      [0, 2], [1, 4],
-      // Belt
-      [2, 3], [3, 4],
-      // Belt to feet
-      [2, 5], [4, 6],
-      // Shoulders across
-      [0, 1],
-      // Sword hanging from belt
-      [3, 7], [7, 8],
+      [0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6],
+      [0, 1], [3, 7], [7, 8],
     ],
   },
   {
-    // Cassiopeia — upper right, classic W shape
-    name: 'Cassiopeia',
-    box: { left: 74, top: 8, width: 18, height: 10 },
+    name: 'Leo',
+    box: { left: 52, top: 18, width: 24, height: 14 },
+    // Sickle + triangle body
     stars: [
-      { x: 6, y: 72, r: 2.2 },
-      { x: 26, y: 32, r: 2.0 },
-      { x: 50, y: 60, r: 2.4 },
-      { x: 74, y: 28, r: 2.0 },
-      { x: 94, y: 66, r: 2.2 },
+      { x: 12, y: 45, r: 2.2 }, // Regulus
+      { x: 18, y: 22, r: 1.4 },
+      { x: 30, y: 10, r: 1.4 },
+      { x: 44, y: 18, r: 1.4 },
+      { x: 48, y: 38, r: 1.6 },
+      { x: 78, y: 52, r: 1.8 }, // Denebola
+      { x: 86, y: 76, r: 1.4 },
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [4, 5], [5, 6]],
+  },
+  {
+    name: 'Pegasus',
+    box: { left: 80, top: 20, width: 18, height: 14 },
+    // The Great Square
+    stars: [
+      { x: 12, y: 15, r: 2.0 },
+      { x: 80, y: 12, r: 2.2 },
+      { x: 85, y: 70, r: 2.0 },
+      { x: 10, y: 68, r: 2.0 },
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 0]],
+  },
+
+  // ─── LOWER BAND (y ~36-50, just above the dock) ─────────────────────────
+  {
+    name: 'Corona Borealis',
+    box: { left: 3, top: 38, width: 14, height: 10 },
+    // Arc of stars forming a crown
+    stars: [
+      { x: 10, y: 65, r: 1.2 },
+      { x: 28, y: 35, r: 1.4 },
+      { x: 50, y: 18, r: 2.0 }, // Alphecca
+      { x: 72, y: 32, r: 1.4 },
+      { x: 90, y: 55, r: 1.2 },
     ],
     lines: [[0, 1], [1, 2], [2, 3], [3, 4]],
+  },
+  {
+    name: 'Gemini',
+    box: { left: 22, top: 36, width: 18, height: 14 },
+    // Twin stick figures (Castor + Pollux)
+    stars: [
+      { x: 25, y: 10, r: 2.0 }, // Castor
+      { x: 65, y: 12, r: 2.2 }, // Pollux
+      { x: 28, y: 32, r: 1.2 },
+      { x: 62, y: 32, r: 1.2 },
+      { x: 20, y: 58, r: 1.2 },
+      { x: 35, y: 62, r: 1.2 },
+      { x: 58, y: 60, r: 1.2 },
+      { x: 72, y: 64, r: 1.2 },
+    ],
+    lines: [[0, 1], [0, 2], [2, 4], [2, 5], [1, 3], [3, 6], [3, 7]],
+  },
+  {
+    name: 'Taurus',
+    box: { left: 46, top: 36, width: 22, height: 14 },
+    // V of the Hyades anchored by Aldebaran, horns on either side
+    stars: [
+      { x: 8, y: 20, r: 1.4 },  // left horn tip
+      { x: 25, y: 30, r: 1.6 },
+      { x: 42, y: 50, r: 2.4 }, // Aldebaran
+      { x: 58, y: 60, r: 1.6 },
+      { x: 75, y: 48, r: 1.6 },
+      { x: 90, y: 30, r: 1.4 }, // right horn tip
+      { x: 55, y: 82, r: 1.4 }, // nose
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [3, 6]],
+  },
+  {
+    name: 'Scorpius',
+    box: { left: 72, top: 38, width: 26, height: 12 },
+    // Curvy J — head to bright Antares to the stinger
+    stars: [
+      { x: 4, y: 20, r: 1.4 },
+      { x: 12, y: 36, r: 1.4 },
+      { x: 22, y: 50, r: 2.4 }, // Antares
+      { x: 36, y: 56, r: 1.4 },
+      { x: 50, y: 60, r: 1.4 },
+      { x: 62, y: 68, r: 1.4 },
+      { x: 74, y: 78, r: 1.4 },
+      { x: 82, y: 86, r: 1.4 },
+      { x: 92, y: 74, r: 1.6 }, // stinger
+    ],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8]],
   },
 ];
 
@@ -190,104 +326,6 @@ export default function SceneBackground() {
           </svg>
         </div>
       ))}
-
-      {/* LIGHTHOUSE — anchored to the far right edge of the scene */}
-      <div
-        className="absolute"
-        style={{
-          right: '0',
-          top: '14vh',
-          width: 'min(16vw, 210px)',
-          height: 'min(44vh, 480px)',
-          minWidth: '70px',
-          minHeight: '260px',
-        }}
-      >
-        <svg
-          className="w-full h-full"
-          viewBox="0 0 120 320"
-          preserveAspectRatio="xMidYMax meet"
-        >
-          {/* Rocky base at the water line */}
-          <ellipse cx="60" cy="316" rx="58" ry="6" fill="rgba(140,128,170,0.32)" />
-          <path
-            d="M6 316 Q22 300 40 308 Q56 292 72 304 Q88 290 104 302 Q116 306 118 316 Z"
-            fill="rgba(175,162,200,0.5)"
-            stroke="rgba(140,128,170,0.7)"
-            strokeWidth="1.2"
-          />
-
-          {/* Tapered main tower body */}
-          <path
-            d="M38 306 L30 146 L90 146 L82 306 Z"
-            fill="rgba(250,247,255,0.88)"
-            stroke="rgba(155,142,185,0.78)"
-            strokeWidth="1.8"
-          />
-
-          {/* Soft lilac horizontal stripes */}
-          <rect x="32" y="172" width="56" height="12" fill="rgba(196,170,220,0.62)" />
-          <rect x="33" y="210" width="54" height="12" fill="rgba(196,170,220,0.62)" />
-          <rect x="34" y="248" width="52" height="12" fill="rgba(196,170,220,0.62)" />
-          <rect x="35" y="286" width="50" height="10" fill="rgba(196,170,220,0.62)" />
-
-          {/* Small portholes down the tower */}
-          <circle cx="60" cy="200" r="3.2" fill="rgba(255,242,218,0.85)" stroke="rgba(155,142,185,0.6)" strokeWidth="0.6" />
-          <circle cx="60" cy="238" r="3.2" fill="rgba(255,242,218,0.85)" stroke="rgba(155,142,185,0.6)" strokeWidth="0.6" />
-          <circle cx="60" cy="276" r="3.2" fill="rgba(255,242,218,0.85)" stroke="rgba(155,142,185,0.6)" strokeWidth="0.6" />
-
-          {/* Gallery — ring platform around the lantern */}
-          <rect x="22" y="136" width="76" height="10" rx="1" fill="rgba(250,247,255,0.9)" stroke="rgba(155,142,185,0.78)" strokeWidth="1.2" />
-          <line x1="22" y1="141" x2="98" y2="141" stroke="rgba(155,142,185,0.5)" strokeWidth="0.5" />
-          {/* Railing posts */}
-          <line x1="30" y1="130" x2="30" y2="138" stroke="rgba(155,142,185,0.62)" strokeWidth="0.8" />
-          <line x1="45" y1="130" x2="45" y2="138" stroke="rgba(155,142,185,0.62)" strokeWidth="0.8" />
-          <line x1="60" y1="130" x2="60" y2="138" stroke="rgba(155,142,185,0.62)" strokeWidth="0.8" />
-          <line x1="75" y1="130" x2="75" y2="138" stroke="rgba(155,142,185,0.62)" strokeWidth="0.8" />
-          <line x1="90" y1="130" x2="90" y2="138" stroke="rgba(155,142,185,0.62)" strokeWidth="0.8" />
-
-          {/* Lantern room */}
-          <rect x="38" y="94" width="44" height="38" fill="rgba(240,232,255,0.6)" stroke="rgba(155,142,185,0.78)" strokeWidth="1.2" />
-          {/* Window mullions */}
-          <line x1="52" y1="94" x2="52" y2="132" stroke="rgba(155,142,185,0.5)" strokeWidth="0.6" />
-          <line x1="68" y1="94" x2="68" y2="132" stroke="rgba(155,142,185,0.5)" strokeWidth="0.6" />
-          <line x1="38" y1="113" x2="82" y2="113" stroke="rgba(155,142,185,0.5)" strokeWidth="0.6" />
-
-          {/* Warm lantern glow — breathing */}
-          <circle cx="60" cy="113" r="12" fill="rgba(255,242,218,0.85)">
-            <animate attributeName="opacity" values="0.6;1;0.6" dur="2.4s" repeatCount="indefinite" />
-            <animate attributeName="r" values="11;14;11" dur="2.4s" repeatCount="indefinite" />
-          </circle>
-          <circle cx="60" cy="113" r="5" fill="rgba(255,250,230,0.95)" />
-
-          {/* Dome */}
-          <path
-            d="M36 94 Q60 66 84 94 Z"
-            fill="rgba(220,198,240,0.85)"
-            stroke="rgba(155,142,185,0.78)"
-            strokeWidth="1.2"
-          />
-
-          {/* Spire + top ornament */}
-          <line x1="60" y1="66" x2="60" y2="48" stroke="rgba(155,142,185,0.85)" strokeWidth="1.2" />
-          <circle cx="60" cy="46" r="1.8" fill="rgba(255,242,218,0.9)" />
-          {/* Small pennant */}
-          <path d="M60 48 L72 52 L60 56 Z" fill="rgba(196,170,220,0.65)" />
-
-          {/* Slow sweeping light beam */}
-          <g>
-            <path d="M60 113 L250 62 L250 164 Z" fill="rgba(255,245,215,0.09)">
-              <animateTransform
-                attributeName="transform"
-                type="rotate"
-                values="-12 60 113;12 60 113;-12 60 113"
-                dur="11s"
-                repeatCount="indefinite"
-              />
-            </path>
-          </g>
-        </svg>
-      </div>
 
       {/* DOCK — anchored to the far left of the scene */}
       <div

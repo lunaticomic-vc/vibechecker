@@ -61,13 +61,21 @@ export default function Home() {
   // When collapsed, the iPad shrinks to a floating pill in the bottom-right corner.
   // Click the pill to re-expand.
   const [collapsed, setCollapsed] = useState(false);
+  // When the vibe flow started via Surprise Me we hide the chosen content type
+  // from the vibe-check header so the user doesn't see which category was rolled.
+  const [fromSurprise, setFromSurprise] = useState(false);
 
-  const openApp = (app: AppTab) => { setActiveApp(app); setScreen('app'); };
-  const pickType = (type: ContentType) => { setSelectedType(type); setError(null); setRecommendation(null); setScreen('vibe'); };
+  const openApp = (app: AppTab) => { setActiveApp(app); setScreen('app'); setFromSurprise(false); };
+  const pickType = (type: ContentType) => { setSelectedType(type); setError(null); setRecommendation(null); setFromSurprise(false); setScreen('vibe'); };
   const pickRandomFromActiveApp = () => {
     const pool = activeApp === 'watch' ? WATCH_TYPES : activeApp === 'read' ? READ_TYPES : DO_TYPES;
     const picked = pool[Math.floor(Math.random() * pool.length)];
-    pickType(picked);
+    // Same as pickType but marks the flow as a surprise so the vibe header hides the category.
+    setSelectedType(picked);
+    setError(null);
+    setRecommendation(null);
+    setFromSurprise(true);
+    setScreen('vibe');
   };
 
   const handleSubmit = async (vibe: string, useInterests: boolean = true) => {
@@ -234,9 +242,9 @@ export default function Home() {
                         {/* Dark vignette gradient at bottom for title legibility */}
                         <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent" />
 
-                        {/* Centered type icon as large decorative element */}
+                        {/* Decorative corner glyph — all dingbat symbols, no emoji */}
                         <div className="absolute top-3 right-3 opacity-30 text-white text-3xl">
-                          {type === 'movie' ? '🎬' : type === 'tv' ? '📺' : type === 'anime' ? '✧' : type === 'youtube' ? '▶' : '❀'}
+                          {type === 'movie' ? '◉' : type === 'tv' ? '▭' : type === 'anime' ? '✧' : type === 'youtube' ? '▶' : '❀'}
                         </div>
 
                         {/* Big readable title — Netflix poster style */}
@@ -381,7 +389,7 @@ export default function Home() {
                   </button>
                   <div>
                     <p className="text-sm font-medium text-[#2d2640]">vibe check</p>
-                    <p className="text-[10px] text-[#b8b0c8]">{TYPE_LABELS[selectedType]}</p>
+                    <p className="text-[10px] text-[#b8b0c8]">{fromSurprise ? 'a surprise · don\'t peek' : TYPE_LABELS[selectedType]}</p>
                   </div>
                 </div>
                 <InlineChat contentType={selectedType} onVibeReady={handleSubmit} loading={loading} isOwner={isOwner} />
@@ -491,7 +499,7 @@ function InlineChat({ contentType, onVibeReady, loading, isOwner }: { contentTyp
       const data = await res.json();
       if (data.type === 'question') setMessages([...newMessages, { role: 'assistant', content: data.message }]);
       else if (data.type === 'ready') {
-        setMessages([...newMessages, { role: 'assistant', content: 'ok i know exactly what to get you, one sec ✨' }]);
+        setMessages([...newMessages, { role: 'assistant', content: 'ok i know exactly what to get you, one sec' }]);
         setTimeout(() => onVibeReady(data.vibe, useInterests), 800);
       }
     } catch { onVibeReady(text, useInterests); }

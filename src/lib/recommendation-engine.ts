@@ -18,6 +18,22 @@ import { getAllPeople } from '@/lib/people';
 import { getUserPreferences } from '@/lib/user-preferences';
 import { log } from '@/lib/logger';
 
+/** Normalize a title for fuzzy comparison — lowercase, strip parentheticals, punctuation. */
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\s*[\(\[].*?[\)\]]\s*/g, '')  // strip (US), [2023], etc.
+    .replace(/[:\-–—!?.,'"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Check if a title fuzzy-matches any entry in the list. */
+function titleInList(title: string, list: string[]): boolean {
+  const n = normalizeTitle(title);
+  return list.some(t => normalizeTitle(t) === n);
+}
+
 async function verifyUrl(url: string): Promise<boolean> {
   try {
     const res = await fetch(url, {
@@ -26,7 +42,10 @@ async function verifyUrl(url: string): Promise<boolean> {
       redirect: 'follow',
       signal: AbortSignal.timeout(5000),
     });
-    return res.ok || res.status === 301 || res.status === 302;
+    if (!res.ok && res.status !== 301 && res.status !== 302) return false;
+    // Substack-specific: non-existent posts return 200 but redirect away from /p/ path
+    if (url.includes('substack.com/p/') && !res.url.includes('/p/')) return false;
+    return true;
   } catch {
     return false;
   }
@@ -52,6 +71,97 @@ const RATING_LABELS: Record<string, string> = {
   watched: 'OKAYISH (neutral)',
   not_my_thing: 'DISLIKED (not their thing)',
 };
+
+/**
+ * Parse a duration hint from the user's vibe text and return:
+ *   - targetSeconds: the requested duration in seconds (null if unspecified)
+ *   - targetLabel: a human label for prompts ("~20 minutes", "long", etc.)
+ *   - cleanVibe: the vibe with the duration hint stripped, so the search
+ *     query generator doesn't include "20 min" as a literal search term
+ *     (which would match videos with "20 min" in the TITLE — exactly the
+ *     bug the user flagged).
+ */
+export interface DurationHint {
+  targetSeconds: number | null;
+  minSeconds: number | null;
+  maxSeconds: number | null;
+  label: string | null;
+  cleanVibe: string;
+}
+
+export function parseDurationHint(vibe: string): DurationHint {
+  let cleaned = vibe;
+  let targetSeconds: number | null = null;
+  let label: string | null = null;
+
+  // Explicit numeric durations: "20 min", "20-minute", "1 hour", "1h 30m", "90s"
+  // Match order matters: hours+minutes combined → hours → minutes → seconds.
+  const hrMin = vibe.match(/\b(\d+)\s*(?:h|hr|hrs|hours?)\s*(?:and\s*)?(\d+)\s*(?:m|min|mins|minutes?)\b/i);
+  const hrOnly = vibe.match(/\b(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hours?)\b/i);
+  const minOnly = vibe.match(/\b(\d+)\s*-?\s*(?:m|min|mins|minutes?|minute)\b/i);
+
+  if (hrMin) {
+    targetSeconds = parseInt(hrMin[1]) * 3600 + parseInt(hrMin[2]) * 60;
+    label = `~${hrMin[1]}h ${hrMin[2]}m`;
+    cleaned = cleaned.replace(hrMin[0], '').trim();
+  } else if (hrOnly) {
+    targetSeconds = Math.round(parseFloat(hrOnly[1]) * 3600);
+    label = `~${hrOnly[1]} hour${hrOnly[1] === '1' ? '' : 's'}`;
+    cleaned = cleaned.replace(hrOnly[0], '').trim();
+  } else if (minOnly) {
+    targetSeconds = parseInt(minOnly[1]) * 60;
+    label = `~${minOnly[1]} minutes`;
+    cleaned = cleaned.replace(minOnly[0], '').trim();
+  }
+
+  // Qualitative hints: "short", "long", "quick", "lengthy", "brief", "binge-length", "feature-length"
+  const qualMap: [RegExp, number, number, number, string][] = [
+    // regex, target, min, max, label
+    [/\b(?:super\s*)?quick(?:ie)?\b/i, 180, 60, 420, 'very short (under 7 min)'],
+    [/\b(?:very\s+)?short\b/i, 600, 120, 900, 'short (2–15 min)'],
+    [/\b(?:very\s+)?brief\b/i, 480, 120, 720, 'brief (2–12 min)'],
+    [/\b(?:really\s+)?long\b/i, 3600, 1800, 14400, 'long (30 min+)'],
+    [/\b(?:extra\s+)?lengthy\b/i, 3600, 1800, 14400, 'lengthy (30 min+)'],
+    [/\b(?:an?\s+)?(?:full\s+)?feature[-\s]length\b/i, 6600, 4800, 9600, 'feature-length (~90–120 min)'],
+    [/\b(?:a\s+)?(?:binge|marathon)[-\s]length\b/i, 7200, 3600, 14400, 'binge-length (1+ hour)'],
+    [/\b(?:a\s+)?(?:bite|bites)[-\s]sized?\b/i, 360, 60, 600, 'bite-sized (1–10 min)'],
+    [/\b(?:an?\s+)?(?:hour|hour-long)\b/i, 3600, 2700, 4500, '~1 hour'],
+    [/\b(?:a\s+)?half[-\s]hour\b/i, 1800, 1500, 2100, '~30 minutes'],
+  ];
+
+  let minSeconds: number | null = null;
+  let maxSeconds: number | null = null;
+
+  if (targetSeconds !== null) {
+    // ±40% window around the explicit ask
+    minSeconds = Math.round(targetSeconds * 0.6);
+    maxSeconds = Math.round(targetSeconds * 1.4);
+  } else {
+    for (const [rx, target, lo, hi, lbl] of qualMap) {
+      if (rx.test(vibe)) {
+        targetSeconds = target;
+        minSeconds = lo;
+        maxSeconds = hi;
+        label = lbl;
+        cleaned = cleaned.replace(rx, '').trim();
+        break;
+      }
+    }
+  }
+
+  // Collapse leftover whitespace and dangling commas
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').replace(/\s+([,.;!?])/g, '$1').replace(/,\s*,/g, ',').trim();
+  cleaned = cleaned.replace(/^[,\s]+|[,\s]+$/g, '');
+  if (!cleaned) cleaned = vibe; // fall back if stripping emptied it
+
+  return {
+    targetSeconds,
+    minSeconds,
+    maxSeconds,
+    label,
+    cleanVibe: cleaned,
+  };
+}
 
 export function buildRecommendationPrompt(
   vibe: string,
@@ -221,6 +331,26 @@ const ACTIVITY_PATTERNS: Array<{ re: RegExp; hint: string }> = [
     re: /\b(?:in bed|before sleep|bedtime|winding down|falling asleep|can['']?t sleep)\b/gi,
     hint: 'calm, slow-burn, not anxiety-inducing',
   },
+  {
+    re: /\b(?:i['']?m\s+)?(?:while\s+)?(?:at work|working|at the office|at my desk)\b/gi,
+    hint: 'background-friendly, low-medium intensity',
+  },
+  {
+    re: /\b(?:i['']?m\s+)?(?:while\s+)?(?:studying|doing homework|revising)\b/gi,
+    hint: 'background-friendly, not too distracting, low-medium intensity',
+  },
+  {
+    re: /\b(?:i['']?m\s+)?(?:while\s+)?(?:on a walk|walking|taking a walk|strolling)\b/gi,
+    hint: 'audio-forward or contemplative, medium intensity',
+  },
+  {
+    re: /\b(?:i['']?m\s+)?(?:just\s+)?(?:chilling|lounging|relaxing|vibing|hanging out)\b/gi,
+    hint: 'any intensity, open to immersion',
+  },
+  {
+    re: /\b(?:i['']?m\s+)?(?:while\s+)?(?:cleaning|doing chores|tidying|doing laundry)\b/gi,
+    hint: 'works while hands are busy, background-friendly, medium intensity',
+  },
 ];
 
 function extractActivityContext(vibe: string): { cleanedVibe: string; situationHint: string } {
@@ -353,8 +483,17 @@ async function getYouTubeRecommendation(
 ): Promise<Recommendation> {
   const openai = getOpenAI();
 
+  // Parse a duration hint out of the vibe. Use the CLEANED vibe for search
+  // query generation so e.g. "20 min" never ends up in the YouTube search
+  // string (which would then match videos with "20 min" in the title).
+  const duration = parseDurationHint(vibe);
+  const searchVibe = duration.cleanVibe;
+  const durationHintText = duration.label
+    ? `\n\nThe user wants a video of approximately this length: ${duration.label}. Do NOT put the duration in the search text — it just means we should prefer videos of that actual runtime.`
+    : '';
+
   // Step 0: Expand the vibe WITHOUT interests — interests only used for picking later
-  const expandedVibe = await expandVibe(openai, vibe, [], tasteProfile);
+  const expandedVibe = await expandVibe(openai, searchVibe, [], tasteProfile);
 
   // Step 1: GPT generates search queries from VIBE ONLY — no interests pollution
   const queryResponse = await openai.chat.completions.create({
@@ -364,11 +503,11 @@ async function getYouTubeRecommendation(
     messages: [
       {
         role: 'system',
-        content: `Generate YouTube search queries to find full-length videos (NOT Shorts). Return ONLY a JSON object with a "queries" field: {"queries": ["query1", "query2", ...]}. 4-5 specific search strings.`,
+        content: `Generate YouTube search queries to find full-length videos (NOT Shorts). Return ONLY a JSON object with a "queries" field: {"queries": ["query1", "query2", ...]}. 4-5 specific search strings. CRITICAL: NEVER put a duration number or word (like "20 min", "1 hour", "long", "short") in the query text — duration is handled separately by filtering on real video runtimes. The query should describe the TOPIC only.`,
       },
       {
         role: 'user',
-        content: `The user wants: "${vibe}"\n\nExpanded concept: ${expandedVibe}\n\nGenerate 4-5 YouTube search queries with this mix:\n- 2 direct queries: literal about "${vibe}" (video essays, deep dives, explainers, niche creators)\n- 1 lateral query: an unexpected angle or tangentially related concept that captures the same FEELING as "${vibe}" but approaches it from a surprising direction\n- 1 format-specific query: combine the topic with a format (e.g. "documentary", "analysis", "essay", "breakdown", "history of", "deep dive")\n- 1 niche creator query: target smaller passionate creators over mainstream channels (think indie, underrated, or niche community spaces)\nThe lateral query should be genuinely surprising — what unexpected topic FEELS exactly like "${vibe}"?`,
+        content: `The user wants: "${searchVibe}"\n\nExpanded concept: ${expandedVibe}${durationHintText}\n\nGenerate 4-5 YouTube search queries with this mix:\n- 2 direct queries: literal about "${searchVibe}" (video essays, deep dives, explainers, niche creators)\n- 1 lateral query: an unexpected angle or tangentially related concept that captures the same FEELING as "${searchVibe}" but approaches it from a surprising direction\n- 1 format-specific query: combine the topic with a format (e.g. "documentary", "analysis", "essay", "breakdown", "history of", "deep dive")\n- 1 niche creator query: target smaller passionate creators over mainstream channels (think indie, underrated, or niche community spaces)\nThe lateral query should be genuinely surprising — what unexpected topic FEELS exactly like "${searchVibe}"?\nNEVER write durations into the queries.`,
       },
     ],
   });
@@ -390,10 +529,34 @@ async function getYouTubeRecommendation(
   }
 
   if (allResults.length > 0) {
-    // Step 2.5: Fetch duration + view counts for quality signal (#3, #9)
-    const candidates = allResults.slice(0, 12);
+    // Step 2.5: Fetch duration + view counts for quality signal
+    let candidates = allResults.slice(0, 20); // fetch a wider pool so duration filtering has room
     const details = await getVideoDetails(candidates.map(v => v.videoId));
     const detailsMap = new Map(details.map(d => [d.videoId, d]));
+
+    // Duration filter: if we have a target window from parseDurationHint, prefer
+    // videos inside it. Sort candidates by "distance from target" so the best
+    // fits come first, then cap at 12. Videos with no duration metadata keep a
+    // middling position so they're not dropped when the API call fails.
+    if (duration.targetSeconds !== null) {
+      const target = duration.targetSeconds;
+      const min = duration.minSeconds ?? Math.round(target * 0.6);
+      const max = duration.maxSeconds ?? Math.round(target * 1.4);
+
+      const scored = candidates.map(v => {
+        const d = detailsMap.get(v.videoId);
+        const dur = d?.durationSeconds;
+        if (dur === undefined) return { v, score: 1e9, inWindow: false };
+        const inWindow = dur >= min && dur <= max;
+        // Distance from target, with a bonus for being inside the soft window
+        const score = Math.abs(dur - target) - (inWindow ? target * 0.5 : 0);
+        return { v, score, inWindow };
+      });
+      scored.sort((a, b) => a.score - b.score);
+      candidates = scored.slice(0, 12).map(s => s.v);
+    } else {
+      candidates = candidates.slice(0, 12);
+    }
 
     // Step 3: GPT picks the best video with validation
     const videoList = candidates.map((v, i) => {
@@ -402,6 +565,10 @@ async function getYouTubeRecommendation(
       const views = d ? `${Math.round(d.viewCount / 1000)}K views` : '';
       return `${i + 1}. "${v.title}" by ${v.channelTitle || 'unknown'} [${dur}${views ? ', ' + views : ''}]`;
     }).join('\n');
+
+    const durationPickLine = duration.label
+      ? `\n\nDURATION TARGET: The user asked for ${duration.label}. The candidates above are already pre-sorted by how well their ACTUAL RUNTIME matches this target. Strongly prefer videos whose runtime (shown in brackets after each title) is close to the target; only skip a close-fit video if it's clearly off-topic.`
+      : '';
 
     const pickResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -428,7 +595,7 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
         },
         {
           role: 'user',
-          content: `Vibe: "${vibe}"${interests.length > 0 ? `\nUser interests (for tie-breaking only, do NOT force-fit): ${interests.join(', ')}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\nRate and pick the video that best matches "${vibe}":\n\n${videoList}`,
+          content: `Vibe: "${searchVibe}"${interests.length > 0 ? `\nUser interests (for tie-breaking only, do NOT force-fit): ${interests.join(', ')}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}${durationPickLine}\n\nRate and pick the video that best matches the vibe:\n\n${videoList}`,
         },
       ],
     });
@@ -714,8 +881,14 @@ async function getScreenRecommendation(
 ): Promise<Recommendation> {
   const openai = getOpenAI();
 
+  // Parse a duration hint (e.g. "a 90 minute movie", "short episodes", "a feature-length film").
+  // We use the cleaned vibe for decomposition/search so numeric durations never leak
+  // into TMDB/Jikan search terms, and pass the label to the picker as a soft preference.
+  const duration = parseDurationHint(vibe);
+  const searchVibe = duration.cleanVibe;
+
   // Step 1: Decompose vibe into structured facets (#6)
-  const facets = await decomposeVibe(openai, vibe);
+  const facets = await decomposeVibe(openai, searchVibe);
   const contentLabelMap: Record<string, string> = {
     movie: 'movies', tv: 'TV shows', anime: 'anime', kdrama: 'Korean dramas',
     book: 'books', poetry: 'poems', short_story: 'short stories', essay: 'essays',
@@ -750,7 +923,7 @@ DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maxim
       },
       {
         role: 'user',
-        content: `Vibe: "${vibe}"\nMood: ${facets.mood}\nGenres: ${facets.genres.join(', ') || 'any'}\nThemes: ${facets.themes.join(', ') || 'any'}\nAesthetic: ${facets.aesthetic || 'any'}${facets.pacing ? `\nPacing: ${facets.pacing}` : ''}${facets.tone ? `\nTone: ${facets.tone}` : ''}\n\nSuggest 10-12 real ${contentLabel} titles with the diversity mix described above.${existingTitles.length > 0 ? `\n\nDo NOT suggest any of these (already seen): ${existingTitles.slice(0, 30).join(', ')}` : ''}${rejectionReasons.length > 0 ? `\n\nUser previously rejected similar recs for: ${rejectionReasons.join('; ')}. Avoid those patterns.` : ''}`,
+        content: `Vibe: "${searchVibe}"\nMood: ${facets.mood}\nGenres: ${facets.genres.join(', ') || 'any'}\nThemes: ${facets.themes.join(', ') || 'any'}\nAesthetic: ${facets.aesthetic || 'any'}${facets.pacing ? `\nPacing: ${facets.pacing}` : ''}${facets.tone ? `\nTone: ${facets.tone}` : ''}${duration.label ? `\nRuntime preference: ${duration.label} — ONLY suggest titles whose actual runtime/episode length is close to this. For episodic shows, consider episode length (not total series length). Do NOT include the duration as a word in the title; it's a separate filter.` : ''}\n\nSuggest 10-12 real ${contentLabel} titles with the diversity mix described above.${existingTitles.length > 0 ? `\n\nDo NOT suggest any of these (already seen): ${existingTitles.slice(0, 30).join(', ')}` : ''}${rejectionReasons.length > 0 ? `\n\nUser previously rejected similar recs for: ${rejectionReasons.join('; ')}. Avoid those patterns.` : ''}`,
       },
     ],
   });
@@ -869,7 +1042,7 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
         },
         {
           role: 'user',
-          content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests (tie-breaking only): ${interests.join(', ')}` : ''}${tastePatterns ? `\n\n${tastePatterns}` : ''}${peopleSection || ''}\n\nPick the ${contentLabel.slice(0, -1)} that best matches "${vibe}":\n\n${candidateList}`,
+          content: `Vibe: "${searchVibe}"${interests.length > 0 ? `\nInterests (tie-breaking only): ${interests.join(', ')}` : ''}${tastePatterns ? `\n\n${tastePatterns}` : ''}${peopleSection || ''}${duration.label ? `\n\nRUNTIME TARGET: ${duration.label}. Prefer titles whose actual runtime (for movies) or typical episode length (for series) matches this target. Use your real knowledge of each title's runtime — do NOT rely on the title text.` : ''}\n\nPick the ${contentLabel.slice(0, -1)} that best matches the vibe:\n\n${candidateList}`,
         },
       ],
     });
@@ -930,7 +1103,7 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
           },
           {
             role: 'user',
-            content: `Vibe: "${vibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${existingTitles.length > 0 ? `\n\nDo NOT recommend any of these: ${existingTitles.slice(0, 30).join(', ')}` : ''}`,
+            content: `Vibe: "${searchVibe}"${interests.length > 0 ? `\nInterests: ${interests.join(', ')}` : ''}${duration.label ? `\n\nRuntime preference: ${duration.label}. Pick a title whose actual runtime or episode length fits this. Use your knowledge of the title's real duration.` : ''}${existingTitles.length > 0 ? `\n\nDo NOT recommend any of these: ${existingTitles.slice(0, 30).join(', ')}` : ''}`,
           },
         ],
       });

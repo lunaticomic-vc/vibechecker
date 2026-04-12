@@ -99,7 +99,7 @@ export default function ChatVibeInput({ contentType, onVibeReady, loading, isOwn
         setMessages([...newMessages, { role: 'assistant', content: data.message }]);
       } else if (data.type === 'ready') {
         // Show a final "got it" message then trigger recommendation
-        setMessages([...newMessages, { role: 'assistant', content: 'ok i know exactly what to get you, one sec ✨' }]);
+        setMessages([...newMessages, { role: 'assistant', content: 'ok i know exactly what to get you, one sec' }]);
         setTimeout(() => onVibeReady(data.vibe, useInterests), 800);
       }
     } catch {
