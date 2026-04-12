@@ -111,7 +111,10 @@ export async function searchPersonBrave(name: string): Promise<BravePersonResult
       const resultTitle = ((results[0] as Record<string, unknown>).title as string) ?? '';
       const cleaned = resultTitle
         .replace(/\s*[\(\[].*?[\)\]]\s*/g, ' ')
-        .replace(/\s*[-–—|:]\s*(imdb|wiki|wikipedia|tmdb|youtube|instagram|twitter|biography|filmography|rotten|metacritic|fandom|actor|actress|director).*/i, '')
+        // Strip common page-title prefixes like "About | ", "Meet ", "Who is "
+        .replace(/^(?:about|meet|who\s+is)\s*[|:–—]\s*/i, '')
+        // Strip common suffixes like "- IMDb", "| Wikipedia", "- Biography"
+        .replace(/\s*[-–—|:]\s*(imdb|wiki|wikipedia|tmdb|youtube|instagram|twitter|biography|filmography|rotten|metacritic|fandom|actor|actress|director|about|home|official).*/i, '')
         .trim();
       if (cleaned && cleaned.length > 1 && cleaned.length < 100) {
         fixedName = cleaned;
