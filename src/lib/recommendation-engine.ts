@@ -409,7 +409,7 @@ Rules:
       },
       {
         role: 'user',
-        content: `Prompt: "${vibe}"${interests.length > 0 ? `\nUser interests (ONLY include if directly relevant to "${vibe}"): ${interests.join(', ')}` : ''}${tasteProfile ? `\nTaste (for tone only): ${tasteProfile.slice(0, 200)}` : ''}`,
+        content: `Prompt: "${vibe}"${interests.length > 0 ? `\nUser interests (ONLY include if directly relevant to "${vibe}"): ${interests.join(', ')}` : ''}${tasteProfile ? `\nTaste (for tone only): ${tasteProfile.slice(0, 500)}` : ''}`,
       },
     ],
   });
