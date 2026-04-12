@@ -622,7 +622,7 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
           },
           {
             role: 'user',
-            content: `Original vibe: "${vibe}"\nThese titles came back but were wrong:\n${candidates.slice(0, 5).map(v => `- "${v.title}"`).join('\n')}\n\nGenerate better, more specific queries.`,
+            content: `Original vibe: "${vibe}"${tasteProfile ? `\nUser taste (for context): ${tasteProfile.slice(0, 300)}` : ''}${interests.length > 0 ? `\nUser interests: ${interests.join(', ')}` : ''}\nThese titles came back but were wrong:\n${candidates.slice(0, 5).map(v => `- "${v.title}"`).join('\n')}\n\nGenerate better, more specific queries.`,
           },
         ],
       });
@@ -654,11 +654,11 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
           messages: [
             {
               role: 'system',
-              content: `Pick the best YouTube video that GENUINELY matches "${vibe}". If none match, pick the closest one. Return ONLY JSON: {"pick": <number>, "description": "brief summary", "reasoning": "why this fits", "interests": ["tag1", "tag2"]}`,
+              content: `Pick the best YouTube video that GENUINELY matches "${vibe}". Score on VIBE RELEVANCE, EMOTIONAL RESONANCE, and NOVELTY (1-10 each). Only pick if average is 6+. Return ONLY JSON: {"pick": <number or 0>, "description": "brief summary", "reasoning": "why this fits", "interests": ["tag1", "tag2"]}`,
             },
             {
               role: 'user',
-              content: `Vibe: "${vibe}"\n\n${retryList}`,
+              content: `Vibe: "${vibe}"${interests.length > 0 ? `\nUser interests (for tie-breaking): ${interests.join(', ')}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\n${retryList}`,
             },
           ],
         });
@@ -857,7 +857,7 @@ Pick the article averaging highest. Return ONLY JSON: {"pick": <number>, "reason
 
   const query = `${vibe} ${interests.slice(0, 2).join(' ')}`.trim();
   return {
-    title: tried[0] ?? vibe,
+    title: `Search: ${vibe}`,
     type: 'substack',
     description: `Couldn't find a verified article. Here's a search instead.`,
     reasoning: '',
@@ -923,7 +923,7 @@ DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maxim
       },
       {
         role: 'user',
-        content: `Vibe: "${searchVibe}"\nMood: ${facets.mood}\nGenres: ${facets.genres.join(', ') || 'any'}\nThemes: ${facets.themes.join(', ') || 'any'}\nAesthetic: ${facets.aesthetic || 'any'}${facets.pacing ? `\nPacing: ${facets.pacing}` : ''}${facets.tone ? `\nTone: ${facets.tone}` : ''}${duration.label ? `\nRuntime preference: ${duration.label} — ONLY suggest titles whose actual runtime/episode length is close to this. For episodic shows, consider episode length (not total series length). Do NOT include the duration as a word in the title; it's a separate filter.` : ''}\n\nSuggest 10-12 real ${contentLabel} titles with the diversity mix described above.${existingTitles.length > 0 ? `\n\nDo NOT suggest any of these (already seen): ${existingTitles.slice(0, 30).join(', ')}` : ''}${rejectionReasons.length > 0 ? `\n\nUser previously rejected similar recs for: ${rejectionReasons.join('; ')}. Avoid those patterns.` : ''}`,
+        content: `Vibe: "${searchVibe}"\nMood: ${facets.mood}\nGenres: ${facets.genres.join(', ') || 'any'}\nThemes: ${facets.themes.join(', ') || 'any'}\nAesthetic: ${facets.aesthetic || 'any'}${facets.pacing ? `\nPacing: ${facets.pacing}` : ''}${facets.tone ? `\nTone: ${facets.tone}` : ''}${duration.label ? `\nRuntime preference: ${duration.label} — ONLY suggest titles whose actual runtime/episode length is close to this. For episodic shows, consider episode length (not total series length). Do NOT include the duration as a word in the title; it's a separate filter.` : ''}\n\nSuggest 10-12 real ${contentLabel} titles with the diversity mix described above.${discoveryMode === 'from_library' && existingTitles.length > 0 ? `\n\nIMPORTANT: You MUST suggest titles from the user's existing library. Here are their titles — pick ones that best match the vibe:\n${existingTitles.slice(0, 50).join(', ')}` : existingTitles.length > 0 ? `\n\nDo NOT suggest any of these (already seen): ${existingTitles.slice(0, 30).join(', ')}` : ''}${rejectionReasons.length > 0 ? `\n\nUser previously rejected similar recs for: ${rejectionReasons.join('; ')}. Avoid those patterns.` : ''}`,
       },
     ],
   });
@@ -945,19 +945,19 @@ DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maxim
   if (contentType === 'anime') {
     const results = await searchAnimeJikanMulti(queries);
     candidates = results
-      .filter(r => excludeExisting ? !existingTitles.includes(r.title) : true)
+      .filter(r => excludeExisting ? !titleInList(r.title, existingTitles) : true)
       .slice(0, 15)
       .map(r => ({ title: r.title, year: r.year, description: r.description, score: r.score, genres: r.genres }));
   } else if (contentType === 'manga') {
     const results = await searchMangaJikanMulti(queries);
     candidates = results
-      .filter(r => excludeExisting ? !existingTitles.includes(r.title) : true)
+      .filter(r => excludeExisting ? !titleInList(r.title, existingTitles) : true)
       .slice(0, 15)
       .map(r => ({ title: r.title, year: r.year, description: r.description, score: r.score }));
   } else if (contentType === 'game') {
     const results = await searchSteamGamesMulti(queries);
     candidates = results
-      .filter(r => excludeExisting ? !existingTitles.includes(r.title) : true)
+      .filter(r => excludeExisting ? !titleInList(r.title, existingTitles) : true)
       .slice(0, 15)
       .map(r => ({ title: r.title, year: r.year, description: r.description }));
   } else if (contentType === 'comic') {
@@ -967,7 +967,7 @@ DO NOT cluster in one era, one popularity tier, or one subgenre. Diversity maxim
     const tmdbType = contentType === 'movie' ? 'movie' as const : 'tv' as const;
     const results = await searchTMDBMulti(queries, tmdbType);
     candidates = results
-      .filter(r => excludeExisting ? !existingTitles.includes(r.title) : true)
+      .filter(r => excludeExisting ? !titleInList(r.title, existingTitles) : true)
       .slice(0, 15)
       .map(r => ({ title: r.title, year: r.year, description: r.description, score: r.voteAverage }));
   }
