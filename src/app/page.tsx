@@ -406,7 +406,7 @@ export default function Home() {
                   </button>
                   <p className="text-sm font-medium text-[#2d2640]">here you go</p>
                 </div>
-                <div className="flex-1 overflow-y-auto px-4 py-4">
+                <div className="flex-1 flex flex-col items-center justify-center px-4 py-3">
                   <RecommendationCard recommendation={recommendation} onAccept={goHome} compact />
                   <div className="flex justify-center gap-3 mt-4 pb-3">
                     <button onClick={async () => { if (!recommendation || loading) return; await fetch('/api/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: recommendation.type, title: recommendation.title, external_id: recommendation.actionUrl, image_url: recommendation.thumbnailUrl ?? recommendation.imageUrls?.[0], metadata: JSON.stringify({ year: recommendation.year, source: 'recommendation', description: recommendation.description, reasoning: recommendation.reasoning, interests: recommendation.interests, actors: recommendation.actors, redditInsights: recommendation.redditInsights }) }) }); if (lastVibe) handleSubmit(lastVibe); }} disabled={loading} className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[#e8e3f3]/60 text-[#c8c2d6] hover:border-[#c4b5fd] hover:text-[#7c3aed] transition-all disabled:opacity-40" title="Save + next">

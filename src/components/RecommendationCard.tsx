@@ -1,8 +1,80 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Recommendation, ResearchLink, KnowledgeChecklistItem } from '@/types/index';
 import { TYPE_COLORS as BASE_TYPE_COLORS, TYPE_LABELS } from '@/lib/constants';
+
+/** Mini gallery: cycles through images, tap to expand full-screen */
+function ImageGallery({ images, alt, aspectRatio = '2/3' }: { images: string[]; alt: string; aspectRatio?: string }) {
+  const [idx, setIdx] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const next = useCallback(() => setIdx(i => (i + 1) % images.length), [images.length]);
+  const prev = useCallback(() => setIdx(i => (i - 1 + images.length) % images.length), [images.length]);
+
+  if (images.length === 0) return null;
+
+  return (
+    <>
+      <div className="relative w-full overflow-hidden rounded-xl border border-[#e9e4f5]" style={{ aspectRatio }}>
+        <img
+          src={images[idx]}
+          alt={`${alt} ${idx + 1}`}
+          className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-[1.02]"
+          onClick={() => setExpanded(true)}
+        />
+        {/* Nav arrows — only if multiple images */}
+        {images.length > 1 && (
+          <>
+            <button onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/90 hover:bg-black/60 transition-colors">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); next(); }} className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/90 hover:bg-black/60 transition-colors">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </>
+        )}
+        {/* Dots */}
+        {images.length > 1 && (
+          <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-1">
+            {images.map((_, i) => (
+              <button key={i} onClick={(e) => { e.stopPropagation(); setIdx(i); }} className={`w-1.5 h-1.5 rounded-full transition-all ${i === idx ? 'bg-white scale-110' : 'bg-white/50'}`} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Full-screen expanded overlay */}
+      {expanded && (
+        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setExpanded(false)}>
+          <button className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors z-10">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+          <img
+            src={images[idx]}
+            alt={`${alt} ${idx + 1}`}
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={e => e.stopPropagation()}
+          />
+          {images.length > 1 && (
+            <>
+              <button onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); next(); }} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </button>
+              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
+                {images.map((_, i) => (
+                  <button key={i} onClick={(e) => { e.stopPropagation(); setIdx(i); }} className={`w-2 h-2 rounded-full transition-all ${i === idx ? 'bg-white scale-125' : 'bg-white/50'}`} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
 
 // RecommendationCard needs border colors in addition to bg/text — extend with borders
 const TYPE_COLORS: Record<string, string> = {
@@ -397,13 +469,22 @@ export default function RecommendationCard({ recommendation, onAccept, compact =
 
     const activeSection = sections.find(s => s.key === openSection) ?? sections[0] ?? null;
 
+    // Build gallery images: combine poster + screencaps + imageUrls
+    const galleryImages: string[] = [];
+    if (thumbnailUrl) galleryImages.push(thumbnailUrl);
+    if (imageUrls) {
+      for (const url of imageUrls) {
+        if (!url.startsWith('gradient:') && !galleryImages.includes(url)) galleryImages.push(url);
+      }
+    }
+
     // YouTube compact — thumbnail left, info right
     if (isYouTube) {
       return (
         <div className="relative z-10 flex gap-3 w-full">
-          {thumbnailUrl && (
-            <div className="w-[38%] shrink-0 cursor-pointer" onClick={handleWatch}>
-              <img src={thumbnailUrl} alt={title} className="w-full rounded-xl border border-[#e9e4f5] object-cover" style={{ aspectRatio: '16/9' }} />
+          {galleryImages.length > 0 && (
+            <div className="w-[38%] shrink-0">
+              <ImageGallery images={galleryImages} alt={title} aspectRatio="16/9" />
             </div>
           )}
           <div className="flex-1 min-w-0 flex flex-col gap-1.5">
@@ -438,13 +519,13 @@ export default function RecommendationCard({ recommendation, onAccept, compact =
       );
     }
 
-    // Screen content compact (movie/tv/anime/kdrama/manga/comic/game) — poster left, info right
+    // Screen content compact (movie/tv/anime/kdrama/manga/comic/game) — gallery left, info right
     return (
       <div className="relative z-10 flex gap-3 w-full">
-        {/* Left: poster */}
-        {poster && (
+        {/* Left: image gallery (poster + screencaps/backdrops) */}
+        {galleryImages.length > 0 && (
           <div className="w-[32%] shrink-0">
-            <img src={poster} alt={`${title} poster`} className="w-full rounded-xl border border-[#e9e4f5] object-cover shadow-sm" style={{ aspectRatio: '2/3' }} />
+            <ImageGallery images={galleryImages} alt={title} aspectRatio="2/3" />
           </div>
         )}
         {/* Right: info */}
