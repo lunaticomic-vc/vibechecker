@@ -58,7 +58,7 @@ async function validateAndFixLinks(links: ResearchLink[]): Promise<ResearchLink[
   return results.filter((r): r is ResearchLink => r !== null);
 }
 
-export async function getResearchRecommendation(vibe: string): Promise<Recommendation> {
+export async function getResearchRecommendation(vibe: string, interests: string[] = []): Promise<Recommendation> {
   const openai = getOpenAI();
 
   const response = await openai.chat.completions.create({
@@ -106,7 +106,7 @@ Rules:
       },
       {
         role: 'user',
-        content: `Research interest: "${vibe}"`,
+        content: `Research interest: "${vibe}"${interests.length > 0 ? `\n\nThe user's interests and passions: ${interests.join(', ')}. Use these to pick the most personally relevant angle on "${vibe}" — prioritize intersections between their interests and the research topic. For example, if they love philosophy and ask about AI, lean toward AI ethics/consciousness rather than technical ML.` : ''}`,
       },
     ],
   });

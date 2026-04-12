@@ -476,10 +476,13 @@ Prioritize recommendations that match these deep fingerprints, not just surface 
 
 async function getYouTubeRecommendation(
   vibe: string,
-  userPrompt: string,
+  _userPrompt: string,
   interests: string[],
   tasteProfile: string | null = null,
-  existingTitles: string[] = []
+  existingTitles: string[] = [],
+  tastePatterns: string = '',
+  rejectionReasons: string[] = [],
+  peopleSection: string = '',
 ): Promise<Recommendation> {
   const openai = getOpenAI();
 
@@ -595,7 +598,7 @@ Return ONLY JSON: {"pick": <number or 0>, "score": <1-10>, "description": "brief
         },
         {
           role: 'user',
-          content: `Vibe: "${searchVibe}"${interests.length > 0 ? `\nUser interests (for tie-breaking only, do NOT force-fit): ${interests.join(', ')}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}${durationPickLine}\n\nRate and pick the video that best matches the vibe:\n\n${videoList}`,
+          content: `Vibe: "${searchVibe}"${interests.length > 0 ? `\nUser interests (for tie-breaking only, do NOT force-fit): ${interests.join(', ')}` : ''}${tastePatterns ? `\n\n${tastePatterns}` : ''}${peopleSection || ''}${rejectionReasons.length > 0 ? `\n\nUser previously rejected similar recs for: ${rejectionReasons.join('; ')}. Avoid those patterns.` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}${durationPickLine}\n\nRate and pick the video that best matches the vibe:\n\n${videoList}`,
         },
       ],
     });
@@ -718,7 +721,9 @@ async function getSubstackRecommendation(
   _userPrompt: string,
   interests: string[],
   tasteProfile: string | null = null,
-  existingTitles: string[] = []
+  existingTitles: string[] = [],
+  rejectionReasons: string[] = [],
+  peopleSection: string = '',
 ): Promise<Recommendation> {
   const openai = getOpenAI();
 
@@ -785,7 +790,7 @@ Pick the article averaging highest. Return ONLY JSON: {"pick": <number>, "reason
         },
         {
           role: 'user',
-          content: `Vibe: "${vibe}"\n${interests.length > 0 ? `Interests: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\nUser taste: ${tasteProfile.slice(0, 400)}` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\nPick the article that best matches "${vibe}" and would genuinely be worth reading:\n\n${articleList}`,
+          content: `Vibe: "${vibe}"\n${interests.length > 0 ? `Interests: ${interests.join(', ')}` : ''}${tasteProfile ? `\n\nUser taste: ${tasteProfile.slice(0, 600)}` : ''}${peopleSection || ''}${rejectionReasons.length > 0 ? `\n\nUser previously rejected similar recs for: ${rejectionReasons.join('; ')}. Avoid those patterns.` : ''}${existingTitles.length > 0 ? `\n\nDO NOT pick any of these (already in library): ${existingTitles.slice(0, 20).join(', ')}` : ''}\n\nPick the article that best matches "${vibe}" and would genuinely be worth reading:\n\n${articleList}`,
         },
       ],
     });
@@ -1065,8 +1070,8 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
       }
 
       // Confidence too low or no match — retry with higher temperature
-      if (attempt === MAX_PICK_ATTEMPTS - 1 && pick >= 0 && pick < candidates.length) {
-        // Last attempt: take what we got
+      if (attempt === MAX_PICK_ATTEMPTS - 1 && pick >= 0 && pick < candidates.length && confidence >= 4) {
+        // Last attempt: accept if confidence is at least passable (4+)
         title = parsed.title ?? candidates[pick].title;
         description = parsed.description ?? '';
         reasoning = parsed.reasoning ?? '';

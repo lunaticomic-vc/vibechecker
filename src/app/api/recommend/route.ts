@@ -82,7 +82,14 @@ export async function POST(req: NextRequest) {
     let raw: Recommendation;
     let isSimpleType = false;
     if (contentType === 'research') {
-      raw = await getResearchRecommendation(vibe.trim());
+      // Load interests for research personalization — research exits before getRecommendation()
+      let researchInterests: string[] = [];
+      try {
+        const client = await db();
+        const result = await client.execute('SELECT name FROM interests ORDER BY name LIMIT 50');
+        researchInterests = (result.rows as unknown as { name: string }[]).map(r => r.name);
+      } catch { /* best effort */ }
+      raw = await getResearchRecommendation(vibe.trim(), researchInterests);
       isSimpleType = true;
     } else if (contentType in READING_TYPES) {
       // Build taste context for reading types — previously these had ZERO personalization.
@@ -148,11 +155,20 @@ async function buildReadingContext(contentType: ContentType): Promise<ReadingCon
     else if (r.rating === 'not_my_thing') disliked.push({ title: f.title, reasoning: r.reasoning });
   }
 
+  // Load interests for reading types — previously missing, leaving a personalization gap
+  let interests: string[] = [];
+  try {
+    const client = await db();
+    const interestsResult = await client.execute('SELECT name FROM interests ORDER BY name LIMIT 50');
+    interests = (interestsResult.rows as unknown as { name: string }[]).map(r => r.name);
+  } catch { /* best effort */ }
+
   return {
     tasteProfile,
     lovedItems: loved,
     enjoyedItems: enjoyed,
     dislikedItems: disliked,
     exclusionList,
+    interests,
   };
 }
