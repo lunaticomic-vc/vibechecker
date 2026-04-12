@@ -1183,7 +1183,7 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
   let thumbnailUrl: string | undefined;
   let redditInsights: { subreddit: string; comment: string; score: number }[] | undefined;
 
-  const readTypes: ContentType[] = ['book', 'poetry', 'short_story', 'essay', 'podcast', 'research', 'manga', 'comic', 'game'];
+  const readTypes: ContentType[] = ['book', 'poetry', 'short_story', 'essay', 'podcast', 'research', 'manga', 'comic'];
   const imagePromise = (async () => {
     if (contentType === 'anime') {
       const [jikan, tmdb] = await Promise.all([
@@ -1192,6 +1192,19 @@ Return ONLY JSON: {"pick": <number or 0>, "confidence": <1-10>, "title": "exact 
       ]);
       thumbnailUrl = jikan?.posterUrl ?? tmdb?.posterUrl ?? undefined;
       imageUrls = tmdb?.backdropUrls?.length ? tmdb.backdropUrls : (jikan?.backdropUrls ?? []);
+    } else if (contentType === 'game') {
+      // Games — use Steam Store API for proper cover art
+      try {
+        const steamRes = await fetch(
+          `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(title!)}&l=en&cc=US`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (steamRes.ok) {
+          const steamData = await steamRes.json();
+          const appId = steamData?.items?.[0]?.id;
+          if (appId) thumbnailUrl = `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
+        }
+      } catch { /* best effort */ }
     } else if (readTypes.includes(contentType)) {
       // Read types — vibe image from Brave
       const braveKey = process.env.BRAVE_API_KEY;

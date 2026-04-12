@@ -305,9 +305,11 @@ export async function enrichManualAdd(
 export async function enrichRecommendation(rec: Recommendation): Promise<Recommendation> {
   const screenTypes: ContentType[] = ['movie', 'tv', 'anime', 'kdrama'];
   const isScreen = screenTypes.includes(rec.type);
+  // Types that have subreddits mapped in reddit.ts — fetch Reddit for all of them
+  const redditTypes: ContentType[] = ['movie', 'tv', 'anime', 'kdrama', 'youtube', 'manga', 'comic', 'game', 'book', 'podcast'];
 
   const missingText = isScreen && (!rec.reasoning || !rec.tropes?.length || !rec.interests?.length);
-  const missingReddit = isScreen && !rec.redditInsights?.length;
+  const missingReddit = redditTypes.includes(rec.type) && !rec.redditInsights?.length;
 
   // Parallel: GPT for missing text fields + Reddit
   const [gptPatch, reddit] = await Promise.all([
