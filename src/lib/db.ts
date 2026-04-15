@@ -174,7 +174,7 @@ async function runInit(db: Client): Promise<void> {
     await db.batch([
       `CREATE TABLE favorites_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'poetry', 'short_story', 'book', 'essay', 'podcast', 'manga', 'comic', 'game')),
+        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'research', 'poetry', 'short_story', 'book', 'essay', 'podcast', 'manga', 'comic', 'game')),
         title TEXT NOT NULL,
         external_id TEXT,
         metadata TEXT,
@@ -187,6 +187,23 @@ async function runInit(db: Client): Promise<void> {
     ]);
     await db.execute('PRAGMA foreign_keys = ON');
     dbLog('Favorites table migrated ✓');
+  }
+
+  // Integrity: ensure every favorite has a watch_progress entry.
+  // The favorites migration above can orphan watch_progress rows (the old
+  // FK target is dropped), leaving favorites with no progress entry — which
+  // the app then shows as "todo". Clean up orphaned rows and backfill any
+  // favorites that lost their progress entry.
+  const orphaned = await db.execute(
+    `SELECT f.id FROM favorites f LEFT JOIN watch_progress wp ON wp.favorite_id = f.id WHERE wp.id IS NULL`
+  );
+  if (orphaned.rows.length > 0) {
+    const stmts = orphaned.rows.map((r: any) => ({
+      sql: `INSERT OR IGNORE INTO watch_progress (favorite_id, status) VALUES (?, 'watching')`,
+      args: [r.id as number],
+    }));
+    await db.batch(stmts);
+    dbLog(`Backfilled ${orphaned.rows.length} missing watch_progress entries ✓`);
   }
 
   // Migration: add reason column to rejected_recommendations
