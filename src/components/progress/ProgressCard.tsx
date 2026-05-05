@@ -172,7 +172,11 @@ export default function ProgressCard({ item, isGuest, onUpdate }: ProgressCardPr
         )}
 
         {!isGuest && (
-        <div className="flex gap-1.5 mt-auto pt-1">
+        <div
+          className="flex gap-1.5 mt-auto pt-1"
+          onMouseDown={e => e.stopPropagation()}
+          onTouchStart={e => e.stopPropagation()}
+        >
           {(item.favorite_type === 'tv' || item.favorite_type === 'anime') && (
             <button onClick={() => patch({ current_episode: item.current_episode + 1 })} className="flex-1 text-[10px] bg-[#f5f3ff] hover:bg-[#e9e4f5] text-[#7c3aed] font-medium px-2 py-1.5 rounded-lg transition-colors">
               +1 Ep

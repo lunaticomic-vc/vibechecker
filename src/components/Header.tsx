@@ -14,7 +14,11 @@ export default function Header() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
+    const mq = window.matchMedia('(min-width: 768px)');
+    const update = () => setIsMobile(!mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
   }, []);
 
   useEffect(() => {

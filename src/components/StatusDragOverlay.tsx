@@ -51,61 +51,72 @@ export default function StatusDragProvider({ children, onStatusChange }: Props) 
   });
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
   const zoneRefs = useRef<Record<string, HTMLDivElement>>({});
-  const holdTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Refs mirror latest state so the window event listeners (registered once per
+  // drag session) always read current values. Without this, listeners captured
+  // the closure at drag-start time and fired with a stale hoveredZone=null,
+  // which is why drops on /progress were silently dropped.
+  const favoriteIdRef = useRef<number | null>(null);
+  const hoveredZoneRef = useRef<string | null>(null);
 
   const startDrag = useCallback((favoriteId: number, title: string, currentStatus: string, x: number, y: number) => {
+    favoriteIdRef.current = favoriteId;
+    hoveredZoneRef.current = null;
     setDrag({ active: true, favoriteId, favoriteTitle: title, currentStatus, position: { x, y } });
     setHoveredZone(null);
   }, []);
 
-  const updatePosition = useCallback((x: number, y: number) => {
-    if (!drag.active) return;
-    setDrag(prev => ({ ...prev, position: { x, y } }));
-
-    // Check which zone we're over
-    let found: string | null = null;
-    for (const [status, el] of Object.entries(zoneRefs.current)) {
-      const rect = el.getBoundingClientRect();
-      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-        found = status;
-        break;
-      }
-    }
-    setHoveredZone(found);
-  }, [drag.active]);
-
-  const endDrag = useCallback(async () => {
-    if (hoveredZone && drag.favoriteId) {
-      await onStatusChange(drag.favoriteId, hoveredZone);
-    }
-    setDrag({ active: false, favoriteId: null, favoriteTitle: '', currentStatus: '', position: { x: 0, y: 0 } });
-    setHoveredZone(null);
-  }, [hoveredZone, drag.favoriteId, onStatusChange]);
-
   useEffect(() => {
     if (!drag.active) return;
 
+    function updatePosition(x: number, y: number) {
+      setDrag(prev => (prev.active ? { ...prev, position: { x, y } } : prev));
+      let found: string | null = null;
+      for (const [status, el] of Object.entries(zoneRefs.current)) {
+        const rect = el.getBoundingClientRect();
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+          found = status;
+          break;
+        }
+      }
+      hoveredZoneRef.current = found;
+      setHoveredZone(found);
+    }
+
+    async function finish() {
+      const zone = hoveredZoneRef.current;
+      const favId = favoriteIdRef.current;
+      // Reset immediately so the overlay dismisses before the network round trip
+      setDrag({ active: false, favoriteId: null, favoriteTitle: '', currentStatus: '', position: { x: 0, y: 0 } });
+      setHoveredZone(null);
+      hoveredZoneRef.current = null;
+      favoriteIdRef.current = null;
+      zoneRefs.current = {};
+      if (zone && favId) {
+        await onStatusChange(favId, zone);
+      }
+    }
+
     function handleMouseMove(e: MouseEvent) { updatePosition(e.clientX, e.clientY); }
-    function handleTouchMove(e: TouchEvent) { updatePosition(e.touches[0].clientX, e.touches[0].clientY); }
-    function handleUp() { endDrag(); }
+    function handleTouchMove(e: TouchEvent) {
+      if (e.touches.length > 0) updatePosition(e.touches[0].clientX, e.touches[0].clientY);
+    }
+    function handleUp() { void finish(); }
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
     window.addEventListener('mouseup', handleUp);
     window.addEventListener('touchend', handleUp);
+    window.addEventListener('touchcancel', handleUp);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('mouseup', handleUp);
       window.removeEventListener('touchend', handleUp);
+      window.removeEventListener('touchcancel', handleUp);
     };
-  }, [drag.active, updatePosition, endDrag]);
-
-  // Clean up hold timer
-  useEffect(() => {
-    return () => { if (holdTimer.current) clearTimeout(holdTimer.current); };
-  }, []);
+  }, [drag.active, onStatusChange]);
 
   const dropZones = ALL_STATUSES.filter(s => s.value !== drag.currentStatus);
 
