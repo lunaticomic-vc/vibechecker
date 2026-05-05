@@ -93,6 +93,56 @@ async function main() {
     try { await db.execute('ALTER TABLE rejected_recommendations ADD COLUMN reason TEXT'); } catch { /* already exists */ }
   }
 
+  // ── Migration 4: watch_progress UNIQUE(favorite_id) ─────────────────────
+  // The runtime schema declares UNIQUE(favorite_id), but the production
+  // table predates that constraint. Without it, `INSERT ... ON CONFLICT
+  // (favorite_id) DO UPDATE` in updateProgress fails ("does not match any
+  // PRIMARY KEY or UNIQUE constraint"), so PATCH /api/progress was a silent
+  // 500 — Drop/Done buttons looked dead and the row stayed at 'watching'.
+  const wpSql = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='watch_progress'");
+  const wpDef = (wpSql.rows[0] as unknown as { sql: string })?.sql ?? '';
+  const wpIdx = await db.execute("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='watch_progress' AND sql LIKE '%UNIQUE%'");
+  const hasUnique = wpDef.toUpperCase().includes('UNIQUE') || wpIdx.rows.length > 0;
+
+  if (wpDef && !hasUnique) {
+    console.log('◆ watch_progress: adding UNIQUE(favorite_id) constraint');
+
+    const dups = await db.execute(
+      `SELECT favorite_id, COUNT(*) as n FROM watch_progress GROUP BY favorite_id HAVING n > 1`
+    );
+    if (dups.rows.length > 0) {
+      console.log(`  deduping ${dups.rows.length} favorite_id collisions (keeping lowest id per favorite)`);
+      await db.execute(
+        `DELETE FROM watch_progress WHERE id NOT IN (SELECT MIN(id) FROM watch_progress GROUP BY favorite_id)`
+      );
+    }
+
+    // Atomic batch — if any step fails, the whole rebuild rolls back. No
+    // other table references watch_progress, so the DROP is safe without
+    // disabling foreign keys (PRAGMA inside a transaction is a no-op).
+    await db.batch([
+      `CREATE TABLE watch_progress_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        favorite_id INTEGER REFERENCES favorites(id) ON DELETE CASCADE,
+        current_season INTEGER DEFAULT 1,
+        current_episode INTEGER DEFAULT 1,
+        total_seasons INTEGER,
+        total_episodes INTEGER,
+        status TEXT DEFAULT 'watching' CHECK(status IN ('todo', 'watching', 'completed', 'dropped', 'on_hold')),
+        stopped_at TEXT,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(favorite_id)
+      )`,
+      `INSERT INTO watch_progress_new (id, favorite_id, current_season, current_episode, total_seasons, total_episodes, status, stopped_at, updated_at)
+       SELECT id, favorite_id, current_season, current_episode, total_seasons, total_episodes, status, stopped_at, updated_at FROM watch_progress`,
+      `DROP TABLE watch_progress`,
+      `ALTER TABLE watch_progress_new RENAME TO watch_progress`,
+      `CREATE INDEX IF NOT EXISTS idx_watch_progress_favorite ON watch_progress(favorite_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_watch_progress_updated ON watch_progress(updated_at DESC)`,
+    ]);
+    console.log('  ✓ watch_progress rebuilt with UNIQUE(favorite_id)');
+  }
+
   console.log('◆ migrate: done ✓');
 }
 
