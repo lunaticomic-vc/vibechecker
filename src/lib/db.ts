@@ -42,6 +42,12 @@ export async function initDb(): Promise<Client> {
 }
 
 async function runInit(db: Client): Promise<void> {
+  // RUNTIME INIT IS STRICTLY NON-DESTRUCTIVE.
+  // Only `CREATE TABLE IF NOT EXISTS` and `CREATE INDEX IF NOT EXISTS` are
+  // permitted here. Any schema change that requires DROP / ALTER / RENAME /
+  // INSERT-SELECT / orphan backfill MUST live in `scripts/migrate.ts` and be
+  // run manually (`npm run migrate`). This prevents automated migrations from
+  // silently nuking data on cold starts. See previous incident: commit 214dc55.
 
   const isLocal = !(process.env.TURSO_DATABASE_URL?.startsWith('libsql'));
   if (isLocal) {
@@ -147,74 +153,6 @@ async function runInit(db: Client): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_accounts_platform ON accounts(platform)',
     'CREATE INDEX IF NOT EXISTS idx_rec_history_created ON recommendation_history(created_at DESC)',
   ]);
-
-  // Migration: recreate ip_usage if window_start column is missing (table may predate the column)
-  const ipCols = await db.execute(`PRAGMA table_info(ip_usage)`);
-  const hasWindowStart = ipCols.rows.some((r: any) => r.name === 'window_start');
-  if (!hasWindowStart) {
-    await db.execute(`DROP TABLE IF EXISTS ip_usage`);
-    await db.execute(`CREATE TABLE IF NOT EXISTS ip_usage (
-      ip TEXT PRIMARY KEY,
-      count INTEGER DEFAULT 0,
-      window_start TEXT DEFAULT (datetime('now')),
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )`);
-    await db.execute(`CREATE INDEX IF NOT EXISTS idx_ip_usage_ip ON ip_usage(ip)`);
-  }
-
-  // Migration: ensure favorites type CHECK constraint includes 'substack' and 'kdrama'
-  // Use sqlite_master to inspect the table definition instead of INSERT+DELETE probes
-  const tableInfo = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='favorites'");
-  const tableSql = (tableInfo.rows[0] as unknown as { sql: string })?.sql ?? '';
-
-  if (!tableSql.includes("'substack'") || !tableSql.includes("'kdrama'") || !tableSql.includes("'podcast'") || !tableSql.includes("'game'") || !tableSql.includes("'research'")) {
-    dbLog('Migrating favorites table to update type CHECK constraint...');
-    // Disable foreign keys during migration to prevent CASCADE deletes when dropping the old table
-    await db.execute('PRAGMA foreign_keys = OFF');
-    await db.batch([
-      `CREATE TABLE favorites_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL CHECK(type IN ('movie', 'tv', 'anime', 'youtube', 'substack', 'kdrama', 'research', 'poetry', 'short_story', 'book', 'essay', 'podcast', 'manga', 'comic', 'game')),
-        title TEXT NOT NULL,
-        external_id TEXT,
-        metadata TEXT,
-        image_url TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )`,
-      `INSERT INTO favorites_new SELECT * FROM favorites`,
-      `DROP TABLE favorites`,
-      `ALTER TABLE favorites_new RENAME TO favorites`,
-    ]);
-    await db.execute('PRAGMA foreign_keys = ON');
-    dbLog('Favorites table migrated ✓');
-  }
-
-  // Integrity: ensure every favorite has a watch_progress entry.
-  // The favorites migration above can orphan watch_progress rows (the old
-  // FK target is dropped), leaving favorites with no progress entry — which
-  // the app then shows as "todo". Clean up orphaned rows and backfill any
-  // favorites that lost their progress entry.
-  const orphaned = await db.execute(
-    `SELECT f.id FROM favorites f LEFT JOIN watch_progress wp ON wp.favorite_id = f.id WHERE wp.id IS NULL`
-  );
-  if (orphaned.rows.length > 0) {
-    const stmts = orphaned.rows.map((r: any) => ({
-      sql: `INSERT OR IGNORE INTO watch_progress (favorite_id, status) VALUES (?, 'watching')`,
-      args: [r.id as number],
-    }));
-    await db.batch(stmts);
-    dbLog(`Backfilled ${orphaned.rows.length} missing watch_progress entries ✓`);
-  }
-
-  // Migration: add reason column to rejected_recommendations
-  try {
-    await db.execute('SELECT reason FROM rejected_recommendations LIMIT 1');
-  } catch {
-    try {
-      await db.execute('ALTER TABLE rejected_recommendations ADD COLUMN reason TEXT');
-      dbLog('Added reason column to rejected_recommendations ✓');
-    } catch { /* already exists or other issue */ }
-  }
 
   dbLog('Tables initialized ✓');
 }
