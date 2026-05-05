@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { mutate } from 'swr';
 import type { ProgressWithFavorite } from '@/lib/progress';
 import { useDragStatus } from '@/components/StatusDragOverlay';
 import { TYPE_COLORS } from '@/lib/constants';
@@ -40,16 +41,42 @@ export default function ProgressCard({ item, isGuest, onUpdate }: ProgressCardPr
       : null;
 
   async function patch(body: Record<string, unknown>) {
-    const isStatusChange = body.status === 'dropped' || body.status === 'completed';
+    const isStatusChange = typeof body.status === 'string' && body.status !== item.status;
+
+    // Optimistic: drop the item from the watching filter immediately so the
+    // card disappears even if the network round-trip is slow. Failures below
+    // will revalidate and put it back.
     if (isStatusChange) {
       setFading(body.status as string);
-      await new Promise(r => setTimeout(r, 400));
+      const newStatus = body.status as ProgressWithFavorite['status'];
+      mutate(
+        '/api/progress',
+        (prev?: ProgressWithFavorite[]) =>
+          prev?.map(p =>
+            p.favorite_id === item.favorite_id ? { ...p, status: newStatus } : p
+          ),
+        { revalidate: false },
+      );
     }
-    await fetch(`/api/progress?id=${item.favorite_id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+
+    let res: Response;
+    try {
+      res = await fetch(`/api/progress?id=${item.favorite_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      console.error('progress patch network error', err);
+      onUpdate();
+      return;
+    }
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error(`progress patch ${res.status}:`, text);
+    }
+
     onUpdate();
   }
 
