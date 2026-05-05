@@ -163,12 +163,52 @@ export default function ContentLibraryPage({ contentType }: ContentLibraryPagePr
   }
 
   async function handleStatusChange(favoriteId: number, newStatus: string) {
-    await fetch('/api/progress', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ favorite_id: favoriteId, status: newStatus }),
-    });
-    mutateProgress(); // background revalidate
+    const status = newStatus as WatchProgress['status'];
+
+    // Optimistic — re-group the card immediately. getGroup() reads progressMap,
+    // so injecting/updating a row here moves the card to the new section before
+    // the network round-trip completes.
+    mutateProgress(
+      prev => {
+        const arr = prev ?? [];
+        const existing = arr.find(p => p.favorite_id === favoriteId);
+        if (existing) {
+          return arr.map(p => p.favorite_id === favoriteId ? { ...p, status } : p);
+        }
+        return [
+          ...arr,
+          {
+            id: 0,
+            favorite_id: favoriteId,
+            current_season: 1,
+            current_episode: 1,
+            status,
+            updated_at: new Date().toISOString(),
+          } as WatchProgress,
+        ];
+      },
+      { revalidate: false },
+    );
+
+    let res: Response;
+    try {
+      res = await fetch('/api/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ favorite_id: favoriteId, status }),
+      });
+    } catch (err) {
+      console.error('progress POST network error', err);
+      mutateProgress();
+      return;
+    }
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error(`progress POST ${res.status}:`, text);
+    }
+
+    mutateProgress();
   }
 
   // Compute grouped + filtered + sorted once per render
