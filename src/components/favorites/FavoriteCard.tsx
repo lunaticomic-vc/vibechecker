@@ -254,6 +254,14 @@ function FavoriteCardInner({ favorite, rating, currentStatus, showTypeLabel, sho
                 </div>
               )}
 
+              {/* Notes (for enriched items — plain-text items show their notes in About) */}
+              {recMeta && plainNotes && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#b0a8c4] mb-1">Notes</p>
+                  <p className="text-xs text-[#5a5270] leading-relaxed whitespace-pre-wrap">{plainNotes}</p>
+                </div>
+              )}
+
               {/* Why this fits */}
               {recMeta?.reasoning && (
                 <div>

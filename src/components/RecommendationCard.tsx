@@ -233,7 +233,7 @@ async function autoAddToProgress(rec: Recommendation) {
         title: rec.title,
         external_id: rec.actionUrl,
         image_url: rec.thumbnailUrl ?? rec.imageUrls?.[0],
-        metadata: JSON.stringify({ year: rec.year, source: 'recommendation', description: rec.description, reasoning: rec.reasoning, interests: rec.interests, actors: rec.actors }),
+        metadata: JSON.stringify({ year: rec.year, source: 'recommendation', description: rec.description, reasoning: rec.reasoning, interests: rec.interests, actors: rec.actors, redditInsights: rec.redditInsights }),
       }),
     });
     const fav = await favRes.json();
